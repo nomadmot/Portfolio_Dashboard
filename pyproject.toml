@@ -1,0 +1,13 @@
+[project]
+name = "portfolio-dashboard"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pandas>=2.3.1",
+    "plotly>=6.2.0",
+    "sqlalchemy>=2.0.42",
+    "streamlit>=1.47.1",
+    "yfinance>=0.2.65",
+]
