@@ -9,5 +9,6 @@ dependencies = [
     "plotly>=6.2.0",
     "sqlalchemy>=2.0.42",
     "streamlit>=1.47.1",
+    "watchdog>=6.0.0",
     "yfinance>=0.2.65",
 ]
