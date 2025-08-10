@@ -1,2 +1,18 @@
 [client]
+# Controls whether to display the default sidebar page navigation in a
+# multi-page app. This only applies when app's pages are defined by the
+# `pages/` directory.
+#
+# Default: true
 showSidebarNavigation = false
+
+[logger]
+# Level of logging for Streamlit's internal logger: "error", "warning",
+# "info", or "debug".
+#
+# Default: "info"
+level = "warning"
+
+[server]
+#address = "0.0.0.0"
+#port = 8501
