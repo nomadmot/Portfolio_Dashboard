@@ -77,7 +77,7 @@ def plot_daily_balance(days, account_id=1):
         ))
     fig.add_trace(go.Scatter(x=spy_dt, y=spy,
             mode='lines', name='SPY',
-            line=dict(color='black')
+            line=dict(color='darkgrey')
         ))
 
     fig.update_layout(title=f'Performance for {account_name} account for the last {days} days',
@@ -88,6 +88,6 @@ def plot_daily_balance(days, account_id=1):
 
     return fig
 
-st.title("Daily Performance")
+st.subheader("Daily Performance")
 
 st.plotly_chart(plot_daily_balance(30, account_id=1), use_container_width=True)
