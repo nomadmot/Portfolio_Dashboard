@@ -1,5 +1,7 @@
 import streamlit as st
 
+# use the stock bull icon
+st.logo(image="images/Stock-Bull.png",)
 # Build the navigation menu
 pages = [
          st.Page("pages/daily_performance.py", title="Daily Performance"),
