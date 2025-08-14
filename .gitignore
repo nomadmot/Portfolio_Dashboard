@@ -1,3 +1,4 @@
 # ignore Python bytecode files
 __pycache__/
 .vscode/launch.json
+.DS_Store
