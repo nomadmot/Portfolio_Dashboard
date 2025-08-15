@@ -23,6 +23,15 @@ def update_daily_balance(
     :param account: The account number to update.
     :param date: The date for which the balance is being updated.
     """
+    
+    # check if the input balance date and amount are valid.
+    if balance_date is None or balance_amount is None:
+        st.error("Please select a date and enter a balance amount.")
+        return False
+    if balance_amount < 0:
+        st.error("Balance cannot be negative.")
+        return False
+    
     # ensure the account exists and get the account name
     with Session(config.DB_ENGINE) as session:
         account: Optional[Account] = session.get(Account, account_id)
