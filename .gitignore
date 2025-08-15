@@ -3,3 +3,4 @@ __pycache__/
 .vscode/launch.json
 .DS_Store
 images/Stock-Bull.png
+Portfolio-Dashboard/logs/portfolio_dashboard.log
