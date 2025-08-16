@@ -5,15 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Module",
+            "name": "Portfolio-Dashboard: Module",
             "type": "debugpy",
             "request": "launch",
+            "cwd": "${workspaceFolder}/Portfolio-Dashboard",
             "module": "utility.query_portfolio"
         }
         {
             "name": "Python: Streamlit",
             "type": "python",
             "request": "launch",
+            "cwd": "${workspaceFolder}/Portfolio-Dashboard",
             "module": "streamlit",
             "args": [
             "run",
