@@ -9,9 +9,8 @@ showSidebarNavigation = false
 [logger]
 # Level of logging for Streamlit's internal logger: "error", "warning",
 # "info", or "debug".
-#
+# #NOTE: application level settings override this setting
 # Default: "info"
-level = "info"
 # String format for logging messages. If logger.datetimeFormat is set,
 # logger messages will default to `%(asctime)s.%(msecs)03d %(message)s`.
 #
