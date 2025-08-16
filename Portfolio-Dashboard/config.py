@@ -2,8 +2,9 @@
 Configuration settings for the application.
 """
 # logging configuration
-LOGLEVEL_STREAMLIT = "debug"
-LOGLEVEL_SQLALCHEMY = "error"
+import logging
+LOGLEVEL_STREAMLIT = logging.DEBUG
+LOGLEVEL_SQLALCHEMY = logging.WARN
 
 # database configuration
 from sqlalchemy import create_engine
