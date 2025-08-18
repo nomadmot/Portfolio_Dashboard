@@ -46,14 +46,6 @@ def update_daily_balance(
     if balance_amount < 0:
         raise ValueError("Balance cannot be negative.")
     
-    # # ensure the account exists and get the account name
-    # with Session(config.DB_ENGINE) as session:
-    #     account: Optional[Account] = session.get(Account, account_id)
-    #     if not account:
-    #         raise ValueError(f"Account with ID {account_id} does not exist.")
-    #     account_name: str = account.name
-    #     session.close()
-    
     # create a new DailyBalance object
     daily_balance: DailyBalance = DailyBalance(
         balance=balance_amount,
