@@ -6,11 +6,11 @@ import streamlit as st
 import sqlalchemy.exc
 from datetime import date
 
-from utility.query_portfolio import get_balance_history
-from utility.manage_portfolio_balances import(
-                                update_daily_balance,
-                                delete_daily_balance
-                                )
+from data import (
+    get_balance_history,
+    update_daily_balance,
+    delete_daily_balance
+)
 
 # constants for streamlit session state
 DAILY_BALANCE_TABLE = "daily_balance_table"
