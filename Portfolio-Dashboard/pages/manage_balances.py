@@ -32,6 +32,9 @@ if selected_row is not None and selected_row != [] and selected_row["selection"]
     st.session_state[UPDATE_DATE] = history.iloc[selected_row]["date"]
     st.session_state[UPDATE_BALANCE] = float(history.iloc[selected_row]["balance"])
 
+# configure the page layout
+st.set_page_config(layout="centered")
+
 # header elements for the page
 st.subheader("Manage Daily Balances")
 
