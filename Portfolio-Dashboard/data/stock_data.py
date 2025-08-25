@@ -4,7 +4,10 @@ routines to fetch securities data
 import pandas as pd
 import yfinance as yf
 
-def get_stock_history(ticker: str, start_date=None, days=None) -> pd.DataFrame:
+def get_stock_history(ticker: str,
+                      start_date=None,
+                      end_date=None,
+                      days=None) -> pd.DataFrame:
     """
     Use yfinance to get historical stock data for a given ticker.
 
@@ -14,6 +17,10 @@ def get_stock_history(ticker: str, start_date=None, days=None) -> pd.DataFrame:
     Keyword Arguments:
         start_date -- The start date for the fetched data. The data will
          include dates from the start date through today. (default: {None})
+
+        end_date -- The end date for the fetched data. If specified, the data
+         will include dates up to and including the end date. (default: {None})
+
         days -- The number of days (starting with today) to fetch data
          (default: {None})
          
@@ -37,12 +44,17 @@ def get_stock_history(ticker: str, start_date=None, days=None) -> pd.DataFrame:
     # in the balances and ending today
     yf_ticker = yf.Ticker(ticker)
     if start_date is not None:
-        #end_date = dt.today().strftime('%Y-%m-%d')
-        ticker_data: pd.DataFrame = yf_ticker.history(
-                                                start=start_date,
-                                                #end=end_date,
-                                                auto_adjust=True
-                                                )
+        if end_date is not None:
+            ticker_data: pd.DataFrame = yf_ticker.history(
+                                        start=start_date,
+                                        end=end_date,
+                                        auto_adjust=True
+                                        )
+        else:
+            ticker_data: pd.DataFrame = yf_ticker.history(
+                                        start=start_date,
+                                        auto_adjust=True
+                                        )
     elif days is not None:
         ticker_data: pd.DataFrame = yf_ticker.history(
                                                 period=f"{days}d",
