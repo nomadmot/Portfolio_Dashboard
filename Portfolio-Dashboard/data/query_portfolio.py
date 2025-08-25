@@ -1,11 +1,15 @@
 """
 This module contains functions to access and manipulate daily balance data.
 """
+# Import necessary libraries
 from datetime import date
 from sqlalchemy import select
 from pandas import DataFrame
+
+# Import local modules
 import config
 from models.portfolio import DailyBalance, Account
+#from data import Periods
 
 def get_account(account_id: int) -> Account:
     """
@@ -21,42 +25,51 @@ def get_account(account_id: int) -> Account:
     stmt = select(Account).where(Account.id == account_id)
     with config.DB_ENGINE.connect() as conn:
         result = conn.execute(stmt).first()
-        
+
     # check if the result is None, which means the account does not exist
     if not result:
         raise ValueError(f"Account with ID {account_id} does not exist.")
-    
-    # return the Account object or None if not found
+
+    # return the Account object
     return result
 
-def get_balance_history(account_id:int, days=None, begin_date=None) -> DataFrame:
+def get_balance_history(account_id:int, period) -> DataFrame:
     """
     Retrieve the balance history for the specified account and time period.
 
     Arguments:
         account_id -- The ID of the account to retrieve balances for.
-
-    Keyword Arguments:
-        days -- If present, returns history for the specified number of
-         trading days. NOTE: you may specify days OR begin_date, but not
-          both. (default: {None})
-        begin_date -- If present, returns history starting from the
-         specified date. NOTE: you may specify begin_date OR days, but not
-          both. (default: {None})
+        period -- The time period for which to retrieve balances.
 
     Returns:
         A pandas DataFrame containing the balance history, indexed by date.
     """
-    # check input for validity
-    if days is not None and begin_date is not None:
-        raise ValueError("You may specify days OR begin_date, but not both.")
+    # import Periods enumeration
+    # needs to be here to avoid circular import
+    # pylint: disable-next=import-outside-toplevel
+    from data import Periods
+
+    # set the number of days for the chart based on the selected period
+    chart_days = None
+    begin_date = None
+    match(period):
+            case(Periods.D30.value):
+                chart_days = 30
+            case(Periods.D50.value):
+                chart_days = 50
+            case(Periods.D90.value):
+                chart_days = 90
+            case(Periods.YTD.value):
+                begin_date = date(date.today().year, 1, 1)
+            case(Periods.YR1.value):
+                begin_date = date(date.today().year -1, date.today().month, date.today().day)
 
     # generate a sqlalchemy select statement to retrieve the balances
     stmt = select(DailyBalance).where(DailyBalance.account_id == account_id)
 
     # apply filters based on the provided parameters
-    if days is not None:
-        stmt = stmt.order_by(DailyBalance.date.desc()).limit(days)
+    if chart_days is not None:
+        stmt = stmt.order_by(DailyBalance.date.desc()).limit(chart_days)
     elif begin_date is not None:
         stmt = stmt.where(DailyBalance.date >= begin_date)
 
