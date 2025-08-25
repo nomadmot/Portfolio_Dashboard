@@ -33,7 +33,7 @@ def get_account(account_id: int) -> Account:
     # return the Account object
     return result
 
-def get_balance_history(account_id:int, period) -> DataFrame:
+def get_balance_history(account_id:int, period=None) -> DataFrame:
     """
     Retrieve the balance history for the specified account and time period.
 
@@ -63,6 +63,8 @@ def get_balance_history(account_id:int, period) -> DataFrame:
                 begin_date = date(date.today().year, 1, 1)
             case(Periods.YR1.value):
                 begin_date = date(date.today().year -1, date.today().month, date.today().day)
+            case(None):
+                pass
 
     # generate a sqlalchemy select statement to retrieve the balances
     stmt = select(DailyBalance).where(DailyBalance.account_id == account_id)
