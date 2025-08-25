@@ -4,6 +4,7 @@ It displays a dataframe of balance history for a specific account.
 """
 import streamlit as st
 import sqlalchemy.exc
+from datetime import date
 
 from utility.query_portfolio import get_balance_history
 from utility.manage_portfolio_balances import(
@@ -31,6 +32,9 @@ if selected_row is not None and selected_row != [] and selected_row["selection"]
     # set the values for the update date and balance widgets
     st.session_state[UPDATE_DATE] = history.iloc[selected_row]["date"]
     st.session_state[UPDATE_BALANCE] = float(history.iloc[selected_row]["balance"])
+# if the update fate is not set, initialize it to today's date
+elif UPDATE_DATE not in st.session_state:
+    st.session_state[UPDATE_DATE] = date.today()
 
 # configure the page layout
 st.set_page_config(layout="centered")
@@ -45,14 +49,12 @@ update_container = st.container(
                     width=500,
                     )
 with update_container:
-    col1, col2 = st.columns(2)
-    with col1:
+    with update_container.container(horizontal=True):
         update_date = st.date_input("Select Date",
                         key=UPDATE_DATE,
                         value=None,
                         help="Select the date for which you want to manage the balance",
                         )
-    with col2:
         update_balance = st.number_input("Daily Balance",
                         key=UPDATE_BALANCE,
                         value=None,
@@ -61,17 +63,12 @@ with update_container:
                         format="%.2f",
                         help="Enter the daily balance amount",
                         )
-
     st.caption("Update Database",
                 help="Click the buttons to update the database with the new balance or delete an existing balance",
                 )
     
     # line up the database update buttons horizontally
-    db_buttons_container = st.container(
-                        horizontal=True,
-                        )
-    #db_button_1, db_button_2 = st.container().columns(2)
-    with db_buttons_container:
+    with st.container(horizontal=True):
         # button to update the balance in the database
         update_record = st.button("Update",
                         help="Click to update the database with the new balance",
