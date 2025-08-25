@@ -10,7 +10,7 @@ class Periods(Enum):
     D30 = "30 days"
     D50 = "50 days"
     D90 = "90 days"
-    YTD = "ytd"
+    YTD = "YTD"
     YR1 = "1 yr"
 
     PERIODS = [D30, D50, D90, YTD, YR1]
