@@ -4,16 +4,21 @@ Plot the daily performance of the account.
 """
 # Import necessary libraries
 from typing import List
+from datetime import timedelta
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
 # Import local modules
-from utility.query_portfolio import get_account, get_balance_history
-from utility.stock_data import get_stock_history
+from data import (
+    get_account,
+    get_balance_history,
+    get_stock_history,
+    Periods
+)
 
 # function to draw a graph comparing cumulative performance for the selected portfolio and SPY
-def plot_daily_balance(days, account_id=1):
+def plot_daily_balance(period, account_id=1):
     """
     Plot the daily balance for a given account over a specified number of days.
 
@@ -23,10 +28,12 @@ def plot_daily_balance(days, account_id=1):
     # get the account name for the specified account ID
     account_name = get_account(account_id).name
 
-    # fetch the daily balances for the specified account
-    df_balances = get_balance_history(account_id, days=30)
-    # get the begin date from the first occurrence of df_balances
+    # get the balance history for the specified account
+    df_balances = get_balance_history(account_id, period)
+    # get the begin and end dates from the df_balances dataframe
     begin_date = df_balances.loc[0, 'date']
+    end_date = \
+        df_balances.loc[len(df_balances)-1, 'date'] + timedelta(days=1)
 
     # calculate the cumulative percent change
     df_balances['pct_change'] = \
@@ -44,7 +51,10 @@ def plot_daily_balance(days, account_id=1):
         df_balances['pct_change'].rolling(window=21).mean()
 
     # fetch historical SPY data since the begin date
-    spy_data: pd.DataFrame = get_stock_history("SPY", start_date=begin_date)
+    spy_data: pd.DataFrame = get_stock_history(
+                    "SPY",
+                    start_date=begin_date,
+                    end_date=end_date)
 
     # calculate the cumulative percent change for SPY
     spy_data['pct_change'] = \
@@ -80,7 +90,8 @@ def plot_daily_balance(days, account_id=1):
             line=dict(color='darkgrey')
         ))
 
-    fig.update_layout(title=f'Performance for {account_name} account for the last {days} days',
+    fig.update_layout(
+        title=f'Performance for {account_name} over period of {period}',
         xaxis_title='Date', yaxis_title='Cumulative Percent Change',
         hovermode="x"
     )
@@ -88,6 +99,18 @@ def plot_daily_balance(days, account_id=1):
 
     return fig
 
-st.subheader("Daily Performance")
+# configure the page layout
+st.set_page_config(layout="wide")
 
-st.plotly_chart(plot_daily_balance(30, account_id=1), use_container_width=True)
+# page subheader
+st.subheader("Daily Performance Chart")
+
+# create a selectbox to select the number of days for the chart
+selected_period = st.selectbox(
+                        "Select Period:",
+                        Periods.get_display_periods(),
+                        index=1,
+                        width=300)
+
+
+st.plotly_chart(plot_daily_balance(selected_period, account_id=1), use_container_width=True)
