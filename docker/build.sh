@@ -11,3 +11,5 @@ cd ../
 # Build the image using the Dockerfile in the current directory
 podman build -f docker/Dockerfile -t portfolio-dashboard:latest .
 
+# initialize the container
+docker/init.sh
