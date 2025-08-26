@@ -32,12 +32,8 @@ RUN uv venv .venv
 RUN uv export > requirements.txt
 RUN uv pip install --requirements requirements.txt
 
-# Override configuration files
-COPY docker/config.toml .streamlit/config.toml
-COPY docker/config.py .
-
-# Copy the startup command
-COPY docker/run_app.sh .
+# Copy production configurations and scripts
+COPY docker/files .
 
 # Start the application
 CMD ./run_app.sh
