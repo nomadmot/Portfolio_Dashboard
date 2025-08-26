@@ -53,18 +53,18 @@ def get_balance_history(account_id:int, period=None) -> DataFrame:
     chart_days = None
     begin_date = None
     match(period):
-            case(Periods.D30.value):
-                chart_days = 30
-            case(Periods.D50.value):
-                chart_days = 50
-            case(Periods.D90.value):
-                chart_days = 90
-            case(Periods.YTD.value):
-                begin_date = date(date.today().year, 1, 1)
-            case(Periods.YR1.value):
-                begin_date = date(date.today().year -1, date.today().month, date.today().day)
-            case(None):
-                pass
+        case(Periods.D30.value):
+            chart_days = 30
+        case(Periods.D50.value):
+            chart_days = 50
+        case(Periods.D90.value):
+            chart_days = 90
+        case(Periods.YTD.value):
+            begin_date = date(date.today().year, 1, 1)
+        case(Periods.YR1.value):
+            begin_date = date(date.today().year -1, date.today().month, date.today().day)
+        case(None):
+            pass
 
     # generate a sqlalchemy select statement to retrieve the balances
     stmt = select(DailyBalance).where(DailyBalance.account_id == account_id)
@@ -91,5 +91,5 @@ def get_balance_history(account_id:int, period=None) -> DataFrame:
 
     return df_balances
 
-if __name__ == "__main__":
-    print(get_balance_history(1, days=30))
+#if __name__ == "__main__":
+    #print(get_balance_history(1, days=30))

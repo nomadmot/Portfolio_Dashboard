@@ -2,7 +2,7 @@
 Routines for accessing and manipulating the portfolio database.
 """
 # Import necessary libraries
-from datetime import date, datetime as dt
+from datetime import date
 from typing import Optional
 import streamlit as st
 import streamlit.logger
@@ -45,7 +45,7 @@ def update_daily_balance(
         raise ValueError("Please select a date and enter a balance amount.")
     if balance_amount < 0:
         raise ValueError("Balance cannot be negative.")
-    
+
     # create a new DailyBalance object
     daily_balance: DailyBalance = DailyBalance(
         balance=balance_amount,
@@ -61,7 +61,7 @@ def update_daily_balance(
     with Session(config.DB_ENGINE) as session:
         session.add(daily_balance)
         session.commit()
-        
+
     logger.info("Daily balance updated successfully")
 
 
@@ -83,7 +83,7 @@ def delete_daily_balance(
         account_id,
         balance_date,
         )
-    
+
     # ensure the account exists and get the account name
     with Session(config.DB_ENGINE) as session:
         account: Optional[Account] = session.get(Account, account_id)

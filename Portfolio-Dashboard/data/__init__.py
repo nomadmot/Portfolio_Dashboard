@@ -1,3 +1,8 @@
+"""
+collect and expose data management and querying functions
+for the data module
+"""
+
 from data.manage_portfolio_balances import (
     update_daily_balance,
     delete_daily_balance

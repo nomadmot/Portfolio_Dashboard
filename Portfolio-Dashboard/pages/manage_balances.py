@@ -2,9 +2,9 @@
 This page allows users to manage their daily balances.
 It displays a dataframe of balance history for a specific account.
 """
+from datetime import date
 import streamlit as st
 import sqlalchemy.exc
-from datetime import date
 
 from data import (
     get_balance_history,
@@ -64,9 +64,10 @@ with update_container:
                         help="Enter the daily balance amount",
                         )
     st.caption("Update Database",
-                help="Click the buttons to update the database with the new balance or delete an existing balance",
+                help="Click the buttons to update the database /" \
+                    "with the new balance or delete an existing balance",
                 )
-    
+
     # line up the database update buttons horizontally
     with st.container(horizontal=True):
         # button to update the balance in the database
@@ -79,24 +80,24 @@ with update_container:
                         help="Click to delete the balance for the selected date",
                         key=DELETE_BALANCE_BUTTON,
                         )
-        
+
     # message area for displaying update results
     update_message = st.empty()
     update_message.info("This area will display messages related to balance updates")
 
 # display the balance history for a specific account
 daily_balance_table = st.dataframe(
-                    history,
-                    key=DAILY_BALANCE_TABLE,
-                    width=500,
-                    hide_index=True,
-                    selection_mode="single-row",
-                    on_select="rerun",
-                    column_config={
-                            "date": st.column_config.DateColumn("Date"),
-                            "balance": st.column_config.NumberColumn("Balance", format="accounting"),
-                            },
-                    )
+            history,
+            key=DAILY_BALANCE_TABLE,
+            width=500,
+            hide_index=True,
+            selection_mode="single-row",
+            on_select="rerun",
+            column_config={
+                "date": st.column_config.DateColumn("Date"),
+                "balance": st.column_config.NumberColumn("Balance", format="accounting"),
+                },
+            )
 
 # handle the update button click
 if update_record:
