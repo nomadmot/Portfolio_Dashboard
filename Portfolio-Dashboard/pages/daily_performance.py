@@ -18,7 +18,7 @@ from data import (
 )
 
 # function to draw a graph comparing cumulative performance for the selected portfolio and SPY
-def plot_daily_balance(period, account_id=1):
+def plot_daily_balance(period, compare = "SPY", account_id=1):
     """
     Plot the daily balance for a given account over a specified number of days.
 
@@ -52,7 +52,7 @@ def plot_daily_balance(period, account_id=1):
 
     # fetch historical SPY data since the begin date
     spy_data: pd.DataFrame = get_stock_history(
-                    "SPY",
+                    compare,
                     start_date=begin_date,
                     end_date=end_date)
 
@@ -86,7 +86,7 @@ def plot_daily_balance(period, account_id=1):
             line=dict(color='green')
         ))
     fig.add_trace(go.Scatter(x=spy_dt, y=spy,
-            mode='lines', name='SPY',
+            mode='lines', name=compare,
             line=dict(color='darkgrey')
         ))
 
@@ -105,12 +105,26 @@ st.set_page_config(layout="wide")
 # page subheader
 st.subheader("Daily Performance Chart")
 
-# create a selectbox to select the number of days for the chart
-selected_period = st.selectbox(
-                        "Select Period:",
-                        Periods.get_display_periods(),
-                        index=1,
-                        width=300)
+# create a horizontal layout for the selectboxes
+with st.container(horizontal=True,
+                  horizontal_alignment="center",
+                  border=True,
+                  width=450):
+    # create a selectbox to select the number of days for the chart
+    selected_period = st.selectbox(
+                            "Select Period:",
+                            Periods.get_display_periods(),
+                            index=1,
+                            width=300)
+    # create a selectbox to select the comparison symbol for the chart
+    selected_comparison = st.selectbox(
+                            "Compare:",
+                            ["SPY", "QQQ"],
+                            index=0,
+                            width=100)
 
-
-st.plotly_chart(plot_daily_balance(selected_period, account_id=1), use_container_width=True)
+st.plotly_chart(plot_daily_balance(selected_period,
+                                   selected_comparison,
+                                   account_id=1),
+                use_container_width=True
+                )
