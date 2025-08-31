@@ -24,7 +24,7 @@ USER devuser
 WORKDIR /home/devuser
 
 # Install the application code
-ADD --exclude=__pycache__  --chown=devuser:devuser ../Portfolio-Dashboard .
+ADD --exclude=__pycache__  --chown=devuser:devuser ../src .
 
 # Create the Python virtual environment
 ADD --chown=devuser:devuser ../uv.lock ../pyproject.toml ../run_app.sh ./
