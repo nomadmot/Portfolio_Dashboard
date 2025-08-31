@@ -1,5 +1,5 @@
 #!/bin/zsh
 
 source .venv/bin/activate
-cd Portfolio-Dashboard
+cd src
 streamlit run app.py
