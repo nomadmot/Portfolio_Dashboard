@@ -8,14 +8,15 @@
             "name": "Portfolio-Dashboard: Module",
             "type": "debugpy",
             "request": "launch",
-            "cwd": "${workspaceFolder}/Portfolio-Dashboard",
+            "cwd": "${workspaceFolder}/src",
             "module": "utility.query_portfolio"
-        }
+        },
+        
         {
             "name": "Python: Streamlit",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
-            "cwd": "${workspaceFolder}/Portfolio-Dashboard",
+            "cwd": "${workspaceFolder}/src",
             "module": "streamlit",
             "args": [
             "run",
