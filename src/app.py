@@ -1,3 +1,6 @@
+'''
+Main application file for the Portfolio Dashboard using Streamlit
+'''
 import streamlit as st
 import streamlit.logger
 import config
