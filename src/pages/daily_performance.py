@@ -4,7 +4,7 @@ Plot the daily performance of the account.
 """
 # Import necessary libraries
 from typing import List
-from datetime import timedelta
+from datetime import date, timedelta
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -31,9 +31,9 @@ def plot_daily_balance(period, compare = "SPY", account_id=1):
     # get the balance history for the specified account
     df_balances = get_balance_history(account_id, period)
     # get the begin and end dates from the df_balances dataframe
-    begin_date = df_balances.loc[0, 'date']
-    end_date = \
-        df_balances.loc[len(df_balances)-1, 'date'] + timedelta(days=1)
+    dates = pd.to_datetime(df_balances['date']).astype('datetime64[ns]').tolist()
+    begin_date: date = dates[0]
+    end_date: date = dates[len(dates)-1] + timedelta(days=1)
 
     # calculate the cumulative percent change
     df_balances['pct_change'] = \
