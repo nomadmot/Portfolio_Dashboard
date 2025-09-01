@@ -5,7 +5,7 @@ from sqlalchemy import (
     create_engine, Integer, String, Float, Date, DateTime,
     ForeignKey, CheckConstraint, Text
 )
-from datetime import datetime
+import datetime as dt
 
 mapper_registry = registry()
 
@@ -131,7 +131,7 @@ class Note:
 class DailyBalance:
     __tablename__ = 'daily_balances'
 
-    date: Mapped[Date] = mapped_column(Date, primary_key=True)
+    date: Mapped[dt.date] = mapped_column(Date, primary_key=True)
     account_id: Mapped[int] = mapped_column(Integer, ForeignKey('accounts.id'), primary_key=True)
     balance: Mapped[float] = mapped_column(Float, nullable=False)
 
