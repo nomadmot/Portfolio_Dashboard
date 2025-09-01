@@ -31,7 +31,7 @@ def get_account(account_id: int) -> Account:
         raise ValueError(f"Account with ID {account_id} does not exist.")
 
     # return the Account object
-    return result
+    return Account(result[0], result[1], trades=[])
 
 def get_balance_history(account_id:int, period=None) -> DataFrame:
     """
