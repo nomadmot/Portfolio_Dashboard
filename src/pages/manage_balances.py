@@ -101,43 +101,45 @@ daily_balance_table = st.dataframe(
 
 # handle the update button click
 if update_record:
-    try:
-        update_daily_balance(1, update_balance, update_date)
-    except ValueError as e:
-        update_message.warning(str(e), icon="⚠️")
-    except sqlalchemy.exc.IntegrityError as e:
-        update_message.warning(
-            "The balance for this date already exists",
-            icon="⚠️"
+    if update_balance is not None and update_date is not None:
+        try:
+            update_daily_balance(1, update_balance, update_date)
+        except ValueError as e:
+            update_message.warning(str(e), icon="⚠️")
+        except sqlalchemy.exc.IntegrityError as e:
+            update_message.warning(
+                "The balance for this date already exists",
+                icon="⚠️"
+                )
+        except  sqlalchemy.exc.SQLAlchemyError as e:
+            update_message.error(
+                f"Unexpected SQL error: {str(e)}",
+                icon="❗"
+                )
+        else:
+            # if the update is successful, display a success message and refresh the dataframe
+            update_message.success(
+                f"Balance for {update_date} updated to {update_balance:.2f} successfully!",
+                icon="✅"
             )
-    except  sqlalchemy.exc.SQLAlchemyError as e:
-        update_message.error(
-            f"Unexpected SQL error: {str(e)}",
-            icon="❗"
-            )
-    else:
-        # if the update is successful, display a success message and refresh the dataframe
-        update_message.success(
-            f"Balance for {update_date} updated to {update_balance:.2f} successfully!",
-            icon="✅"
-        )
-        st.rerun()
+            st.rerun()
 
     # handle the delete button click
 if delete_record:
-    try:
-        delete_daily_balance(1, update_date)
-    except ValueError as e:
-        update_message.warning(str(e), icon="⚠️")
-    except  sqlalchemy.exc.SQLAlchemyError as e:
-        update_message.error(
-            f"Unexpected SQL error: {str(e)}",
-            icon="❗"
+    if update_date is not None:
+        try:
+            delete_daily_balance(1, update_date)
+        except ValueError as e:
+            update_message.warning(str(e), icon="⚠️")
+        except  sqlalchemy.exc.SQLAlchemyError as e:
+            update_message.error(
+                f"Unexpected SQL error: {str(e)}",
+                icon="❗"
+                )
+        else:
+            # if the update is successful, display a success message
+            update_message.success(
+                f"Balance for {update_date} deleted successfully!",
+                icon="✅"
             )
-    else:
-        # if the update is successful, display a success message
-        update_message.success(
-            f"Balance for {update_date} deleted successfully!",
-            icon="✅"
-        )
-        st.rerun()
+            st.rerun()
