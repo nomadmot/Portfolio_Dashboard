@@ -122,7 +122,6 @@ if update_record:
                 f"Balance for {update_date} updated to {update_balance:.2f} successfully!",
                 icon="✅"
             )
-            st.rerun()
 
     # handle the delete button click
 if delete_record:
@@ -142,4 +141,3 @@ if delete_record:
                 f"Balance for {update_date} deleted successfully!",
                 icon="✅"
             )
-            st.rerun()
