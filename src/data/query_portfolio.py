@@ -47,7 +47,7 @@ def get_balance_history(account_id:int, period=None) -> DataFrame:
     # import Periods enumeration
     # needs to be here to avoid circular import
     # pylint: disable-next=import-outside-toplevel
-    from data import Periods
+    from services import Periods
 
     # set the number of days for the chart based on the selected period
     chart_days = None

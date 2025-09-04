@@ -13,9 +13,11 @@ import plotly.graph_objects as go
 from data import (
     get_account,
     get_balance_history,
+)
+from services import(
     get_stock_history,
     Periods
-)
+    )
 
 # function to draw a graph comparing cumulative performance for the selected portfolio and SPY
 def plot_daily_balance(period, compare = "SPY", account_id=1):

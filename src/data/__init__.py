@@ -11,16 +11,10 @@ from data.query_portfolio import (
     get_account,
     get_balance_history
 )
-from data.stock_data import (
-    get_stock_history
-)
-from data.helper import Periods
 
 __all__ = [
     "update_daily_balance",
     "delete_daily_balance",
     "get_account",
     "get_balance_history",
-    "get_stock_history",
-    "Periods"
 ]
