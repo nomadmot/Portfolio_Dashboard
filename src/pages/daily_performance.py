@@ -10,7 +10,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 # Import local modules
-from data import (
+from core import (
     get_account,
     get_balance_history,
 )

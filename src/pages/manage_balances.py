@@ -6,7 +6,7 @@ from datetime import date
 import streamlit as st
 import sqlalchemy.exc
 
-from data import (
+from core import (
     get_balance_history,
     update_daily_balance,
     delete_daily_balance
