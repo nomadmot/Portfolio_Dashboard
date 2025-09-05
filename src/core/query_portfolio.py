@@ -53,11 +53,9 @@ def get_balance_history(account_id:int, period=None) -> DataFrame:
     chart_days = None
     begin_date = None
     match(period):
-        case(Periods.D30.value):
+        case(Periods.M1.value):
             chart_days = 30
-        case(Periods.D50.value):
-            chart_days = 50
-        case(Periods.D90.value):
+        case(Periods.M3.value):
             chart_days = 90
         case(Periods.YTD.value):
             begin_date = date(date.today().year, 1, 1)
