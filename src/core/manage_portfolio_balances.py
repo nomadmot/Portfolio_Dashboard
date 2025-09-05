@@ -67,7 +67,7 @@ def update_daily_balance(
 
 # function to delete the daily balance for a specified account and day
 def delete_daily_balance(
-    account_id: int, 
+    account_id: int,
     balance_date: date
 ) -> None:
     """
