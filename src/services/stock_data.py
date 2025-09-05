@@ -1,8 +1,34 @@
 """
 routines to fetch securities data
 """
+from enum import Enum
 import pandas as pd
 import yfinance as yf
+
+class Periods(Enum):
+    """
+    Enumeration for time period selections
+    """
+    D1 = "1d"
+    D5 = "5d"
+    M1 = "1mo"
+    M3 = "3mo"
+    M6 = "6mo"
+    YTD = "ytd"
+    YR1 = "1y"
+
+    PERIODS = [D1, D5, M1, M3, M6, YTD, YR1]
+
+    @classmethod
+    def get_display_periods(cls) -> list:
+        """
+        provide a list of display values for period selection
+
+        Returns:
+            list of display values for period selection
+        """
+        return cls.PERIODS.value
+
 
 def get_stock_history(ticker: str,
                       start_date=None,
@@ -57,7 +83,7 @@ def get_stock_history(ticker: str,
                                         )
     elif days is not None:
         ticker_data: pd.DataFrame = yf_ticker.history(
-                                                period=f"{days}d",
+                                                period=days.value,
                                                 auto_adjust=True
                                                 )
     ticker_data.reset_index(inplace=True)
