@@ -11,6 +11,7 @@ from core import (
     update_daily_balance,
     delete_daily_balance
 )
+from services import Periods
 
 # constants for streamlit session state
 DAILY_BALANCE_TABLE = "daily_balance_table"
@@ -20,10 +21,9 @@ UPDATE_BALANCE_BUTTON = "update_balance_button"
 DELETE_BALANCE_BUTTON = "delete_balance_button"
 
 # initialize data variables
-history = get_balance_history(account_id=1)
-# sort the history by date in descending order
-history.sort_values(by="date", ascending=False, inplace=True)
-history.reset_index(drop=True, inplace=True)
+history = get_balance_history(account_id=1,
+                              period=Periods.YR1,
+                              ascending=False)
 
 # if a row is selected, retrieve the date and balance
 selected_row = st.session_state.get("daily_balance_table")
@@ -135,6 +135,7 @@ if delete_record:
                 f"Unexpected SQL error: {str(e)}",
                 icon="❗"
                 )
+
         else:
             # if the update is successful, display a success message
             update_message.success(
