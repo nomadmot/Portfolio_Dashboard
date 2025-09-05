@@ -9,7 +9,7 @@ from pandas import DataFrame
 # Import local modules
 import config
 from models.portfolio import DailyBalance, Account
-#from data import Periods
+from services import Periods
 
 def get_account(account_id: int) -> Account:
     """
@@ -33,7 +33,9 @@ def get_account(account_id: int) -> Account:
     # return the Account object
     return Account(result[0], result[1], trades=[])
 
-def get_balance_history(account_id:int, period=None) -> DataFrame:
+def get_balance_history(account_id:int,
+                        period:Periods,
+                        ascending:bool = False) -> DataFrame:
     """
     Retrieve the balance history for the specified account and time period.
 
@@ -44,11 +46,6 @@ def get_balance_history(account_id:int, period=None) -> DataFrame:
     Returns:
         A pandas DataFrame containing the balance history, indexed by date.
     """
-    # import Periods enumeration
-    # needs to be here to avoid circular import
-    # pylint: disable-next=import-outside-toplevel
-    from services import Periods
-
     # set the number of days for the chart based on the selected period
     chart_days = None
     begin_date = None
@@ -61,8 +58,6 @@ def get_balance_history(account_id:int, period=None) -> DataFrame:
             begin_date = date(date.today().year, 1, 1)
         case(Periods.YR1.value):
             begin_date = date(date.today().year -1, date.today().month, date.today().day)
-        case(None):
-            pass
 
     # generate a sqlalchemy select statement to retrieve the balances
     stmt = select(DailyBalance).where(DailyBalance.account_id == account_id)
@@ -83,8 +78,9 @@ def get_balance_history(account_id:int, period=None) -> DataFrame:
         'balance': balance.balance
     } for balance in result])
 
-    # ensure the DataFrame is sorted by date ascending
-    df_balances.sort_values('date', ascending=True, inplace=True)
+    # ensure the DataFrame is sorted by date as requested in
+    # the ascending parameter and reset the index for proper ordering
+    df_balances.sort_values('date', ascending=ascending, inplace=True)
     df_balances.reset_index(drop=True, inplace=True)
 
     return df_balances

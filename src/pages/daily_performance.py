@@ -31,7 +31,10 @@ def plot_daily_balance(period, compare = "SPY", account_id=1):
     account_name = get_account(account_id).name
 
     # get the balance history for the specified account
-    df_balances = get_balance_history(account_id, period)
+    df_balances = get_balance_history(account_id=account_id,
+                                      period=period,
+                                      ascending=True
+                                      )
     # get the begin and end dates from the df_balances dataframe
     dates = pd.to_datetime(df_balances['date']).astype('datetime64[ns]').tolist()
     begin_date: date = dates[0]
