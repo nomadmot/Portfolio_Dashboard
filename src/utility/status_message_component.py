@@ -1,6 +1,6 @@
 """
 Utility component for managing and displaying a status
-message in a streamlit page
+message in a Streamlit page.
 """
 import streamlit as st
 import streamlit.logger
@@ -14,8 +14,8 @@ logger.debug("Entering StatusMessageComponent module")
 
 class StatusMessageComponent:
     """
-    Implements a utility components for managing and displaying
-    a status message in a streamlit page. Uses class methods for
+    Implements a utility component for managing and displaying
+    a status message in a Streamlit page. Uses class methods for
     all functionality to avoid the need for instantiation.
     """
     STATUS_MESSAGE_KEY = "status_message_component"
@@ -28,7 +28,7 @@ class StatusMessageComponent:
         msg_icon
     ):
         """
-        store the data needed to display the current status message
+        Store the data needed to display the current status message
         into the session state for later retrieval and display.
         """
         status_message = (
@@ -44,7 +44,8 @@ class StatusMessageComponent:
     @classmethod
     def display_status_message(cls):
         """
-        Display the current status message stored in the session state
+        Display the current status message stored in the session state.
+        If no status message is stored, display a default informational message.
         """
         status_message = st.session_state.get(cls.STATUS_MESSAGE_KEY, None)
         logger.debug("Received status message from session state: %s",
@@ -59,7 +60,7 @@ class StatusMessageComponent:
     @classmethod
     def clear_status_message(cls):
         """
-        Clear the current status message from the session state
+        Clear the current status message from the session state.
         """
         if cls.STATUS_MESSAGE_KEY in st.session_state:
             logger.debug("Clearing status message from session state")

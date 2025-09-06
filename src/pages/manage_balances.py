@@ -120,12 +120,12 @@ if update_record:
                 "The balance for this date already exists",
                 "⚠️"
             )
-        except  sqlalchemy.exc.SQLAlchemyError as e:
+        except sqlalchemy.exc.SQLAlchemyError as e:
             StatusMessageComponent.set_status_message(
                 st.error,
                 f"Unexpected SQL error: {str(e)}",
                 "❗"
-            )
+                )
         else:
             # if the update is successful, display a success message and refresh the dataframe
             StatusMessageComponent.set_status_message(
