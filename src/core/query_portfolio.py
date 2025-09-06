@@ -42,7 +42,8 @@ def get_balance_history(account_id: int,
     Arguments:
         account_id -- The ID of the account to retrieve balances for.
         period -- The time period for which to retrieve balances.
-
+        ascending -- Whether to sort the results in ascending order by date (default is False).
+        
     Returns:
         A pandas DataFrame containing the balance history, indexed by date.
     """
