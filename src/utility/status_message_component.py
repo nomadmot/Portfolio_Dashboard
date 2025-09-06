@@ -17,6 +17,11 @@ class StatusMessageComponent:
     Implements a utility component for managing and displaying
     a status message in a Streamlit page. Uses class methods for
     all functionality to avoid the need for instantiation.
+
+    The use case for this component is to display a status message
+    from session state when the page is refreshed using st.rerun()
+    after a user interaction. Otherwise, use standard Streamlit
+    functions to display status messages.
     """
     STATUS_MESSAGE_KEY = "status_message_component"
 
