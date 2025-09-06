@@ -12,27 +12,15 @@ from core import (
     delete_daily_balance
 )
 from services import Periods
+from utility import StatusMessageComponent
 
 # constants for streamlit session state
-CURRENT_MESSAGE = "current_message"
 DAILY_BALANCE_TABLE = "daily_balance_table"
 UPDATE_BALANCE = "update_balance"
 UPDATE_DATE = "update_date"
 UPDATE_MESSAGE = "update_message"
 UPDATE_BALANCE_BUTTON = "update_balance_button"
 DELETE_BALANCE_BUTTON = "delete_balance_button"
-
-# function to set current message in session state
-def set_current_message(function, text, icon):
-    """
-    store the data needed to display the current status message
-    into the session state for later retrieval and display.
-    """
-    st.session_state[CURRENT_MESSAGE] = (
-                        function,
-                        text,
-                        icon
-    )
 
 
 # initialize data variables
@@ -98,13 +86,8 @@ with update_container:
 
     # message area for displaying update results
     update_message = st.empty()
-    current_message = st.session_state.get(CURRENT_MESSAGE, None)
-    if current_message is not None:
-        msg_function, msg_text, msg_icon = current_message
-        with update_message:
-            msg_function(msg_text, icon=msg_icon)
-    else:
-        update_message.info("This area will display messages related to balance updates")
+    with update_message:
+        StatusMessageComponent.display_status_message()
 
 # display the balance history for a specific account
 daily_balance_table = st.dataframe(
@@ -126,20 +109,26 @@ if update_record:
         try:
             update_daily_balance(1, update_balance, update_date)
         except ValueError as e:
-            update_message.warning(str(e), icon="⚠️")
+            StatusMessageComponent.set_status_message(
+                st.warning,
+                str(e),
+                "⚠️"
+                )
         except sqlalchemy.exc.IntegrityError as e:
-            update_message.warning(
+            StatusMessageComponent.set_status_message(
+                st.warning,
                 "The balance for this date already exists",
-                icon="⚠️"
+                "⚠️"
             )
         except  sqlalchemy.exc.SQLAlchemyError as e:
-            update_message.error(
+            StatusMessageComponent.set_status_message(
+                st.error,
                 f"Unexpected SQL error: {str(e)}",
-                icon="❗"
+                "❗"
             )
         else:
             # if the update is successful, display a success message and refresh the dataframe
-            set_current_message(
+            StatusMessageComponent.set_status_message(
                 st.success,
                 f"Balance for {update_date} updated to {update_balance:.2f} successfully!",
                 "✅"
@@ -152,16 +141,21 @@ if delete_record:
         try:
             delete_daily_balance(1, update_date)
         except ValueError as e:
-            update_message.warning(str(e), icon="⚠️")
+            StatusMessageComponent.set_status_message(
+                st.warning,
+                str(e),
+                "⚠️"
+                )
         except  sqlalchemy.exc.SQLAlchemyError as e:
-            update_message.error(
+            StatusMessageComponent.set_status_message(
+                st.error,
                 f"Unexpected SQL error: {str(e)}",
-                icon="❗"
+                "❗"
                 )
 
         else:
             # if the update is successful, display a success message
-            st.session_state[CURRENT_MESSAGE] = (
+            StatusMessageComponent.set_status_message(
                 st.success,
                 f"Balance for {update_date} deleted successfully!",
                 "✅"
