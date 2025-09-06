@@ -109,22 +109,19 @@ if update_record:
         try:
             update_daily_balance(1, update_balance, update_date)
         except ValueError as e:
-            StatusMessageComponent.set_status_message(
-                st.warning,
+            update_message.warning(
                 str(e),
-                "⚠️"
+                icon="⚠️"
                 )
         except sqlalchemy.exc.IntegrityError as e:
-            StatusMessageComponent.set_status_message(
-                st.warning,
+            update_message.warning(
                 "The balance for this date already exists",
-                "⚠️"
+                icon="⚠️"
             )
         except sqlalchemy.exc.SQLAlchemyError as e:
-            StatusMessageComponent.set_status_message(
-                st.error,
+            update_message.error(
                 f"Unexpected SQL error: {str(e)}",
-                "❗"
+                icon="❗"
                 )
         else:
             # if the update is successful, display a success message and refresh the dataframe
@@ -141,16 +138,14 @@ if delete_record:
         try:
             delete_daily_balance(1, update_date)
         except ValueError as e:
-            StatusMessageComponent.set_status_message(
-                st.warning,
+            update_message.warning(
                 str(e),
-                "⚠️"
+                icon="⚠️"
                 )
         except sqlalchemy.exc.SQLAlchemyError as e:
-            StatusMessageComponent.set_status_message(
-                st.error,
+            update_message.error(
                 f"Unexpected SQL error: {str(e)}",
-                "❗"
+                icon="❗"
                 )
 
         else:
