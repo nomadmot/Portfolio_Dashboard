@@ -146,7 +146,7 @@ if delete_record:
                 str(e),
                 "⚠️"
                 )
-        except  sqlalchemy.exc.SQLAlchemyError as e:
+        except sqlalchemy.exc.SQLAlchemyError as e:
             StatusMessageComponent.set_status_message(
                 st.error,
                 f"Unexpected SQL error: {str(e)}",
