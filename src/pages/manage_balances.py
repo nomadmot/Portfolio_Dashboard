@@ -14,11 +14,26 @@ from core import (
 from services import Periods
 
 # constants for streamlit session state
+CURRENT_MESSAGE = "current_message"
 DAILY_BALANCE_TABLE = "daily_balance_table"
 UPDATE_BALANCE = "update_balance"
 UPDATE_DATE = "update_date"
+UPDATE_MESSAGE = "update_message"
 UPDATE_BALANCE_BUTTON = "update_balance_button"
 DELETE_BALANCE_BUTTON = "delete_balance_button"
+
+# function to set current message in session state
+def set_current_message(function, text, icon):
+    """
+    store the data needed to display the current status message
+    into the session state for later retrieval and display.
+    """
+    st.session_state[CURRENT_MESSAGE] = (
+                        function,
+                        text,
+                        icon
+    )
+
 
 # initialize data variables
 history = get_balance_history(account_id=1,
@@ -74,16 +89,21 @@ with update_container:
         update_record = st.button("Update",
                         help="Click to update the database with the new balance",
                         key=UPDATE_BALANCE_BUTTON,
-                        )
+                )
         # button to delete the balance for the selected date
         delete_record = st.button("Delete",
                         help="Click to delete the balance for the selected date",
                         key=DELETE_BALANCE_BUTTON,
-                        )
+                )
 
     # message area for displaying update results
     update_message = st.empty()
-    update_message.info("This area will display messages related to balance updates")
+    current_message = st.session_state.get(CURRENT_MESSAGE, None)
+    if current_message is not None:
+        msg_function, msg_text, msg_icon = current_message
+        msg_function(msg_text, icon=msg_icon)
+    else:
+        update_message.info("This area will display messages related to balance updates")
 
 # display the balance history for a specific account
 daily_balance_table = st.dataframe(
@@ -110,18 +130,20 @@ if update_record:
             update_message.warning(
                 "The balance for this date already exists",
                 icon="⚠️"
-                )
+            )
         except  sqlalchemy.exc.SQLAlchemyError as e:
             update_message.error(
                 f"Unexpected SQL error: {str(e)}",
                 icon="❗"
-                )
+            )
         else:
             # if the update is successful, display a success message and refresh the dataframe
-            update_message.success(
+            set_current_message(
+                st.success,
                 f"Balance for {update_date} updated to {update_balance:.2f} successfully!",
-                icon="✅"
+                "✅"
             )
+            st.rerun()
 
     # handle the delete button click
 if delete_record:
@@ -138,7 +160,9 @@ if delete_record:
 
         else:
             # if the update is successful, display a success message
-            update_message.success(
+            st.session_state[CURRENT_MESSAGE] = (
+                st.success,
                 f"Balance for {update_date} deleted successfully!",
-                icon="✅"
-            )
+                "✅"
+                )
+            st.rerun()
