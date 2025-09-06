@@ -101,7 +101,8 @@ with update_container:
     current_message = st.session_state.get(CURRENT_MESSAGE, None)
     if current_message is not None:
         msg_function, msg_text, msg_icon = current_message
-        msg_function(msg_text, icon=msg_icon)
+        with update_message:
+            msg_function(msg_text, icon=msg_icon)
     else:
         update_message.info("This area will display messages related to balance updates")
 
