@@ -11,19 +11,22 @@ from core import (
     update_daily_balance,
     delete_daily_balance
 )
+from services import Periods
+from utility import StatusMessageComponent
 
 # constants for streamlit session state
 DAILY_BALANCE_TABLE = "daily_balance_table"
 UPDATE_BALANCE = "update_balance"
 UPDATE_DATE = "update_date"
+UPDATE_MESSAGE = "update_message"
 UPDATE_BALANCE_BUTTON = "update_balance_button"
 DELETE_BALANCE_BUTTON = "delete_balance_button"
 
+
 # initialize data variables
-history = get_balance_history(account_id=1)
-# sort the history by date in descending order
-history.sort_values(by="date", ascending=False, inplace=True)
-history.reset_index(drop=True, inplace=True)
+history = get_balance_history(account_id=1,
+                              period=Periods.YR1,
+                              ascending=False)
 
 # if a row is selected, retrieve the date and balance
 selected_row = st.session_state.get("daily_balance_table")
@@ -74,16 +77,17 @@ with update_container:
         update_record = st.button("Update",
                         help="Click to update the database with the new balance",
                         key=UPDATE_BALANCE_BUTTON,
-                        )
+                )
         # button to delete the balance for the selected date
         delete_record = st.button("Delete",
                         help="Click to delete the balance for the selected date",
                         key=DELETE_BALANCE_BUTTON,
-                        )
+                )
 
     # message area for displaying update results
     update_message = st.empty()
-    update_message.info("This area will display messages related to balance updates")
+    with update_message:
+        StatusMessageComponent.display_status_message()
 
 # display the balance history for a specific account
 daily_balance_table = st.dataframe(
@@ -105,23 +109,31 @@ if update_record:
         try:
             update_daily_balance(1, update_balance, update_date)
         except ValueError as e:
-            update_message.warning(str(e), icon="⚠️")
-        except sqlalchemy.exc.IntegrityError as e:
-            update_message.warning(
-                "The balance for this date already exists",
-                icon="⚠️"
+            StatusMessageComponent.set_status_message(
+                st.warning,
+                str(e),
+                "⚠️"
                 )
-        except  sqlalchemy.exc.SQLAlchemyError as e:
-            update_message.error(
+        except sqlalchemy.exc.IntegrityError as e:
+            StatusMessageComponent.set_status_message(
+                st.warning,
+                "The balance for this date already exists",
+                "⚠️"
+            )
+        except sqlalchemy.exc.SQLAlchemyError as e:
+            StatusMessageComponent.set_status_message(
+                st.error,
                 f"Unexpected SQL error: {str(e)}",
-                icon="❗"
+                "❗"
                 )
         else:
             # if the update is successful, display a success message and refresh the dataframe
-            update_message.success(
+            StatusMessageComponent.set_status_message(
+                st.success,
                 f"Balance for {update_date} updated to {update_balance:.2f} successfully!",
-                icon="✅"
+                "✅"
             )
+            st.rerun()
 
     # handle the delete button click
 if delete_record:
@@ -129,15 +141,23 @@ if delete_record:
         try:
             delete_daily_balance(1, update_date)
         except ValueError as e:
-            update_message.warning(str(e), icon="⚠️")
-        except  sqlalchemy.exc.SQLAlchemyError as e:
-            update_message.error(
-                f"Unexpected SQL error: {str(e)}",
-                icon="❗"
+            StatusMessageComponent.set_status_message(
+                st.warning,
+                str(e),
+                "⚠️"
                 )
+        except sqlalchemy.exc.SQLAlchemyError as e:
+            StatusMessageComponent.set_status_message(
+                st.error,
+                f"Unexpected SQL error: {str(e)}",
+                "❗"
+                )
+
         else:
             # if the update is successful, display a success message
-            update_message.success(
+            StatusMessageComponent.set_status_message(
+                st.success,
                 f"Balance for {update_date} deleted successfully!",
-                icon="✅"
-            )
+                "✅"
+                )
+            st.rerun()
