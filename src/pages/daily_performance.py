@@ -116,7 +116,8 @@ with st.container(horizontal=True,
     # create a selectbox to select the number of days for the chart
     selected_period = st.selectbox(
                             "Select Period:",
-                            Periods.get_display_periods(),
+                            Periods.get_periods(),
+                            format_func=Periods.get_label,
                             index=1,
                             width=300)
     # create a selectbox to select the comparison symbol for the chart
