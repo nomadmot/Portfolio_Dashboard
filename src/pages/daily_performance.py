@@ -53,27 +53,28 @@ def plot_daily_balance(period, compare = "SPY", account_id=1):
     df_balances['21_day_avg'] = \
         df_balances['pct_change'].rolling(window=21).mean()
 
-    # fetch historical SPY data since the begin date
-    spy_data: pd.DataFrame = get_stock_history(
+    # fetch historical data for the comparison ticker
+    # since the begin date
+    comp_data: pd.DataFrame = get_stock_history(
                     compare,
                     start_date=begin_date,
                     end_date=end_date)
 
     # calculate the cumulative percent change for SPY
-    spy_data['pct_change'] = \
-        spy_data['Close'].rolling(window=2).apply(
+    comp_data['pct_change'] = \
+        comp_data['Close'].rolling(window=2).apply(
             lambda x: (x.iloc[1] - x.iloc[0]) / x.iloc[0]
         ).cumsum()
     # set the first day pct_change to 0
-    spy_data.loc[0, 'pct_change'] = 0
+    comp_data.loc[0, 'pct_change'] = 0
 
     # prepare data for plotting
     dates: List[pd.Timestamp] = list(df_balances['date'])
     change: List[float] = list(df_balances['pct_change'])
     avg_10: List[float] = list(df_balances['10_day_avg'])
     avg_21: List[float] = list(df_balances['21_day_avg'])
-    spy: List[float] = list(spy_data['pct_change'])
-    spy_dt: List[pd.Timestamp] = list(spy_data['Date'])
+    comp_performance: List[float] = list(comp_data['pct_change'])
+    comp_date: List[pd.Timestamp] = list(comp_data['Date'])
 
     # create the plot
     fig: go.Figure = go.Figure(data=go.Scatter(x=dates, y=change,
@@ -88,7 +89,7 @@ def plot_daily_balance(period, compare = "SPY", account_id=1):
             mode='lines', name='21-day Avg',
             line=dict(color='green')
         ))
-    fig.add_trace(go.Scatter(x=spy_dt, y=spy,
+    fig.add_trace(go.Scatter(x=comp_date, y=comp_performance,
             mode='lines', name=compare,
             line=dict(color='darkgrey')
         ))
