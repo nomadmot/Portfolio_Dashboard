@@ -34,7 +34,7 @@ def get_account(account_id: int) -> Account:
     return Account(result[0], result[1], trades=[])
 
 def get_balance_history(account_id: int,
-                        period: Periods = Periods.ALL,
+                        period: str = Periods.ALL.value,
                         ascending: bool = False) -> DataFrame:
     """
     Retrieve the balance history for the specified account and time period.
