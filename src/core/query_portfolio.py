@@ -72,6 +72,8 @@ def get_balance_history(account_id: int,
     stmt = select(DailyBalance).where(DailyBalance.account_id == account_id)
 
     # apply filters based on the provided parameters
+    if chart_days is not None and begin_date is not None:
+        raise ValueError("Chart days and begin date cannot both be specified.")
     if chart_days is not None:
         stmt = stmt.order_by(DailyBalance.date.desc()).limit(chart_days)
     elif begin_date is not None:
