@@ -11,7 +11,7 @@ from core import (
     update_daily_balance,
     delete_daily_balance
 )
-from services import Periods
+from core import Periods
 from utility import StatusMessageComponent
 
 # constants for streamlit session state
@@ -25,7 +25,7 @@ DELETE_BALANCE_BUTTON = "delete_balance_button"
 
 # initialize data variables
 history = get_balance_history(account_id=1,
-                              period=Periods.YR1,
+                              period=Periods.ALL.value,
                               ascending=False)
 
 # if a row is selected, retrieve the date and balance
