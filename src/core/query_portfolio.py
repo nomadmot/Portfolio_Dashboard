@@ -9,7 +9,7 @@ from pandas import DataFrame
 # Import local modules
 import config
 from models.portfolio import DailyBalance, Account
-from services import Periods
+from core import Periods
 
 def get_account(account_id: int) -> Account:
     """
@@ -34,7 +34,7 @@ def get_account(account_id: int) -> Account:
     return Account(result[0], result[1], trades=[])
 
 def get_balance_history(account_id: int,
-                        period: Periods,
+                        period: Periods = Periods.ALL,
                         ascending: bool = False) -> DataFrame:
     """
     Retrieve the balance history for the specified account and time period.
@@ -51,14 +51,22 @@ def get_balance_history(account_id: int,
     chart_days = None
     begin_date = None
     match(period):
-        case(Periods.M1.value):
+        case Periods.D30:
             chart_days = 30
-        case(Periods.M3.value):
+        case Periods.D50:
+            chart_days = 50
+        case Periods.D90:
             chart_days = 90
-        case(Periods.YTD.value):
+        case Periods.YTD:
             begin_date = date(date.today().year, 1, 1)
-        case(Periods.YR1.value):
+        case Periods.YR1:
             begin_date = date(date.today().year -1, date.today().month, date.today().day)
+        case Periods.ALL:
+            # no specific period, return all balances
+            pass
+        case _:
+            # raise an error if the period is not recognized
+            raise ValueError(f"Invalid period: {period}")
 
     # generate a sqlalchemy select statement to retrieve the balances
     stmt = select(DailyBalance).where(DailyBalance.account_id == account_id)
