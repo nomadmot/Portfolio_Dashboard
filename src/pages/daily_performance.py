@@ -117,7 +117,7 @@ with st.container(horizontal=True,
     selected_period = st.selectbox(
                             "Select Period:",
                             Periods.get_display_periods(),
-                            index=0,
+                            index=1,
                             width=300)
     # create a selectbox to select the comparison symbol for the chart
     selected_comparison = st.selectbox(
