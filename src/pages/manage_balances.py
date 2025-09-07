@@ -25,7 +25,7 @@ DELETE_BALANCE_BUTTON = "delete_balance_button"
 
 # initialize data variables
 history = get_balance_history(account_id=1,
-                              period=Periods.ALL.value,
+                              period=Periods.ALL,
                               ascending=False)
 
 # if a row is selected, retrieve the date and balance
