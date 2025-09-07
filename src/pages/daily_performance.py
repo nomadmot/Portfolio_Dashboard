@@ -94,7 +94,7 @@ def plot_daily_balance(period, compare = "SPY", account_id=1):
         ))
 
     fig.update_layout(
-        title=f'Performance for {account_name} over period of {period}',
+        title=f'Performance for {account_name} over period of {period.value}',
         xaxis_title='Date', yaxis_title='Cumulative Percent Change',
         hovermode="x"
     )
