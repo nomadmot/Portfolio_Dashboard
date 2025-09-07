@@ -51,17 +51,17 @@ def get_balance_history(account_id: int,
     chart_days = None
     begin_date = None
     match(period):
-        case Periods.D30:
+        case Periods.D30.value:
             chart_days = 30
-        case Periods.D50:
+        case Periods.D50.value:
             chart_days = 50
-        case Periods.D90:
+        case Periods.D90.value:
             chart_days = 90
-        case Periods.YTD:
+        case Periods.YTD.value:
             begin_date = date(date.today().year, 1, 1)
-        case Periods.YR1:
+        case Periods.YR1.value:
             begin_date = date(date.today().year -1, date.today().month, date.today().day)
-        case Periods.ALL:
+        case Periods.ALL.value:
             # no specific period, return all balances
             pass
         case _:
