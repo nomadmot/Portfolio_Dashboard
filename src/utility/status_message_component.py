@@ -36,6 +36,12 @@ class StatusMessageComponent:
             msg_text,
             msg_icon
         )
+
+        # Write out the message to the current interface
+        logger.debug("Writing status message to UI: %s", status_message)
+        msg_function(msg_text, icon=msg_icon)
+
+        # Store the message in session state for later retrieval
         logger.debug("Setting status message in session state: %s",
                      status_message
                      )
