@@ -11,13 +11,11 @@ import plotly.graph_objects as go
 
 # Import local modules
 from core import (
+    Periods,
     get_account,
     get_balance_history,
 )
-from services import(
-    get_stock_history,
-    Periods
-    )
+from services import get_stock_history
 
 # function to draw a graph comparing cumulative performance for the selected portfolio and SPY
 def plot_daily_balance(period, compare = "SPY", account_id=1):
@@ -118,12 +116,8 @@ with st.container(horizontal=True,
     # create a selectbox to select the number of days for the chart
     selected_period = st.selectbox(
                             "Select Period:",
-                            [Periods.M1.value,
-                             Periods.M3.value,
-                             Periods.YTD.value,
-                             Periods.YR1.value,
-                             ],
-                            index=0,
+                            Periods.get_display_periods(),
+                            index=1,
                             width=300)
     # create a selectbox to select the comparison symbol for the chart
     selected_comparison = st.selectbox(

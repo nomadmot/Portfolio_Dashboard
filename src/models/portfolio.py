@@ -102,7 +102,7 @@ class Security:
     def __repr__(self):
         return (f"<Security(symbol={self.symbol!r}, "
                 f"name={self.name!r}, security_type="
-                "{self.security_type!r}, "
+                f"{self.security_type!r}, "
                 f"associated_symbol={self.associated_symbol!r})>"
                 )
 
