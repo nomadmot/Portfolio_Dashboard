@@ -3,10 +3,10 @@ this module contains a script to test the stock data retrieval
 and processing functions
 """
 
-from services import Periods, get_stock_history
+from services import YfPeriods, get_stock_history
 
 # retrieve stock history for 'AAPL' for the last month
-aapl_data = get_stock_history('AAPL', days=Periods.M1)
+aapl_data = get_stock_history('AAPL', days=YfPeriods.M1)
 print(aapl_data)
 
 

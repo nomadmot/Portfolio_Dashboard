@@ -5,7 +5,7 @@ from enum import Enum
 import pandas as pd
 import yfinance as yf
 
-class Periods(Enum):
+class YfPeriods(Enum):
     """
     Enumeration for time period selections
     """
