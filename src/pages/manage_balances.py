@@ -109,30 +109,34 @@ if update_record:
         try:
             update_daily_balance(1, update_balance, update_date)
         except ValueError as e:
-            StatusMessageComponent.set_status_message(
-                st.warning,
-                str(e),
-                "⚠️"
-                )
+            with update_message:
+                StatusMessageComponent.set_status_message(
+                    st.warning,
+                    str(e),
+                    "⚠️"
+                    )
         except sqlalchemy.exc.IntegrityError as e:
-            StatusMessageComponent.set_status_message(
-                st.warning,
-                "The balance for this date already exists",
-                "⚠️"
-            )
-        except sqlalchemy.exc.SQLAlchemyError as e:
-            StatusMessageComponent.set_status_message(
-                st.error,
-                f"Unexpected SQL error: {str(e)}",
-                "❗"
+            with update_message:
+                StatusMessageComponent.set_status_message(
+                    st.warning,
+                    "The balance for this date already exists",
+                    "⚠️"
                 )
+        except sqlalchemy.exc.SQLAlchemyError as e:
+            with update_message:
+                StatusMessageComponent.set_status_message(
+                    st.error,
+                    f"Unexpected SQL error: {str(e)}",
+                    "❗"
+                    )
         else:
             # if the update is successful, display a success message and refresh the dataframe
-            StatusMessageComponent.set_status_message(
-                st.success,
-                f"Balance for {update_date} updated to {update_balance:.2f} successfully!",
-                "✅"
-            )
+            with update_message:
+                StatusMessageComponent.set_status_message(
+                    st.success,
+                    f"Balance for {update_date} updated to {update_balance:.2f} successfully!",
+                    "✅"
+                )
             st.rerun()
 
     # handle the delete button click
@@ -141,23 +145,26 @@ if delete_record:
         try:
             delete_daily_balance(1, update_date)
         except ValueError as e:
-            StatusMessageComponent.set_status_message(
-                st.warning,
-                str(e),
-                "⚠️"
-                )
+            with update_message:
+                StatusMessageComponent.set_status_message(
+                    st.warning,
+                    str(e),
+                    "⚠️"
+                    )
         except sqlalchemy.exc.SQLAlchemyError as e:
-            StatusMessageComponent.set_status_message(
-                st.error,
-                f"Unexpected SQL error: {str(e)}",
-                "❗"
-                )
+            with update_message:
+                StatusMessageComponent.set_status_message(
+                    st.error,
+                    f"Unexpected SQL error: {str(e)}",
+                    "❗"
+                    )
 
         else:
             # if the update is successful, display a success message
-            StatusMessageComponent.set_status_message(
-                st.success,
-                f"Balance for {update_date} deleted successfully!",
-                "✅"
-                )
+            with update_message:
+                StatusMessageComponent.set_status_message(
+                    st.success,
+                    f"Balance for {update_date} deleted successfully!",
+                    "✅"
+                    )
             st.rerun()
