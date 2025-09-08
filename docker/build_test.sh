@@ -1,6 +1,6 @@
 #! /bin/zsh
 # This script builds the container image for the project.
-IMAGE_NAME=portfolio-dashboard
+IMAGE_NAME=portfolio-dashboard-test
 echo "Building the container image: $IMAGE_NAME"
 
 # Remove any existing image with the same name
@@ -15,9 +15,9 @@ IMAGE_ID=`cat image_id`
 echo "Successfully built image with ID: $IMAGE_ID"
 
 # initialize the container
-docker/init.sh
+docker/init_test.sh
 
 # push to DockerHub
-echo "Pushing image $IMAGE_ID to DockerHub as $IMAGE_NAME"
+echo "Pushing image $IMAGE_ID to DockerHub"
 podman login docker.io
 podman push $IMAGE_ID tdamon/nomadmot:$IMAGE_NAME
