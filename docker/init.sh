@@ -14,4 +14,3 @@ podman run -it --detach --replace \
     -v $WORKSPACE_DIR:$MOUNT_DIR \
     -p 8080:8080 \
     portfolio-dashboard:latest
-# run the configuration script
