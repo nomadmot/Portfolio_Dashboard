@@ -14,14 +14,19 @@ class Periods(Enum):
     YR1 = "1 Year"
     ALL = "All"
 
-    PERIODS = [D30, D50, D90, YTD, YR1, ALL]
+    @classmethod
+    def get_periods(cls):
+        """
+        Provide a list of Period enum members
+        """
+        return [item[1] for item in cls.__members__.items()]
 
     @classmethod
-    def get_display_periods(cls) -> list:
+    def get_label(cls, item)-> str:
         """
-        provide a list of display values for period selection
+        provide a label for the period selection dropdown
 
         Returns:
-            list of display values for period selection
+            label for the period selection dropdown
         """
-        return cls.PERIODS.value
+        return item.value
