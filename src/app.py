@@ -1,9 +1,13 @@
 '''
 Main application file for the Portfolio Dashboard using Streamlit
 '''
+#standard library imports
 import streamlit as st
 import streamlit.logger
+
+#local application imports
 import config
+from utility import StatusMessageComponent
 
 # Initialize logging
 logger = streamlit.logger.get_logger(st.__name__)
@@ -27,3 +31,6 @@ pg = st.navigation(pages,
 
 # Display the selected page
 pg.run()
+
+# Clear out any status messages left in the session state
+StatusMessageComponent.clear_status_message()

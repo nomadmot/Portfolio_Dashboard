@@ -9,7 +9,7 @@ from pandas import DataFrame
 # Import local modules
 import config
 from models.portfolio import DailyBalance, Account
-#from data import Periods
+from core import Periods
 
 def get_account(account_id: int) -> Account:
     """
@@ -33,43 +33,47 @@ def get_account(account_id: int) -> Account:
     # return the Account object
     return Account(result[0], result[1], trades=[])
 
-def get_balance_history(account_id:int, period=None) -> DataFrame:
+def get_balance_history(account_id: int,
+                        period: Periods = Periods.ALL,
+                        ascending: bool = False) -> DataFrame:
     """
     Retrieve the balance history for the specified account and time period.
 
     Arguments:
         account_id -- The ID of the account to retrieve balances for.
         period -- The time period for which to retrieve balances.
-
+        ascending -- Whether to sort the results in ascending order by date (default is False).
+        
     Returns:
         A pandas DataFrame containing the balance history, indexed by date.
     """
-    # import Periods enumeration
-    # needs to be here to avoid circular import
-    # pylint: disable-next=import-outside-toplevel
-    from data import Periods
-
     # set the number of days for the chart based on the selected period
     chart_days = None
     begin_date = None
     match(period):
-        case(Periods.D30.value):
+        case Periods.D30:
             chart_days = 30
-        case(Periods.D50.value):
+        case Periods.D50:
             chart_days = 50
-        case(Periods.D90.value):
+        case Periods.D90:
             chart_days = 90
-        case(Periods.YTD.value):
+        case Periods.YTD:
             begin_date = date(date.today().year, 1, 1)
-        case(Periods.YR1.value):
+        case Periods.YR1:
             begin_date = date(date.today().year -1, date.today().month, date.today().day)
-        case(None):
+        case Periods.ALL:
+            # no specific period, return all balances
             pass
+        case _:
+            # raise an error if the period is not recognized
+            raise ValueError(f"Invalid period: {period}")
 
     # generate a sqlalchemy select statement to retrieve the balances
     stmt = select(DailyBalance).where(DailyBalance.account_id == account_id)
 
     # apply filters based on the provided parameters
+    if chart_days is not None and begin_date is not None:
+        raise ValueError("Chart days and begin date cannot both be specified.")
     if chart_days is not None:
         stmt = stmt.order_by(DailyBalance.date.desc()).limit(chart_days)
     elif begin_date is not None:
@@ -85,8 +89,9 @@ def get_balance_history(account_id:int, period=None) -> DataFrame:
         'balance': balance.balance
     } for balance in result])
 
-    # ensure the DataFrame is sorted by date ascending
-    df_balances.sort_values('date', ascending=True, inplace=True)
+    # ensure the DataFrame is sorted by date as requested in
+    # the ascending parameter and reset the index for proper ordering
+    df_balances.sort_values('date', ascending=ascending, inplace=True)
     df_balances.reset_index(drop=True, inplace=True)
 
     return df_balances
