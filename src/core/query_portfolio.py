@@ -58,7 +58,7 @@ def get_balance_history(account_id: int,
         case Periods.D90:
             chart_days = 90
         case Periods.YTD:
-            begin_date = date(date.today().year, 1, 1)
+            begin_date = date(date.today().year-1, 12, 31)
         case Periods.YR1:
             begin_date = date(date.today().year -1, date.today().month, date.today().day)
         case Periods.ALL:
