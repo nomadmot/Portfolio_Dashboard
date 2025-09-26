@@ -4,6 +4,7 @@ This module contains functions to access and manipulate daily balance data.
 # Import necessary libraries
 from datetime import date
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 from pandas import DataFrame
 
 # Import local modules
@@ -22,16 +23,17 @@ def get_account(account_id: int) -> Account:
         The Account object corresponding to the given account_id.
     """
     # generate a sqlalchemy select statement to retrieve the account
-    stmt = select(Account).where(Account.id == account_id)
-    with config.DB_ENGINE.connect() as conn:
-        result = conn.execute(stmt).first()
+    with Session(config.DB_ENGINE) as session:
+        result = session.execute(
+            select(Account).where(Account.id == account_id)
+            ).first()
 
     # check if the result is None, which means the account does not exist
     if not result:
         raise ValueError(f"Account with ID {account_id} does not exist.")
 
     # return the Account object
-    return Account(result[0], result[1], trades=[])
+    return result[0]
 
 def get_balance_history(account_id: int,
                         period: Periods = Periods.ALL,
@@ -95,6 +97,3 @@ def get_balance_history(account_id: int,
     df_balances.reset_index(drop=True, inplace=True)
 
     return df_balances
-
-#if __name__ == "__main__":
-    #print(get_balance_history(1, days=30))
