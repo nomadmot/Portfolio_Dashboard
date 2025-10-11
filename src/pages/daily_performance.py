@@ -40,9 +40,9 @@ def plot_daily_balance(period, compare = "SPY", account_id=1):
 
     # calculate the cumulative percent change
     df_balances['pct_change'] = \
-        df_balances['balance'].rolling(window=2).apply(
-            lambda x: (x.iloc[1] - x.iloc[0]) / x.iloc[0]
-        ).cumsum()
+        df_balances['balance'].rolling(window=1).apply(
+            lambda x: (x.iloc[0] - df_balances['balance'][0]) / df_balances['balance'][0]
+        )
     # set the first day pct_change to 0
     df_balances.loc[0, 'pct_change'] = 0
 
@@ -60,11 +60,11 @@ def plot_daily_balance(period, compare = "SPY", account_id=1):
                     start_date=begin_date,
                     end_date=end_date)
 
-    # calculate the cumulative percent change for SPY
+    # calculate the cumulative percent change for the chosen comparison ticker
     comp_data['pct_change'] = \
-        comp_data['Close'].rolling(window=2).apply(
-            lambda x: (x.iloc[1] - x.iloc[0]) / x.iloc[0]
-        ).cumsum()
+        comp_data['Close'].rolling(window=1).apply(
+            lambda x: (x.iloc[0] - comp_data['Close'][0]) / comp_data['Close'][0]
+        )
     # set the first day pct_change to 0
     comp_data.loc[0, 'pct_change'] = 0
 
