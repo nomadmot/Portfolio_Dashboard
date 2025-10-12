@@ -76,6 +76,8 @@ def plot_daily_balance(period, balances, compare = "SPY", account_id=1):
     comp_data: pd.DataFrame = get_stock_history(
                     compare,
                     start_date=begin_date,
+                    end_date=end_date,
+                )
     # calculate the cumulative percent change for the chosen comparison ticker
     initial_close = comp_data['Close'].iloc[0]
     comp_data['pct_change'] = \
