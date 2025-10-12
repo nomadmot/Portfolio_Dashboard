@@ -20,9 +20,9 @@ from services import get_stock_history
 # function to draw a graph comparing cumulative performance for the selected portfolio and SPY
 def calculate_daily_balance(period, account_id=1):
     """
-    calculate the daily balance for a given account over a specified number of days.
+    Calculate the daily balance for a given account over a specified number of days.
 
-    :param days: The period over which performance will be calculated.
+    :param period: The period over which performance will be calculated.
     :param account_id: The account ID to plot (default is 1).
     """
 
@@ -32,10 +32,12 @@ def calculate_daily_balance(period, account_id=1):
                                       ascending=True
                                       )
 
+    # store the initial balance value for efficient calculation
+    initial_balance = df_balances['balance'].iloc[0]
     # calculate the cumulative percent change
     df_balances['pct_change'] = \
         df_balances['balance'].rolling(window=1).apply(
-            lambda x: (x.iloc[0] - df_balances['balance'][0]) / df_balances['balance'][0]
+            lambda x: (x.iloc[0] - initial_balance) / initial_balance
         )
     # set the first day pct_change to 0
     df_balances.loc[0, 'pct_change'] = 0
@@ -74,13 +76,14 @@ def plot_daily_balance(period, balances, compare = "SPY", account_id=1):
     comp_data: pd.DataFrame = get_stock_history(
                     compare,
                     start_date=begin_date,
-                    end_date=end_date)
-
     # calculate the cumulative percent change for the chosen comparison ticker
+    initial_close = comp_data['Close'].iloc[0]
     comp_data['pct_change'] = \
         comp_data['Close'].rolling(window=1).apply(
-            lambda x: (x.iloc[0] - comp_data['Close'][0]) / comp_data['Close'][0]
+            lambda x: (x.iloc[0] - initial_close) / initial_close
         )
+    # set the first day pct_change to 0
+    comp_data.loc[0, 'pct_change'] = 0
     # set the first day pct_change to 0
     comp_data.loc[0, 'pct_change'] = 0
 
