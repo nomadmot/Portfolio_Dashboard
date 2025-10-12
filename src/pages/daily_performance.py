@@ -93,7 +93,8 @@ def plot_daily_balance(period, balances, compare = "SPY", account_id=1):
     comp_date: List[pd.Timestamp] = list(comp_data['Date'])
 
     # create the plot
-    fig: go.Figure = go.Figure(data=go.Scatter(x=dates, y=change,
+    fig: go.Figure = go.Figure()
+    fig.add_trace(go.Scatter(x=dates, y=change,
             mode='lines' , name='Pct Change',
             line=dict(color='orange'),
         ))
@@ -107,13 +108,16 @@ def plot_daily_balance(period, balances, compare = "SPY", account_id=1):
         ))
     fig.add_trace(go.Scatter(x=comp_date, y=comp_performance,
             mode='lines', name=compare,
-            line=dict(color='darkgrey')
+            line=dict(color='darkgrey'),
+            # add the daily balance at the end of the hover text
+            customdata=balances[['balance']],
+            hovertemplate='%{y}<br>Balance: $%{customdata[0]:.2f}',
         ))
 
     fig.update_layout(
         title=f'Performance for {account_name} over period of {Periods.get_label(period)}',
         xaxis_title='Date', yaxis_title='Cumulative Percent Change',
-        hovermode="x"
+        hovermode="x unified"
     )
     fig.update_yaxes(dict(tickformat=".1%"))
 
