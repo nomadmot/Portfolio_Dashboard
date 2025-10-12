@@ -18,25 +18,19 @@ from core import (
 from services import get_stock_history
 
 # function to draw a graph comparing cumulative performance for the selected portfolio and SPY
-def plot_daily_balance(period, compare = "SPY", account_id=1):
+def calculate_daily_balance(period, account_id=1):
     """
-    Plot the daily balance for a given account over a specified number of days.
+    calculate the daily balance for a given account over a specified number of days.
 
-    :param days: The number of days to plot.
+    :param days: The period over which performance will be calculated.
     :param account_id: The account ID to plot (default is 1).
     """
-    # get the account name for the specified account ID
-    account_name = get_account(account_id).name
 
     # get the balance history for the specified account
     df_balances = get_balance_history(account_id=account_id,
                                       period=period,
                                       ascending=True
                                       )
-    # get the begin and end dates from the df_balances dataframe
-    dates = pd.to_datetime(df_balances['date']).astype('datetime64[ns]').tolist()
-    begin_date: date = dates[0]
-    end_date: date = dates[len(dates)-1] + timedelta(days=1)
 
     # calculate the cumulative percent change
     df_balances['pct_change'] = \
@@ -52,6 +46,28 @@ def plot_daily_balance(period, compare = "SPY", account_id=1):
     # calculate the 21-day moving average of the percentage change
     df_balances['21_day_avg'] = \
         df_balances['pct_change'].rolling(window=21).mean()
+
+    #return the dataframe for further processing
+    return df_balances
+
+
+# function to draw a graph comparing cumulative performance for the selected portfolio and SPY
+def plot_daily_balance(period, balances, compare = "SPY", account_id=1):
+    """
+    Plot the daily balance for a given account over a specified number of days.
+
+    :param period: The period to be displayed in the plot.
+    :param balances: The dataframe containing balance history and calculated fields.
+    :param compare: The ticker symbol to compare against (default is "SPY").
+    :param account_id: The account ID to plot (default is 1).
+    """
+    # get the account name for the specified account ID
+    account_name = get_account(account_id).name
+
+    # get the begin and end dates from the balances dataframe
+    dates = pd.to_datetime(balances['date']).astype('datetime64[ns]').tolist()
+    begin_date: date = dates[0]
+    end_date: date = dates[len(dates)-1] + timedelta(days=1)
 
     # fetch historical data for the comparison ticker
     # since the begin date
@@ -69,10 +85,10 @@ def plot_daily_balance(period, compare = "SPY", account_id=1):
     comp_data.loc[0, 'pct_change'] = 0
 
     # prepare data for plotting
-    dates: List[pd.Timestamp] = list(df_balances['date'])
-    change: List[float] = list(df_balances['pct_change'])
-    avg_10: List[float] = list(df_balances['10_day_avg'])
-    avg_21: List[float] = list(df_balances['21_day_avg'])
+    dates: List[pd.Timestamp] = list(balances['date'])
+    change: List[float] = list(balances['pct_change'])
+    avg_10: List[float] = list(balances['10_day_avg'])
+    avg_21: List[float] = list(balances['21_day_avg'])
     comp_performance: List[float] = list(comp_data['pct_change'])
     comp_date: List[pd.Timestamp] = list(comp_data['Date'])
 
@@ -103,6 +119,7 @@ def plot_daily_balance(period, compare = "SPY", account_id=1):
 
     return fig
 
+
 # configure the page layout
 st.set_page_config(layout="wide")
 
@@ -128,8 +145,17 @@ with st.container(horizontal=True,
                             index=0,
                             width=100)
 
+# calculate the daily balance for the selected period
+work_balances = calculate_daily_balance(selected_period,
+                                      account_id=1)
+
+# plot the daily balance for the selected period
 st.plotly_chart(plot_daily_balance(selected_period,
+                                   work_balances,
                                    selected_comparison,
                                    account_id=1),
                 use_container_width=True
                 )
+
+# page subheader
+st.subheader(f"Total Cumulative Performance for period: {work_balances['pct_change'].iloc[-1]:.1%}")
