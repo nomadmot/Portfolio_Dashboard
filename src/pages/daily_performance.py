@@ -86,8 +86,6 @@ def plot_daily_balance(period, balances, compare = "SPY", account_id=1):
         )
     # set the first day pct_change to 0
     comp_data.loc[0, 'pct_change'] = 0
-    # set the first day pct_change to 0
-    comp_data.loc[0, 'pct_change'] = 0
 
     # prepare data for plotting
     dates: List[pd.Timestamp] = list(balances['date'])
@@ -96,6 +94,19 @@ def plot_daily_balance(period, balances, compare = "SPY", account_id=1):
     avg_21: List[float] = list(balances['21_day_avg'])
     comp_performance: List[float] = list(comp_data['pct_change'])
     comp_date: List[pd.Timestamp] = list(comp_data['Date'])
+
+    # Align balances to comp_data dates so customdata lines up with comp_date
+    balances_dt = balances.copy()
+    balances_dt['date'] = pd.to_datetime(balances_dt['date'])
+    comp_dt = comp_data.copy()
+    if 'Date' in comp_dt.columns:
+        comp_dt['date'] = pd.to_datetime(comp_dt['Date'])
+    else:
+        comp_dt['date'] = pd.to_datetime(comp_dt['date'])
+
+    merged = pd.merge(comp_dt[['date']], balances_dt[['date', 'balance']], on='date', how='left')
+    merged['balance'] = merged['balance'].ffill().bfill()
+    aligned_balances: List[float] = list(merged['balance'])
 
     # create the plot
     fig: go.Figure = go.Figure()
@@ -115,7 +126,7 @@ def plot_daily_balance(period, balances, compare = "SPY", account_id=1):
             mode='lines', name=compare,
             line=dict(color='darkgrey'),
             # add the daily balance at the end of the hover text
-            customdata=balances[['balance']],
+            customdata=[[b] for b in aligned_balances],
             hovertemplate='%{y}<br>Balance: $%{customdata[0]:.2f}',
         ))
 
