@@ -5,6 +5,7 @@
             "name": "Python:Streamlit",
             "type": "debugpy",
             "request": "launch",
+            "cwd": "${fileDirname}",
             "module": "streamlit",
             "args": [
                 "run",
