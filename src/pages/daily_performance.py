@@ -78,24 +78,29 @@ def plot_daily_balance(period, balances, compare = "SPY", account_id=1):
                     start_date=begin_date,
                     end_date=end_date,
                 )
+    # drop the time component from the Date column
+    comp_data['Date'] = pd.to_datetime(comp_data['Date']).dt.date
+    # merge the balances with the comparison data
+    merged = pd.merge(comp_data, balances, how='left', left_on="Date", right_on="date")
+    # fill in any missing balance values
+    merged['balance'] = merged['balance'].ffill().bfill()
+    merged['pct_change'] = merged['pct_change'].ffill().bfill()
+
     # calculate the cumulative percent change for the chosen comparison ticker
-    initial_close = comp_data['Close'].iloc[0]
-    comp_data['pct_change'] = \
-        comp_data['Close'].rolling(window=1).apply(
+    initial_close = merged['Close'].iloc[0]
+    merged['comp_change'] = \
+        merged['Close'].rolling(window=1).apply(
             lambda x: (x.iloc[0] - initial_close) / initial_close
         )
     # set the first day pct_change to 0
-    comp_data.loc[0, 'pct_change'] = 0
-    # set the first day pct_change to 0
-    comp_data.loc[0, 'pct_change'] = 0
+    merged.loc[0, 'pct_change'] = 0
 
     # prepare data for plotting
-    dates: List[pd.Timestamp] = list(balances['date'])
-    change: List[float] = list(balances['pct_change'])
-    avg_10: List[float] = list(balances['10_day_avg'])
-    avg_21: List[float] = list(balances['21_day_avg'])
-    comp_performance: List[float] = list(comp_data['pct_change'])
-    comp_date: List[pd.Timestamp] = list(comp_data['Date'])
+    dates: List[pd.Timestamp] = list(merged['Date'])
+    change: List[float] = list(merged['pct_change'])
+    avg_10: List[float] = list(merged['10_day_avg'])
+    avg_21: List[float] = list(merged['21_day_avg'])
+    comparison: List[float] = list(merged['comp_change'])
 
     # create the plot
     fig: go.Figure = go.Figure()
@@ -111,11 +116,11 @@ def plot_daily_balance(period, balances, compare = "SPY", account_id=1):
             mode='lines', name='21-day Avg',
             line=dict(color='green')
         ))
-    fig.add_trace(go.Scatter(x=comp_date, y=comp_performance,
+    fig.add_trace(go.Scatter(x=dates, y=comparison,
             mode='lines', name=compare,
             line=dict(color='darkgrey'),
             # add the daily balance at the end of the hover text
-            customdata=balances[['balance']],
+            customdata=[[b] for b in merged['balance']],
             hovertemplate='%{y}<br>Balance: $%{customdata[0]:.2f}',
         ))
 
