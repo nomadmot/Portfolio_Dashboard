@@ -1,6 +1,5 @@
 """
-Update the daily balance for a specified account and day.
-Plot the daily performance of the account.
+Plot the daily performance of the specified account compared to a selected stock ticker.
 """
 # Import necessary libraries
 from typing import List
@@ -17,85 +16,44 @@ from core import (
 )
 from services import get_stock_history
 
-# function to draw a graph comparing cumulative performance for the selected portfolio and SPY
-def calculate_daily_balance(period, account_id=1):
+# function to calculate the cumulative performance for a given series
+def calculate_cumulative_performance(data: pd.Series):
     """
     Calculate the daily balance for a given account over a specified number of days.
 
-    :param period: The period over which performance will be calculated.
-    :param account_id: The account ID to plot (default is 1).
+    :param series: The series over which performance will be calculated.
     """
 
-    # get the balance history for the specified account
-    df_balances = get_balance_history(account_id=account_id,
-                                      period=period,
-                                      ascending=True
-                                      )
-
     # store the initial balance value for efficient calculation
-    initial_balance = df_balances['balance'].iloc[0]
+    initial_balance = data.iloc[0]
     # calculate the cumulative percent change
-    df_balances['pct_change'] = \
-        df_balances['balance'].rolling(window=1).apply(
+    ret_val = data.rolling(window=1).apply(
             lambda x: (x.iloc[0] - initial_balance) / initial_balance
-        )
+            )
     # set the first day pct_change to 0
-    df_balances.loc[0, 'pct_change'] = 0
-
-    # calculate the 10-day moving average of the percentage change
-    df_balances['10_day_avg'] = \
-        df_balances['pct_change'].rolling(window=10).mean()
-    # calculate the 21-day moving average of the percentage change
-    df_balances['21_day_avg'] = \
-        df_balances['pct_change'].rolling(window=21).mean()
+    ret_val.iloc[0] = 0
 
     #return the dataframe for further processing
-    return df_balances
-
+    return ret_val
 
 # function to draw a graph comparing cumulative performance for the selected portfolio and SPY
-def plot_daily_balance(period, balances, compare = "SPY", account_id=1):
+def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     """
     Plot the daily balance for a given account over a specified number of days.
 
-    :param period: The period to be displayed in the plot.
-    :param balances: The dataframe containing balance history and calculated fields.
-    :param compare: The ticker symbol to compare against (default is "SPY").
+    :param df: The dataframe containing balance and comparison data.
+    :param compare: The comparison ticker symbol.
     :param account_id: The account ID to plot (default is 1).
     """
     # get the account name for the specified account ID
     account_name = get_account(account_id).name
 
-    # get the begin and end dates from the balances dataframe
-    dates = pd.to_datetime(balances['date']).astype('datetime64[ns]').tolist()
-    begin_date: date = dates[0]
-    end_date: date = dates[len(dates)-1] + timedelta(days=1)
-
-    # fetch historical data for the comparison ticker
-    # since the begin date
-    comp_data: pd.DataFrame = get_stock_history(
-                    compare,
-                    start_date=begin_date,
-                    end_date=end_date,
-                )
-    # calculate the cumulative percent change for the chosen comparison ticker
-    initial_close = comp_data['Close'].iloc[0]
-    comp_data['pct_change'] = \
-        comp_data['Close'].rolling(window=1).apply(
-            lambda x: (x.iloc[0] - initial_close) / initial_close
-        )
-    # set the first day pct_change to 0
-    comp_data.loc[0, 'pct_change'] = 0
-    # set the first day pct_change to 0
-    comp_data.loc[0, 'pct_change'] = 0
-
     # prepare data for plotting
-    dates: List[pd.Timestamp] = list(balances['date'])
-    change: List[float] = list(balances['pct_change'])
-    avg_10: List[float] = list(balances['10_day_avg'])
-    avg_21: List[float] = list(balances['21_day_avg'])
-    comp_performance: List[float] = list(comp_data['pct_change'])
-    comp_date: List[pd.Timestamp] = list(comp_data['Date'])
+    dates: List[pd.Timestamp] = list(df['Date'])
+    change: List[float] = list(df['pct_change'])
+    avg_10: List[float] = list(df['10_day_avg'])
+    avg_21: List[float] = list(df['21_day_avg'])
+    comparison: List[float] = list(df['comp_change'])
 
     # create the plot
     fig: go.Figure = go.Figure()
@@ -111,16 +69,16 @@ def plot_daily_balance(period, balances, compare = "SPY", account_id=1):
             mode='lines', name='21-day Avg',
             line=dict(color='green')
         ))
-    fig.add_trace(go.Scatter(x=comp_date, y=comp_performance,
+    fig.add_trace(go.Scatter(x=dates, y=comparison,
             mode='lines', name=compare,
             line=dict(color='darkgrey'),
             # add the daily balance at the end of the hover text
-            customdata=balances[['balance']],
+            customdata=[[b] for b in df['balance']],
             hovertemplate='%{y}<br>Balance: $%{customdata[0]:.2f}',
         ))
 
     fig.update_layout(
-        title=f'Performance for {account_name} over period of {Periods.get_label(period)}',
+        title=f'Performance for {account_name}',
         xaxis_title='Date', yaxis_title='Cumulative Percent Change',
         hovermode="x unified"
     )
@@ -154,17 +112,51 @@ with st.container(horizontal=True,
                             index=0,
                             width=100)
 
-# calculate the daily balance for the selected period
-work_balances = calculate_daily_balance(selected_period,
-                                      account_id=1)
+# get the balance history for the specified account
+df_balances = get_balance_history(account_id=1,
+                                    period=selected_period,
+                                    ascending=True
+                                    )
+
+# get the begin and end dates from the balances dataframe
+work_dates = pd.to_datetime(df_balances['date']).astype('datetime64[ns]').tolist()
+begin_date: date = work_dates[0]
+end_date: date = work_dates[len(work_dates)-1] + timedelta(days=1)
+
+# fetch historical data for the comparison ticker
+# since the begin date
+df_comparison: pd.DataFrame = get_stock_history(
+                selected_comparison,
+                start_date=begin_date,
+                end_date=end_date,
+            )
+# drop the time component from the Date column
+df_comparison['Date'] = pd.to_datetime(df_comparison['Date']).dt.date
+# merge the balances with the comparison data
+merged = pd.merge(df_comparison, df_balances, how='left', left_on="Date", right_on="date")
+# fill in any missing balance values
+merged['balance'] = merged['balance'].ffill().bfill()
+
+# add the cumulative performance for the daily balances
+merged['pct_change'] = calculate_cumulative_performance(merged['balance'])
+# calculate the 10-day moving average of the percentage change
+merged['10_day_avg'] = merged['pct_change'].rolling(window=10).mean()
+# calculate the 21-day moving average of the percentage change
+merged['21_day_avg'] = merged['pct_change'].rolling(window=21).mean()
+# add the cululative prformance for the comparison ticker
+merged['comp_change'] = calculate_cumulative_performance(merged['Close'])
 
 # plot the daily balance for the selected period
-st.plotly_chart(plot_daily_balance(selected_period,
-                                   work_balances,
-                                   selected_comparison,
-                                   account_id=1),
+st.plotly_chart(plot_daily_balance(merged,
+                compare=selected_comparison,
+                account_id=1),
                 use_container_width=True
                 )
 
-# page subheader
-st.subheader(f"Total Cumulative Performance for period: {work_balances['pct_change'].iloc[-1]:.1%}")
+# summary subheader
+st.subheader(f"Total Cumulative Performance for period "
+             f"{Periods.get_label(selected_period)}: {merged['pct_change'].iloc[-1]:.1%}"
+             )
+st.subheader(f"Comparison ({selected_comparison}) Cumulative Performance: "
+         f"{merged['comp_change'].iloc[-1]:.1%}"
+         )
