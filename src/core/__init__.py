@@ -7,12 +7,14 @@ from core.periods import Periods
 
 from core.manage_portfolio_balances import (
     update_daily_balance,
-    delete_daily_balance
+    delete_daily_balance,
 )
 
 from core.query_portfolio import (
     get_account,
     get_balance_history,
+    get_security_symbols,
+    get_trades,
 )
 
 __all__ = [
@@ -21,4 +23,6 @@ __all__ = [
     "delete_daily_balance",
     "get_account",
     "get_balance_history",
+    "get_security_symbols",
+    "get_trades",
 ]
