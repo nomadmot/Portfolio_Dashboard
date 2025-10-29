@@ -28,3 +28,4 @@ symbols = st.multiselect(
 if symbols:
     trades = get_trades(symbols=symbols)
     st.table(trades)
+    st.subheader(f"Total Gain/Loss: ${trades['Amount'].sum():,.2f}")
