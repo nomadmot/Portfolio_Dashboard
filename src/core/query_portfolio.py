@@ -2,14 +2,15 @@
 This module contains functions to access and manipulate daily balance data.
 """
 # Import necessary libraries
+from typing import List
 from datetime import date
-from sqlalchemy import select
+from sqlalchemy import select, distinct
 from sqlalchemy.orm import Session
 from pandas import DataFrame
 
 # Import local modules
 import config
-from models.portfolio import DailyBalance, Account
+from models.portfolio import DailyBalance, Account, Security, Trade, SecurityType
 from core import Periods
 
 def get_account(account_id: int) -> Account:
@@ -97,3 +98,88 @@ def get_balance_history(account_id: int,
     df_balances.reset_index(drop=True, inplace=True)
 
     return df_balances
+
+# function to get a list of security symbols from the database
+def get_security_symbols(include_options=False) -> List[str]:
+    """
+    Get a list of security symbols from the database
+
+    Keyword Arguments:
+        include_options -- Select whether or not options are included
+         in the results (default: {False})
+
+    Returns:
+        A list of all security symbols in the database, optionally including options.
+    """
+    stmt = select(distinct(Security.symbol)).where(
+        Security.security_type != SecurityType.OPTION
+    )
+    with Session(config.DB_ENGINE) as session:
+        result = session.execute(stmt)
+    symbols = [symbol[0] for symbol in result]
+
+    # add the associated symbols for options if include_options is True
+    if include_options:
+        stmt = select(distinct(Security.symbol)).where(
+            Security.security_type == SecurityType.OPTION
+        )
+        with Session(config.DB_ENGINE) as session:
+            result = session.execute(stmt)
+        for row in result:
+            symbol = row[0]
+            if symbol not in symbols:
+                symbols.append(symbol)
+
+    # return the sorted list
+    symbols.sort()
+    return symbols
+
+# function to query the database for trades of the selected security
+def get_trades(symbols: List[str]) -> DataFrame:
+    """
+    Query the Trades table for the selected security symbols.
+
+    Arguments:
+        symbols -- a list of security symbols to query trades for.
+
+    Returns:
+        A pandas DataFrame containing the trades for the specified symbols.
+    """
+    stmt = select(
+                Security.security_type,
+                Security.name,
+                Trade.symbol,
+                Trade.trade_date,
+                Trade.trade_type,
+                Trade.quantity,
+                Trade.price,
+                Trade.fees
+        ).join(
+            Trade, Security.symbol == Trade.symbol
+        ).where(
+            Security.symbol.in_(symbols)
+        )
+
+    with Session(config.DB_ENGINE) as session:
+        db_result = session.execute(stmt)
+
+    # convert the trades to a list of Dict objects
+    trades = []
+    for row in db_result:
+        if row.security_type == SecurityType.OPTION:
+            # for options, multiply quantity by 100
+            trade_amount = row.quantity * row.price * 100
+        else:
+            trade_amount = row.quantity * row.price
+
+        trades.append({
+                    'Symbol': row.symbol,
+                    'Date': row.trade_date,
+                    'Type': row.trade_type,
+                    'Quantity': row.quantity,
+                    'Price': row.price,
+                    'Amount': -round(trade_amount),
+                    })
+
+    # sort the results and return a pandas Dataframe
+    return DataFrame(trades).sort_values('Date')

@@ -24,6 +24,7 @@ st.logo(image="images/Stock-Bull.png",)
 pages = [
          st.Page("pages/daily_performance.py", title="Daily Performance"),
          st.Page("pages/manage_balances.py", title="Manage Daily Balances"),
+         st.Page("pages/detail_performance.py", title="Detail Performance"),
         ]
 pg = st.navigation(pages,
                    position="top"
