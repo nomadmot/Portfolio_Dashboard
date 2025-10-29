@@ -101,8 +101,16 @@ def get_balance_history(account_id: int,
 
 # function to get a list of security symbols from the database
 def get_security_symbols(include_options=False) -> List[str]:
-    # get a list of security symbols from the database
-    # get the symbols for all securities except options
+    """
+    Get a list of security symbols from the database
+
+    Keyword Arguments:
+        include_options -- Select whether or not options are included
+         in the results (default: {False})
+
+    Returns:
+        A list of all security symbols in the database, optionally including options.
+    """
     stmt = select(distinct(Security.symbol)).where(
         Security.security_type != SecurityType.OPTION
     )
@@ -128,7 +136,15 @@ def get_security_symbols(include_options=False) -> List[str]:
 
 # function to query the database for trades of the selected security
 def get_trades(symbols: List[str]) -> DataFrame:
-    # query the trades for the selected security symbol
+    """
+    Query the Trades table for the selected security symbols.
+
+    Arguments:
+        symbols -- a list of security symbols to query trades for.
+
+    Returns:
+        A pandas DataFrame containing the trades for the specified symbols.
+    """
     stmt = select(
                 Security.security_type,
                 Security.name,
@@ -143,25 +159,6 @@ def get_trades(symbols: List[str]) -> DataFrame:
         ).where(
             Security.symbol.in_(symbols)
         )
-
-    # add options trades if include_options is True
-    # if include_options:
-    #     stmt = union_all(
-    #         stmt,
-    #         select(
-    #                         Security.security_type,
-    #                         Security.name,
-    #                         Trade.symbol,
-    #                         Trade.trade_date,
-    #                         Trade.trade_type,
-    #                         Trade.quantity,
-    #                         Trade.price,
-    #                         Trade.fees
-    #         ).where(and_(
-    #             Security.security_type == SecurityType.OPTION,
-    #             Security.associated_symbol == symbol
-    #         )).join(Security).filter(Security.associated_symbol == symbol)
-    #     )
 
     with Session(config.DB_ENGINE) as session:
         db_result = session.execute(stmt)
