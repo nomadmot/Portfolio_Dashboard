@@ -70,6 +70,7 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
 
     # prepare data for plotting
     dates: List[pd.Timestamp] = list(df['Date'])
+    dly_pct_change: List[float] = list(df['dly_pct_change'])
     change: List[float] = list(df['pct_change'])
     avg_10: List[float] = list(df['10_day_avg'])
     avg_21: List[float] = list(df['21_day_avg'])
@@ -78,7 +79,7 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     # create the plot
     fig: go.Figure = go.Figure()
     fig.add_trace(go.Scatter(x=dates, y=change,
-            mode='lines' , name='Pct Change',
+            mode='lines' , name='Cumulative Change',
             line=dict(color='orange'),
         ))
     fig.add_trace(go.Scatter(x=dates, y=avg_10,
@@ -92,6 +93,11 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     fig.add_trace(go.Scatter(x=dates, y=comparison,
             mode='lines', name=compare,
             line=dict(color='darkgrey'),
+        ))
+    fig.add_trace(go.Scatter(x=dates, y=dly_pct_change,
+            mode='lines' , name='Daily Change',
+            showlegend=False,
+            line=dict(width=0),
             # add the daily balance at the end of the hover text
             customdata=[[b] for b in df['balance']],
             hovertemplate='%{y}<br>Balance: $%{customdata[0]:.2f}',
