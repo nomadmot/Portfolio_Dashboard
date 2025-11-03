@@ -19,7 +19,7 @@ from services import get_stock_history
 # function to calculate the cumulative performance for a given series
 def calculate_cumulative_performance(data: pd.Series):
     """
-    Calculate the daily balance for a given account over a specified number of days.
+    Calculate the cumulative performance for a given account over a specified number of days.
 
     :param series: The series over which performance will be calculated.
     """
@@ -35,6 +35,26 @@ def calculate_cumulative_performance(data: pd.Series):
 
     #return the dataframe for further processing
     return ret_val
+
+
+# function to calculate the daily performance for a given series
+def calculate_daily_performance(data: pd.Series):
+    """
+    Calculate the daily performance for a given account over a specified number of days.
+
+    :param series: The series over which performance will be calculated.
+    """
+
+    # calculate the cumulative percent change
+    ret_val = data.rolling(window=2).apply(
+            lambda x: (x.iloc[1] - x.iloc[0]) / x.iloc[0]
+            )
+    # set the first day pct_change to 0
+    ret_val.iloc[0] = 0
+
+    #return the dataframe for further processing
+    return ret_val
+
 
 # function to draw a graph comparing cumulative performance for the selected portfolio and SPY
 def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
@@ -139,6 +159,8 @@ merged['balance'] = merged['balance'].ffill().bfill()
 
 # add the cumulative performance for the daily balances
 merged['pct_change'] = calculate_cumulative_performance(merged['balance'])
+# add the daily performance for the daily balances
+merged['dly_pct_change'] = calculate_daily_performance(merged['balance'])
 # calculate the 10-day moving average of the percentage change
 merged['10_day_avg'] = merged['pct_change'].rolling(window=10).mean()
 # calculate the 21-day moving average of the percentage change
