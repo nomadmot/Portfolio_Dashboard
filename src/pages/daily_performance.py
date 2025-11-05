@@ -19,7 +19,7 @@ from services import get_stock_history
 # function to calculate the cumulative performance for a given series
 def calculate_cumulative_performance(data: pd.Series):
     """
-    Calculate the daily balance for a given account over a specified number of days.
+    Calculate the cumulative performance for a given account over a specified number of days.
 
     :param series: The series over which performance will be calculated.
     """
@@ -36,6 +36,26 @@ def calculate_cumulative_performance(data: pd.Series):
     #return the dataframe for further processing
     return ret_val
 
+
+# function to calculate the daily performance for a given series
+def calculate_daily_performance(data: pd.Series):
+    """
+    Calculate the daily performance for a given account over a specified number of days.
+
+    :param series: The series over which performance will be calculated.
+    """
+
+    # calculate the cumulative percent change
+    ret_val = data.rolling(window=2).apply(
+            lambda x: (x.iloc[1] - x.iloc[0]) / x.iloc[0]
+            )
+    # set the first day pct_change to 0
+    ret_val.iloc[0] = 0
+
+    #return the dataframe for further processing
+    return ret_val
+
+
 # function to draw a graph comparing cumulative performance for the selected portfolio and SPY
 def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     """
@@ -50,6 +70,7 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
 
     # prepare data for plotting
     dates: List[pd.Timestamp] = list(df['Date'])
+    dly_pct_change: List[float] = list(df['dly_pct_change'])
     change: List[float] = list(df['pct_change'])
     avg_10: List[float] = list(df['10_day_avg'])
     avg_21: List[float] = list(df['21_day_avg'])
@@ -58,7 +79,7 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     # create the plot
     fig: go.Figure = go.Figure()
     fig.add_trace(go.Scatter(x=dates, y=change,
-            mode='lines' , name='Pct Change',
+            mode='lines' , name='Cumulative Change',
             line=dict(color='orange'),
         ))
     fig.add_trace(go.Scatter(x=dates, y=avg_10,
@@ -72,6 +93,11 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     fig.add_trace(go.Scatter(x=dates, y=comparison,
             mode='lines', name=compare,
             line=dict(color='darkgrey'),
+        ))
+    fig.add_trace(go.Scatter(x=dates, y=dly_pct_change,
+            mode='lines' , name='Daily Change',
+            showlegend=False,
+            line=dict(width=0),
             # add the daily balance at the end of the hover text
             customdata=[[b] for b in df['balance']],
             hovertemplate='%{y}<br>Balance: $%{customdata[0]:.2f}',
@@ -139,6 +165,8 @@ merged['balance'] = merged['balance'].ffill().bfill()
 
 # add the cumulative performance for the daily balances
 merged['pct_change'] = calculate_cumulative_performance(merged['balance'])
+# add the daily performance for the daily balances
+merged['dly_pct_change'] = calculate_daily_performance(merged['balance'])
 # calculate the 10-day moving average of the percentage change
 merged['10_day_avg'] = merged['pct_change'].rolling(window=10).mean()
 # calculate the 21-day moving average of the percentage change
