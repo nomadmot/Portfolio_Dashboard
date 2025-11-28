@@ -8,15 +8,15 @@ import streamlit as st
 import pandas as pd
 
 # Import local modules
-from core import get_security_symbols, get_trades
+from core import get_security_symbols, get_trades, lookup_associated_symbols
 
 def filter_trades(symbols, trades, begin_date, end_date):
     """Filter trades based on selected symbols and date range."""
     filtered_trades = trades[
-        (trades["Symbol"].isin(symbols)) &
+        ((trades["Symbol"].isin(symbols)) &
         (trades["Date"] >= pd.to_datetime(begin_date).date()) &
         (trades["Date"] <= pd.to_datetime(end_date).date())
-    ]
+        )]
     return filtered_trades
 
 # configure the page layout
@@ -32,13 +32,13 @@ with st.container(width="stretch"):
     with layout_inputs:
         # container for input elements
         with st.container(border=True):
-            #begin and end dates in the first row
+            #begin date, end date, and options checkbox in the first row
             with st.container(horizontal=True):
                 layout_begin_date = st.empty()
                 layout_end_date = st.empty()
-            # include options checkbox and symbol multiselect in the second row
-            with st.container(horizontal=True):
                 layout_include_options = st.empty()
+            # include symbol multiselect in the second row
+            with st.container(horizontal=True):
                 layout_select_symbols = st.empty()
 
 # collect user inputs
@@ -66,10 +66,12 @@ with layout_select_symbols:
         "Select Symbol(s):",
         label_visibility="collapsed",
         placeholder="Select Symbol(s)",
-        options=get_security_symbols(include_options=include_options),
+        options=get_security_symbols(include_options=False),
         )
 
 if selected_symbols:
+    if include_options:
+        selected_symbols = lookup_associated_symbols(selected_symbols)
     selected_trades = filter_trades(
         selected_symbols,
         get_trades(symbols=selected_symbols),
