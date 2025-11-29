@@ -6,6 +6,11 @@
 # Default: true
 showSidebarNavigation = false
 
+# Styling configuration
+[theme]
+base = "dark"
+baseFontSize=18
+
 [logger]
 # Level of logging for Streamlit's internal logger: "error", "warning",
 # "info", or "debug".

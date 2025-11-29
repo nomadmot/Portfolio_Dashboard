@@ -79,5 +79,15 @@ if selected_symbols:
         selected_end_date,
     )
 
-    st.table(selected_trades)
+    st.dataframe(selected_trades,
+                 hide_index=True,
+                 #use_container_width=False,
+                 width=800,
+                 column_config={
+                     #"Symbol:": st.column_config.TextColumn(width="large"),
+                     "Quantity": st.column_config.NumberColumn(format="accounting", width="small"),
+                     "Price": st.column_config.NumberColumn(format="dollar"),
+                     "Amount": st.column_config.NumberColumn(format="dollar")
+                    }
+                 )
     st.subheader(f"Total Gain/Loss: ${selected_trades['Amount'].sum():,.2f}")
