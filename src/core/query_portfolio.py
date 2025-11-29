@@ -99,6 +99,7 @@ def get_balance_history(account_id: int,
 
     return df_balances
 
+
 # function to get a list of security symbols from the database
 def get_security_symbols(include_options=False) -> List[str]:
     """
@@ -133,6 +134,34 @@ def get_security_symbols(include_options=False) -> List[str]:
     # return the sorted list
     symbols.sort()
     return symbols
+
+
+# function to add associated options symbols to a list of security symbols
+def lookup_associated_symbols(symbols: List[str]) -> List[str]:
+    """
+    Append associated options symbols from the database to the input list of stock symbols
+
+    Keyword Arguments:
+        symbols: -- A list of stock symbols to add associated options for
+
+    Returns:
+        The input list of security symbols, including associated options.
+    """
+    # add the associated symbols for options if include_options is True
+    stmt = select(distinct(Security.symbol)).where(
+        (Security.associated_symbol.in_(symbols))
+    )
+    with Session(config.DB_ENGINE) as session:
+        result = session.execute(stmt)
+    for row in result:
+        symbol = row[0]
+        if symbol not in symbols:
+            symbols.append(symbol)
+
+    # return the sorted list
+    symbols.sort()
+    return symbols
+
 
 # function to query the database for trades of the selected security
 def get_trades(symbols: List[str]) -> DataFrame:
