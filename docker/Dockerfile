@@ -5,7 +5,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 RUN apt-get update && apt-get install -y curl sqlite3
 
 # install VS Code (code-server)
-RUN apt-get update && apt-get install -y curl nodejs sqlite3
+RUN apt-get update && apt-get install -y curl nodejs sqlite3 sudo
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 # To have systemd start code-server now and restart on boot:
 # sudo systemctl enable --now code-server@$USER
