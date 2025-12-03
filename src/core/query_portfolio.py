@@ -163,6 +163,18 @@ def lookup_associated_symbols(symbols: List[str]) -> List[str]:
     return symbols
 
 
+def get_last_trade_date():
+    """Get the last trade date from the Trades table."""
+    stmt = select(
+                Trade.trade_date
+        ).order_by(
+            Trade.trade_date.desc()
+        ).limit(1)
+    
+    with Session(config.DB_ENGINE) as session:
+        return list(session.execute(stmt))[0][0]
+
+
 # function to query the database for trades of the selected security
 def get_trades(symbols: List[str]) -> DataFrame:
     """
