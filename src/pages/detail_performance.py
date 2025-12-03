@@ -30,7 +30,7 @@ st.set_page_config(layout="wide")
 
 # page subheader
 st.subheader("Detail Performance Analysis")
-st.subheader(f"Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}")
+st.markdown(f"*Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}*",)
 
 # set page content layout
 with st.container(width="stretch"):
