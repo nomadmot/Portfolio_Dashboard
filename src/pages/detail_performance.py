@@ -8,7 +8,13 @@ import streamlit as st
 import pandas as pd
 
 # Import local modules
-from core import get_security_symbols, get_trades, lookup_associated_symbols
+from core import (get_security_symbols,
+                  get_trades,
+                  get_last_trade_date,
+                  lookup_associated_symbols,
+                  )
+
+
 
 def filter_trades(symbols, trades, begin_date, end_date):
     """Filter trades based on selected symbols and date range."""
@@ -24,6 +30,7 @@ st.set_page_config(layout="wide")
 
 # page subheader
 st.subheader("Detail Performance Analysis")
+st.subheader(f"Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}")
 
 # set page content layout
 with st.container(width="stretch"):
@@ -81,10 +88,8 @@ if selected_symbols:
 
     st.dataframe(selected_trades,
                  hide_index=True,
-                 #use_container_width=False,
                  width=800,
                  column_config={
-                     #"Symbol:": st.column_config.TextColumn(width="large"),
                      "Quantity": st.column_config.NumberColumn(format="accounting", width="small"),
                      "Price": st.column_config.NumberColumn(format="dollar"),
                      "Amount": st.column_config.NumberColumn(format="dollar")
