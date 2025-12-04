@@ -70,16 +70,26 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
 
     # prepare data for plotting
     dates: List[pd.Timestamp] = list(df['Date'])
+    dly_balance = list(df['balance'])
     dly_pct_change: List[float] = list(df['dly_pct_change'])
     change: List[float] = list(df['pct_change'])
     avg_10: List[float] = list(df['10_day_avg'])
     avg_21: List[float] = list(df['21_day_avg'])
     comparison: List[float] = list(df['comp_change'])
+    dly_comp_change: List[float] = list(df['dly_comp_change'])
 
     # create the plot
     fig: go.Figure = go.Figure()
+    fig.add_trace(go.Scatter(x=dates, y=dly_pct_change,
+            # no line, just a placeholder for hover text
+            mode='none', showlegend=False,
+            # add the daily balance and percent change to the hover text
+            customdata=list(zip(dly_balance, dly_pct_change)),
+            hovertemplate='<extra>Balance: $%{customdata[0]:,.2f}<br>Pct Change: %{customdata[1]:.1%}</extra>',
+        ))
     fig.add_trace(go.Scatter(x=dates, y=change,
             mode='lines' , name='Cumulative Change',
+            hoverlabel=dict(namelength = -1),
             line=dict(color='orange'),
         ))
     fig.add_trace(go.Scatter(x=dates, y=avg_10,
@@ -94,19 +104,15 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
             mode='lines', name=compare,
             line=dict(color='darkgrey'),
         ))
-    fig.add_trace(go.Scatter(x=dates, y=dly_pct_change,
-            mode='lines' , name='Daily Change',
+    fig.add_trace(go.Scatter(x=dates, y=dly_comp_change,
+            mode='none', name=f'{compare} Pct Change',
             showlegend=False,
-            line=dict(width=0),
-            # add the daily balance at the end of the hover text
-            customdata=[[b] for b in df['balance']],
-            hovertemplate='%{y}<br>Balance: $%{customdata[0]:.2f}',
         ))
 
     fig.update_layout(
         title=f'Performance for {account_name}',
         xaxis_title='Date', yaxis_title='Cumulative Percent Change',
-        hovermode="x unified"
+        hovermode="x unified",
     )
     fig.update_yaxes(dict(tickformat=".1%"))
 
@@ -171,8 +177,10 @@ merged['dly_pct_change'] = calculate_daily_performance(merged['balance'])
 merged['10_day_avg'] = merged['pct_change'].rolling(window=10).mean()
 # calculate the 21-day moving average of the percentage change
 merged['21_day_avg'] = merged['pct_change'].rolling(window=21).mean()
-# add the cululative prformance for the comparison ticker
+# add the cumulative performance for the comparison ticker
 merged['comp_change'] = calculate_cumulative_performance(merged['Close'])
+# add the daily performance for the comparison ticker
+merged['dly_comp_change'] = calculate_daily_performance(merged['Close'])
 
 # plot the daily balance for the selected period
 st.plotly_chart(plot_daily_balance(merged,
