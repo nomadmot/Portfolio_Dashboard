@@ -129,7 +129,7 @@ st.subheader("Daily Performance Chart")
 with st.container(horizontal=True,
                   horizontal_alignment="center",
                   border=True,
-                  width=450):
+                  width=500):
     # create a selectbox to select the number of days for the chart
     selected_period = st.selectbox(
                             "Select Period:",
