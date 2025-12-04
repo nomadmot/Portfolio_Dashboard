@@ -257,4 +257,7 @@ def get_trades(symbols: List[str],
                     })
 
     # sort the results and return a pandas Dataframe
-    return DataFrame(trades).sort_values(by='Date', ascending=ascending).reset_index(drop=True)
+    if trades:
+        return DataFrame(trades).sort_values(by='Date', ascending=ascending).reset_index(drop=True)
+    else:
+        return DataFrame(columns=['Symbol', 'Date', 'Type', 'Quantity', 'Price', 'Amount'])
