@@ -3,27 +3,16 @@ Generate a portfolio performance page based on selected symbols
 and other criteria.
 '''
 # Import necessary libraries
-from datetime import date
 import streamlit as st
-import pandas as pd
 
 # Import local modules
 from core import (get_security_symbols,
                   get_trades,
                   get_last_trade_date,
                   lookup_associated_symbols,
+                  Periods
                   )
 
-
-
-def filter_trades(symbols, trades, begin_date, end_date):
-    """Filter trades based on selected symbols and date range."""
-    filtered_trades = trades[
-        ((trades["Symbol"].isin(symbols)) &
-        (trades["Date"] >= pd.to_datetime(begin_date).date()) &
-        (trades["Date"] <= pd.to_datetime(end_date).date())
-        )]
-    return filtered_trades
 
 # configure the page layout
 st.set_page_config(layout="wide")
@@ -41,27 +30,22 @@ with st.container(width="stretch"):
         with st.container(border=True):
             #begin date, end date, and options checkbox in the first row
             with st.container(horizontal=True):
-                layout_begin_date = st.empty()
-                layout_end_date = st.empty()
+                layout_selected_period = st.empty()
+                #layout_end_date = st.empty()
                 layout_include_options = st.empty()
             # include symbol multiselect in the second row
             with st.container(horizontal=True):
                 layout_select_symbols = st.empty()
 
 # collect user inputs
-# begin and end dates for the performance analysis
-with layout_begin_date:
-    selected_begin_date = st.date_input(
-        "Begin Date:",
-        value=date(date.today().year, 1, 1),
-        label_visibility="collapsed",
-    )
-with layout_end_date:
-    selected_end_date = st.date_input(
-        "End Date:",
-        value=date.today(),
-        label_visibility="collapsed",
-    )
+with layout_selected_period:
+    # create a selectbox to select the number of days for the chart
+    selected_period = st.selectbox(
+                            "Select Period:",
+                            Periods.get_periods(),
+                            format_func=Periods.get_label,
+                            index=1,
+                            width=300)
 
 with layout_include_options:
     # option to include options in the symbol list
@@ -79,11 +63,11 @@ with layout_select_symbols:
 if selected_symbols:
     if include_options:
         selected_symbols = lookup_associated_symbols(selected_symbols)
-    selected_trades = filter_trades(
-        selected_symbols,
-        get_trades(symbols=selected_symbols),
-        selected_begin_date,
-        selected_end_date,
+
+    selected_trades = get_trades(
+        symbols=selected_symbols,
+        period=selected_period,
+        ascending=True,
     )
 
     st.dataframe(selected_trades,
