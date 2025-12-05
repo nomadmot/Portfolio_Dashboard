@@ -19,6 +19,10 @@ from core.query_portfolio import (
     lookup_associated_symbols
 )
 
+from core.stock_info import (
+    get_basic_quote,
+)
+
 __all__ = [
     "Periods",
     "update_daily_balance",
@@ -29,4 +33,5 @@ __all__ = [
     "get_trades",
     "get_last_trade_date,"
     "lookup_associated_symbols",
+    "get_basic_quote"
 ]
