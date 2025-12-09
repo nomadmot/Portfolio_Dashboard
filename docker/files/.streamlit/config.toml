@@ -20,6 +20,9 @@ showSidebarNavigation = false
 # Default: "%(asctime)s %(message)s"
 messageFormat = "%(asctime)s %(levelname)s %(module)s - %(message)s"
 
+[theme]
+base = "dark"
+
 [server]
 headless = true
 address = "0.0.0.0"
