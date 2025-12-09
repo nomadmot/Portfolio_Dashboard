@@ -109,9 +109,14 @@ if selected_symbols:
                      "Market Value": st.column_config.NumberColumn(format="$%.2f"),
                     }
                  )
-    current_holdings = trades['Holding'].iloc[-1]
-    current_price = get_basic_quote(trades['Symbol'].iloc[-1]).get('currentPrice', 0)
-    current_value = current_price * current_holdings
+    if trades.empty:
+        current_holdings = 0
+        current_price = 0
+        current_value = 0
+    else:
+        current_holdings = trades['Holding'].iloc[-1]
+        current_price = get_basic_quote(trades['Symbol'].iloc[-1]).get('currentPrice', 0)
+        current_value = current_price * current_holdings
     st.subheader(f"Currently holding {current_holdings:.0f} shares @ ${current_price:,.2f} per share")
     st.subheader(f"Current Market Value: {current_value:,.2f}")
     total_gain_loss = current_value + selected_trades['Amount'].sum()
