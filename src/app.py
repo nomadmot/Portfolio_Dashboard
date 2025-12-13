@@ -12,9 +12,7 @@ import config
 from utility import StatusMessageComponent
 
 # Initialize logging
-#logger = logging.getLogger(st.__name__)
 logger = config.LOGGER
-#logger.setLevel(config.LOGLEVEL_STREAMLIT)
 # mark entry into the module
 logger.debug("Starting Portfolio Dashboard application")
 # set the sqlalchemy logging level
