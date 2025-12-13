@@ -1,0 +1,28 @@
+services:
+  PortfolioDashboard:
+    image: tdamon/nomadmot:portfolio-dashboard-test
+    environment:
+      - DATABASE_URI=sqlite://///home/devuser/investorlab/DATA/portfolio-test.db
+    ports:
+      - target: 8080
+        published: "8089"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /DATA/Dropbox/Apps/Investing
+        target: /home/devuser/investorlab
+x-casaos:
+  architectures:
+    - arm64
+  author: nomadmot
+  category: unknown
+  description:
+    en_us: "test portfolio dashboard environment"
+  developer: unknown
+  hostname: ""
+  icon: https://github.com/nomadmot/Portfolio_Dashboard/blob/main/src/images/Stock-Bull_192px.png
+  index: /
+  main: PortfolioDashboard
+  title:
+    custom: ""
+    en_us: PortfolioDashboardTest
