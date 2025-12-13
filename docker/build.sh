@@ -14,9 +14,6 @@ podman build -f docker/Dockerfile -t $IMAGE_NAME  --iidfile image_id .
 IMAGE_ID=`cat image_id`
 echo "Successfully built image with ID: $IMAGE_ID"
 
-# initialize the container
-docker/init.sh
-
 # push to DockerHub
 echo "Pushing image $IMAGE_ID to DockerHub as $IMAGE_NAME"
 podman login docker.io
