@@ -2,20 +2,21 @@
 Main application file for the Portfolio Dashboard using Streamlit
 '''
 #standard library imports
+import logging
+
+#import 3rd-party libraries
 import streamlit as st
-import streamlit.logger
 
 #local application imports
 import config
 from utility import StatusMessageComponent
 
 # Initialize logging
-logger = streamlit.logger.get_logger(st.__name__)
-logger.setLevel(config.LOGLEVEL_STREAMLIT)
+logger = config.LOGGER
 # mark entry into the module
 logger.debug("Starting Portfolio Dashboard application")
 # set the sqlalchemy logging level
-sqlalchemy_logger = streamlit.logger.get_logger("sqlalchemy.engine")
+sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
 sqlalchemy_logger.setLevel(config.LOGLEVEL_SQLALCHEMY)
 
 # use the stock bull icon
@@ -32,6 +33,8 @@ pg = st.navigation(pages,
 
 # Display the selected page
 pg.run()
+# Force the disposal of the database engine
+config.DB_ENGINE.dispose()
 
 # Clear out any status messages left in the session state
 StatusMessageComponent.clear_status_message()

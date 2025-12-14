@@ -3,7 +3,7 @@ This module contains functions to access and manipulate daily balance data.
 """
 # Import necessary libraries
 from typing import List
-from datetime import date
+from datetime import date, timedelta
 from sqlalchemy import select, distinct
 from sqlalchemy.orm import Session
 from pandas import DataFrame
@@ -50,7 +50,7 @@ def get_balance_history(account_id: int,
     Returns:
         A pandas DataFrame containing the balance history, indexed by date.
     """
-    # set the number of days for the chart based on the selected period
+    # set the number of days or begin date based on the selected period
     chart_days = None
     begin_date = None
     match(period):
@@ -74,7 +74,7 @@ def get_balance_history(account_id: int,
     # generate a sqlalchemy select statement to retrieve the balances
     stmt = select(DailyBalance).where(DailyBalance.account_id == account_id)
 
-    # apply filters based on the provided parameters
+    # apply date filters based on the provided parameters
     if chart_days is not None and begin_date is not None:
         raise ValueError("Chart days and begin date cannot both be specified.")
     if chart_days is not None:
@@ -163,17 +163,54 @@ def lookup_associated_symbols(symbols: List[str]) -> List[str]:
     return symbols
 
 
+def get_last_trade_date():
+    """Get the last trade date from the Trades table."""
+    stmt = select(
+                Trade.trade_date
+        ).order_by(
+            Trade.trade_date.desc()
+        ).limit(1)
+
+    with Session(config.DB_ENGINE) as session:
+        return list(session.execute(stmt))[0][0]
+
+
 # function to query the database for trades of the selected security
-def get_trades(symbols: List[str]) -> DataFrame:
+def get_trades(symbols: List[str],
+               period: Periods = Periods.ALL,
+               ascending: bool = False) -> DataFrame:
     """
     Query the Trades table for the selected security symbols.
 
     Arguments:
         symbols -- a list of security symbols to query trades for.
+        period -- The time period for which to retrieve trades (defaut is ALL).
+        ascending -- Whether to sort the results in ascending order by date (default is False).
 
     Returns:
         A pandas DataFrame containing the trades for the specified symbols.
     """
+    # set the number of days or begin/end dates based on the selected period
+    chart_days = None
+    begin_date = None
+    match(period):
+        case Periods.D30:
+            begin_date = date.today() - timedelta(days=30)
+        case Periods.D50:
+            begin_date = date.today() - timedelta(days=50)
+        case Periods.D90:
+            begin_date = date.today() - timedelta(days=90)
+        case Periods.YTD:
+            begin_date = date(date.today().year-1, 12, 31)
+        case Periods.YR1:
+            begin_date = date(date.today().year -1, date.today().month, date.today().day)
+        case Periods.ALL:
+            # no specific period, return all balances
+            pass
+        case _:
+            # raise an error if the period is not recognized
+            raise ValueError(f"Invalid period: {period}")
+
     stmt = select(
                 Security.security_type,
                 Security.name,
@@ -189,6 +226,15 @@ def get_trades(symbols: List[str]) -> DataFrame:
             Security.symbol.in_(symbols)
         )
 
+    # apply date filter based on the provided parameters
+    if chart_days is not None and begin_date is not None:
+        raise ValueError("Chart days and begin date cannot both be specified.")
+    if chart_days is not None:
+        stmt = stmt.order_by(Trade.trade_date.desc()).limit(chart_days)
+    elif begin_date is not None:
+        stmt = stmt.where(Trade.trade_date >= begin_date)
+
+    # execute the query and fetch results
     with Session(config.DB_ENGINE) as session:
         db_result = session.execute(stmt)
 
@@ -211,4 +257,7 @@ def get_trades(symbols: List[str]) -> DataFrame:
                     })
 
     # sort the results and return a pandas Dataframe
-    return DataFrame(trades).sort_values('Date')
+    if trades:
+        return DataFrame(trades).sort_values(by='Date', ascending=ascending).reset_index(drop=True)
+    else:
+        return DataFrame(columns=['Symbol', 'Date', 'Type', 'Quantity', 'Price', 'Amount'])

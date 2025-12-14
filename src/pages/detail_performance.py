@@ -3,27 +3,50 @@ Generate a portfolio performance page based on selected symbols
 and other criteria.
 '''
 # Import necessary libraries
-from datetime import date
 import streamlit as st
-import pandas as pd
 
 # Import local modules
-from core import get_security_symbols, get_trades, lookup_associated_symbols
+from core import (get_security_symbols,
+                  get_trades,
+                  get_last_trade_date,
+                  lookup_associated_symbols,
+                  get_basic_quote,
+                  Periods
+                  )
 
-def filter_trades(symbols, trades, begin_date, end_date):
-    """Filter trades based on selected symbols and date range."""
-    filtered_trades = trades[
-        ((trades["Symbol"].isin(symbols)) &
-        (trades["Date"] >= pd.to_datetime(begin_date).date()) &
-        (trades["Date"] <= pd.to_datetime(end_date).date())
-        )]
-    return filtered_trades
+# function to analyze trades
+def analyze_trades(trades_df):
+    """
+    Analyze the current status of a trade using the trade data from the input Dataframe
+
+    Arguments:
+        trades_df -- input DataFrame containing trade data to be analyzed
+
+    Returns:
+        DataFrame with additional columns for analysis
+    """
+    # initialize variables
+    total_shares = 0
+    market_value = 0
+
+    # loop through each row to compute analysis metrics
+    for index, row in trades_df.iterrows():
+        # calculate the current quantity for each trade
+        total_shares = total_shares + row["Quantity"]
+        trades_df.at[index, "Holding"] = total_shares
+        # calculate the total current market value
+        market_value = market_value + row["Amount"]
+        trades_df.at[index, "Market Value"] = market_value
+
+    return trades_df
+
 
 # configure the page layout
 st.set_page_config(layout="wide")
 
 # page subheader
 st.subheader("Detail Performance Analysis")
+st.markdown(f"*Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}*",)
 
 # set page content layout
 with st.container(width="stretch"):
@@ -34,27 +57,22 @@ with st.container(width="stretch"):
         with st.container(border=True):
             #begin date, end date, and options checkbox in the first row
             with st.container(horizontal=True):
-                layout_begin_date = st.empty()
-                layout_end_date = st.empty()
+                layout_selected_period = st.empty()
+                #layout_end_date = st.empty()
                 layout_include_options = st.empty()
             # include symbol multiselect in the second row
             with st.container(horizontal=True):
                 layout_select_symbols = st.empty()
 
 # collect user inputs
-# begin and end dates for the performance analysis
-with layout_begin_date:
-    selected_begin_date = st.date_input(
-        "Begin Date:",
-        value=date(date.today().year, 1, 1),
-        label_visibility="collapsed",
-    )
-with layout_end_date:
-    selected_end_date = st.date_input(
-        "End Date:",
-        value=date.today(),
-        label_visibility="collapsed",
-    )
+with layout_selected_period:
+    # create a selectbox to select the number of days for the chart
+    selected_period = st.selectbox(
+                            "Select Period:",
+                            Periods.get_periods(),
+                            format_func=Periods.get_label,
+                            index=1,
+                            width=300)
 
 with layout_include_options:
     # option to include options in the symbol list
@@ -72,22 +90,34 @@ with layout_select_symbols:
 if selected_symbols:
     if include_options:
         selected_symbols = lookup_associated_symbols(selected_symbols)
-    selected_trades = filter_trades(
-        selected_symbols,
-        get_trades(symbols=selected_symbols),
-        selected_begin_date,
-        selected_end_date,
+
+    selected_trades = get_trades(
+        symbols=selected_symbols,
+        period=selected_period,
+        ascending=True,
     )
 
-    st.dataframe(selected_trades,
+    trades = analyze_trades(selected_trades.copy())
+
+    st.dataframe(trades,
                  hide_index=True,
-                 #use_container_width=False,
                  width=800,
                  column_config={
-                     #"Symbol:": st.column_config.TextColumn(width="large"),
                      "Quantity": st.column_config.NumberColumn(format="accounting", width="small"),
-                     "Price": st.column_config.NumberColumn(format="dollar"),
-                     "Amount": st.column_config.NumberColumn(format="dollar")
+                     "Price": st.column_config.NumberColumn(format="$%.2f",),
+                     "Amount": st.column_config.NumberColumn(format="$%.2f"),
+                     "Market Value": st.column_config.NumberColumn(format="$%.2f"),
                     }
                  )
-    st.subheader(f"Total Gain/Loss: ${selected_trades['Amount'].sum():,.2f}")
+    if trades.empty:
+        current_holdings = 0
+        current_price = 0
+        current_value = 0
+    else:
+        current_holdings = trades['Holding'].iloc[-1]
+        current_price = get_basic_quote(trades['Symbol'].iloc[-1]).get('currentPrice', 0)
+        current_value = current_price * current_holdings
+    st.subheader(f"Currently holding {current_holdings:.0f} shares @ ${current_price:,.2f} per share")
+    st.subheader(f"Current Market Value: {current_value:,.2f}")
+    total_gain_loss = current_value + selected_trades['Amount'].sum()
+    st.subheader(f"Total Gain/Loss: ${total_gain_loss:,.2f}")
