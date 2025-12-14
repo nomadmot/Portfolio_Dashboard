@@ -33,6 +33,8 @@ pg = st.navigation(pages,
 
 # Display the selected page
 pg.run()
+# Force the disposal of the database engine
+config.DB_ENGINE.dispose()
 
 # Clear out any status messages left in the session state
 StatusMessageComponent.clear_status_message()
