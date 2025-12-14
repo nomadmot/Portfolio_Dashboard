@@ -31,7 +31,7 @@ __all__ = [
     "get_balance_history",
     "get_security_symbols",
     "get_trades",
-    "get_last_trade_date,"
+    "get_last_trade_date",
     "lookup_associated_symbols",
     "get_basic_quote"
 ]
