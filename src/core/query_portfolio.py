@@ -253,7 +253,7 @@ def get_trades(symbols: List[str],
                     'Type': row.trade_type,
                     'Quantity': row.quantity,
                     'Price': row.price,
-                    'Amount': -round(trade_amount),
+                    'Amount': trade_amount,
                     })
 
     # sort the results and return a pandas Dataframe
