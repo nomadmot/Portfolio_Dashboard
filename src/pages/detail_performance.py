@@ -35,7 +35,8 @@ def analyze_trades(trades_df):
         total_shares = total_shares + row["Quantity"]
         trades_df.at[index, "Holding"] = total_shares
         # calculate the total current market value
-        market_value = market_value + row["Amount"]
+        # sign of market value is opposite of trade amount
+        market_value = market_value - row["Amount"]
         trades_df.at[index, "Market Value"] = market_value
 
     return trades_df
