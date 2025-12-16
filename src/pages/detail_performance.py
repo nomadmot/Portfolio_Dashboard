@@ -111,17 +111,17 @@ if selected_symbols:
                     }
                  )
     if trades.empty:
-        current_holdings = 0
-        current_price = 0
-        current_value = 0
+        CURRENT_HOLDINGS = 0
+        CURRENT_PRICE = 0
+        CURRENT_VALUE = 0
     else:
-        current_holdings = trades['Holding'].iloc[-1]
-        current_price = get_basic_quote(trades['Symbol'].iloc[-1]).get('currentPrice', 0)
-        current_value = current_price * current_holdings
+        CURRENT_HOLDINGS = trades['Holding'].iloc[-1]
+        CURRENT_PRICE = get_basic_quote(trades['Symbol'].iloc[-1]).get('currentPrice', 0)
+        CURRENT_VALUE = CURRENT_PRICE * CURRENT_HOLDINGS
     st.subheader(
-        (f"Currently holding {current_holdings:.0f} "),
+        (f"Currently holding {CURRENT_HOLDINGS:.0f} "),
         ("shares @ ${current_price:,.2f} per share")
     )
-    st.subheader(f"Current Market Value: {current_value:,.2f}")
-    total_gain_loss = current_value + selected_trades['Amount'].sum()
+    st.subheader(f"Current Market Value: {CURRENT_VALUE:,.2f}")
+    total_gain_loss = CURRENT_VALUE + selected_trades['Amount'].sum()
     st.subheader(f"Total Gain/Loss: ${total_gain_loss:,.2f}")
