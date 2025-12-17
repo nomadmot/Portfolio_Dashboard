@@ -4,6 +4,7 @@ and other criteria.
 '''
 # Import necessary libraries
 import streamlit as st
+import pandas as pd
 
 # Import local modules
 from core import (get_security_symbols,
@@ -15,7 +16,7 @@ from core import (get_security_symbols,
                   )
 
 # function to analyze trades
-def analyze_trades(trades_df):
+def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     """
     Analyze the current status of a trade using the trade data from the input Dataframe
 
@@ -26,17 +27,35 @@ def analyze_trades(trades_df):
         DataFrame with additional columns for analysis
     """
     # initialize variables
-    total_shares = 0
-    market_value = 0
+    total_shares = 0.0
+    total_cost = 0.0
+    market_value = 0.0
+
+    # add columns for analysis
+    trades_df.insert(6, "Cost", 0.0)
+    trades_df.insert(7, "Realized P/L", 0.0)
 
     # loop through each row to compute analysis metrics
     for index, row in trades_df.iterrows():
         # calculate the current quantity for each trade
         total_shares = total_shares + row["Quantity"]
         trades_df.at[index, "Holding"] = total_shares
-        # calculate the total current market value
-        # sign of market value is opposite of trade amount
-        market_value = market_value - row["Amount"]
+        if total_shares == 0:
+            # calculate the total realized profit/loss
+            realized_pl = row["Amount"] - total_cost
+            # If current holdings equal 0 the current market value and cost is also 0
+            market_value = 0.0
+            total_cost = 0.0
+        else:
+            # realized profit/loss is 0 if holdings are not zero
+            realized_pl = 0.0
+            # calculate the current market value
+            # sign of market value is opposite of trade amount
+            market_value = total_shares * row["Price"]
+            # update the total cost
+            total_cost = total_cost - row["Amount"]
+        trades_df.at[index, "Cost"] = total_cost
+        trades_df.at[index, "Realized P/L"] = realized_pl
         trades_df.at[index, "Market Value"] = market_value
 
     return trades_df
@@ -108,6 +127,7 @@ if selected_symbols:
                      "Price": st.column_config.NumberColumn(format="$%.2f",),
                      "Amount": st.column_config.NumberColumn(format="$%.2f"),
                      "Market Value": st.column_config.NumberColumn(format="$%.2f"),
+                     "Realized P/L": st.column_config.NumberColumn(format="$%.2f"),
                     }
                  )
     if trades.empty:
@@ -119,9 +139,8 @@ if selected_symbols:
         CURRENT_PRICE = get_basic_quote(trades['Symbol'].iloc[-1]).get('currentPrice', 0)
         CURRENT_VALUE = CURRENT_PRICE * CURRENT_HOLDINGS
     st.subheader(
-        (f"Currently holding {CURRENT_HOLDINGS:.0f} "),
-        ("shares @ ${current_price:,.2f} per share")
+        f"Currently holding {CURRENT_HOLDINGS:.0f} "
+        f"shares @ ${CURRENT_PRICE:,.2f} per share"
     )
     st.subheader(f"Current Market Value: {CURRENT_VALUE:,.2f}")
-    total_gain_loss = CURRENT_VALUE + selected_trades['Amount'].sum()
-    st.subheader(f"Total Gain/Loss: ${total_gain_loss:,.2f}")
+    st.subheader(f"Realized Gain/Loss: ${trades["Realized P/L"].sum():,.2f}")
