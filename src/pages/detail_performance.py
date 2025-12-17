@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 
 # Import local modules
+from config import LOGGER
 from core import (get_security_symbols,
                   get_trades,
                   get_last_trade_date,
@@ -26,6 +27,9 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame with additional columns for analysis
     """
+    # mark entry in log
+    LOGGER.debug("in analyze_trades: %s rows to analyze", trades_df.shape[0])
+
     # initialize variables
     total_shares = 0.0
     total_cost = 0.0
@@ -36,7 +40,9 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     trades_df.insert(7, "Realized P/L", 0.0)
 
     # loop through each row to compute analysis metrics
-    for index, row in trades_df.iterrows():
+    for index in range(trades_df.shape[0]):
+        row = trades_df.iloc[index]
+        LOGGER.debug("analyzing row %s: %s", index, row.to_dict())
         # calculate the current quantity for each trade
         total_shares = total_shares + row["Quantity"]
         trades_df.at[index, "Holding"] = total_shares
