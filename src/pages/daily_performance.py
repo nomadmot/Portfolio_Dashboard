@@ -85,7 +85,10 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
             mode='none', showlegend=False,
             # add the daily balance and percent change to the hover text
             customdata=list(zip(dly_balance, dly_pct_change)),
-            hovertemplate='<extra>Balance: $%{customdata[0]:,.2f}<br>Pct Change: %{customdata[1]:.1%}</extra>',
+            hovertemplate=(
+                "<extra>Balance: $%{customdata[0]:,.2f}<br>",
+                "Pct Change: %{customdata[1]:.1%}</extra>",
+            )
         ))
     fig.add_trace(go.Scatter(x=dates, y=change,
             mode='lines' , name='Cumulative Change',
@@ -181,6 +184,11 @@ merged['21_day_avg'] = merged['pct_change'].rolling(window=21).mean()
 merged['comp_change'] = calculate_cumulative_performance(merged['Close'])
 # add the daily performance for the comparison ticker
 merged['dly_comp_change'] = calculate_daily_performance(merged['Close'])
+
+# dispplay statistics for the current day
+st.subheader(f"Current Day Performance for {get_account(1).name} ({merged['Date'].iloc[-1]}):")
+st.write(f"Balance: ${merged['balance'].iloc[-1]:,.2f}")
+st.write(f"Daily Change: {merged['dly_pct_change'].iloc[-1]:.1%}")
 
 # plot the daily balance for the selected period
 st.plotly_chart(plot_daily_balance(merged,
