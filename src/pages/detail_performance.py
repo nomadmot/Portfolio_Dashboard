@@ -127,8 +127,9 @@ if selected_symbols:
 
     st.dataframe(trades,
                  hide_index=True,
-                 width=800,
+                 width=1000,
                  column_config={
+                     "Symbol": st.column_config.TextColumn(width=150),
                      "Quantity": st.column_config.NumberColumn(format="accounting", width="small"),
                      "Price": st.column_config.NumberColumn(format="$%.2f",),
                      "Amount": st.column_config.NumberColumn(format="$%.2f"),
