@@ -85,10 +85,9 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
             mode='none', showlegend=False,
             # add the daily balance and percent change to the hover text
             customdata=list(zip(dly_balance, dly_pct_change)),
-            hovertemplate=(
-                "<extra>Balance: $%{customdata[0]:,.2f}<br>",
+            hovertemplate=
+                "<extra>Balance: %${customdata[0]:,.2f}<br>" +
                 "Pct Change: %{customdata[1]:.1%}</extra>",
-            )
         ))
     fig.add_trace(go.Scatter(x=dates, y=change,
             mode='lines' , name='Cumulative Change',
@@ -116,6 +115,9 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
         title=f'Performance for {account_name}',
         xaxis_title='Date', yaxis_title='Cumulative Percent Change',
         hovermode="x unified",
+        clickmode="event",
+        dragmode=False,
+        modebar=go.layout.Modebar(remove=("zoom","zoomin", "zoomout","pan","select","lasso")),
     )
     fig.update_yaxes(dict(tickformat=".1%"))
 
