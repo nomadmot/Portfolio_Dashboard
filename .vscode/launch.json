@@ -1,18 +1,26 @@
 {
     "version": "0.2.0",
     "configurations": [
+        
         {
             "name": "Python:Streamlit",
             "type": "debugpy",
             "request": "launch",
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}/src",
             "module": "streamlit",
+            "envFile": "${workspaceFolder}/.env",
+            // "env": {
+            //         "DATABASE_URL": "sqlite://///home/devuser/investorlab/DATA/portfolio.db",
+            //         "LOGLEVEL_STREAMLIT": "INFO",
+            //         "LOGLEVEL_SQLALCHEMY": "WARN",
+            //         "YFINANCE_DEBUG": "FALSE"
+            //     },
             "args": [
                 "run",
-                "${file}",
+                "app.py",
                 "--server.port",
                 "2000"
-            ]
+                ]
         }
     ]
 }
