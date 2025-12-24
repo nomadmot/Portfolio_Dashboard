@@ -3,6 +3,9 @@ Generate a portfolio performance page based on selected symbols
 and other criteria.
 '''
 # Import necessary libraries
+from collections import namedtuple
+
+# Import 3rd party modules
 import streamlit as st
 import pandas as pd
 
@@ -15,6 +18,24 @@ from core import (get_security_symbols,
                   get_basic_quote,
                   Periods
                   )
+
+
+# create a named tuple for summary data
+Summary = namedtuple(
+    "Summary",
+    [
+        #"Date",
+        "Symbol",
+        "Holding",
+        "Realized",
+        "Unrealized"
+    ]
+)
+# global variables to hold the summary data
+TRADE_SUMMARY = list()
+TOTAL_REALIZED = 0.0
+TOTAL_UNREALIZED = 0.0
+
 
 # utility function to analyse trades for a single symbol
 def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
@@ -34,7 +55,8 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     total_shares = 0.0
     total_cost = 0.0
     market_value = 0.0
-
+    realized_pl = 0.0
+    symbol = trades_df.iloc[0].Symbol
 
     # loop through each row to compute analysis metrics
     for row in trades_df.itertuples():
@@ -59,6 +81,23 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         trades_df.loc[row.Index, "Cost"] = total_cost
         trades_df.loc[row.Index, "Realized P/L"] = realized_pl
         trades_df.loc[row.Index, "Market Value"] = market_value
+
+    # update the summary data
+    if total_shares != 0:
+        # calculate the total unrealized profit/loss
+        current_price = get_basic_quote(str(symbol)).get('currentPrice', 0)
+    else:
+        current_price = 0.0
+    unrealized_pl = total_shares * current_price # type: ignore
+    global TOTAL_REALIZED, TOTAL_UNREALIZED
+    TOTAL_REALIZED += realized_pl
+    TOTAL_UNREALIZED += unrealized_pl # type: ignore
+    TRADE_SUMMARY.append(Summary(
+                        Symbol=symbol,
+                        Holding=total_shares,
+                        Realized=realized_pl,
+                        Unrealized=unrealized_pl,
+                    ))
 
     return trades_df
 
@@ -165,17 +204,24 @@ if selected_symbols:
                      "Realized P/L": st.column_config.NumberColumn(format="$%.2f"),
                     }
                  )
-    if trades.empty:
-        CURRENT_HOLDINGS = 0
-        CURRENT_PRICE = 0
-        CURRENT_VALUE = 0
-    else:
-        CURRENT_HOLDINGS = trades['Holding'].iloc[-1]
-        CURRENT_PRICE = get_basic_quote(trades['Symbol'].iloc[-1]).get('currentPrice', 0)
-        CURRENT_VALUE = CURRENT_PRICE * CURRENT_HOLDINGS
-    st.subheader(
-        f"Currently holding {CURRENT_HOLDINGS:.0f} "
-        f"shares @ ${CURRENT_PRICE:,.2f} per share"
+
+    # print out the summary information
+    st.subheader("Trade Summary Data:")
+    st.dataframe(TRADE_SUMMARY,
+                 hide_index=True,
+                 width=1000,
+                 column_config={
+                    "Symbol": st.column_config.TextColumn(width=150),
+                    "Holding": st.column_config.NumberColumn(format="accounting", width="small"),
+                    "Realized": st.column_config.NumberColumn(
+                        label="Realized P/L",
+                        format="$%.2f",
+                    ),
+                    "Unrealized": st.column_config.NumberColumn(
+                        label="Unrealized P/L",
+                        format="$%.2f",
+                    ),
+                 }
     )
-    st.subheader(f"Current Market Value: {CURRENT_VALUE:,.2f}")
-    st.subheader(f"Realized Gain/Loss: ${trades["Realized P/L"].sum():,.2f}")
+    st.subheader(f"Total Realized Gain/Loss: ${TOTAL_REALIZED:,.2f}")
+    st.subheader(f"Total Unrealized Gain/Loss: ${TOTAL_UNREALIZED:,.2f}")
