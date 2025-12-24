@@ -83,51 +83,16 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     trades_df.insert(8, "Holding", 0.0)
     trades_df.insert(8, "Market Value", 0.0)
 
-    #### EXPERIMENT! ###
-    #indexed = trades_df.set_index("Symbol")
+    # group by symbol and analyze trades for each symbol
     indexed = trades_df
     analyzed = list()
     grouped = indexed.groupby("Symbol")
     for s in grouped:
         symbol = s[0]
         analyzed.append(_analyze_trades(grouped.get_group(symbol)))
-    stacked = pd.concat(analyzed)
 
-    # # initialize variables
-    # total_shares = 0.0
-    # total_cost = 0.0
-    # market_value = 0.0
-
-    # # add columns for analysis
-    # trades_df.insert(6, "Cost", 0.0)
-    # trades_df.insert(7, "Realized P/L", 0.0)
-
-    # # loop through each row to compute analysis metrics
-    # for index in range(trades_df.shape[0]):
-    #     row = trades_df.iloc[index]
-    #     LOGGER.debug("analyzing row %s: %s", index, row.to_dict())
-    #     # calculate the current quantity for each trade
-    #     total_shares = total_shares + row["Quantity"]
-    #     trades_df.at[index, "Holding"] = total_shares
-    #     if total_shares == 0:
-    #         # calculate the total realized profit/loss
-    #         realized_pl = row["Amount"] - total_cost
-    #         # If current holdings equal 0 the current market value and cost is also 0
-    #         market_value = 0.0
-    #         total_cost = 0.0
-    #     else:
-    #         # realized profit/loss is 0 if holdings are not zero
-    #         realized_pl = 0.0
-    #         # calculate the current market value
-    #         # sign of market value is opposite of trade amount
-    #         market_value = total_shares * row["Price"]
-    #         # update the total cost
-    #         total_cost = total_cost - row["Amount"]
-    #     trades_df.at[index, "Cost"] = total_cost
-    #     trades_df.at[index, "Realized P/L"] = realized_pl
-    #     trades_df.at[index, "Market Value"] = market_value
-
-    return stacked
+    # concatenate the analyzed trades for each symbol and return
+    return pd.concat(analyzed)
 
 
 # configure the page layout
