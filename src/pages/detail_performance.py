@@ -37,14 +37,14 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
 
 
     # loop through each row to compute analysis metrics
-    for key, row in trades_df.iterrows():
+    for row in trades_df.itertuples():
         LOGGER.debug("analyzing row %s", row)
         # calculate the current quantity for each trade
-        total_shares = total_shares + row["Quantity"]
-        trades_df.loc[key, "Holding"] = total_shares
+        total_shares = total_shares + row.Quantity # type: ignore
+        trades_df.loc[row.Index, "Holding"] = total_shares
         if total_shares == 0:
             # calculate the total realized profit/loss
-            realized_pl = row["Amount"] - total_cost
+            realized_pl = row.Amount - total_cost # type: ignore
             # If current holdings equal 0 the current market value and cost is also 0
             market_value = 0.0
             total_cost = 0.0
@@ -53,12 +53,12 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
             realized_pl = 0.0
             # calculate the current market value
             # sign of market value is opposite of trade amount
-            market_value = total_shares * row["Price"]
+            market_value = total_shares * row.Price # type: ignore
             # update the total cost
-            total_cost = total_cost - row["Amount"]
-        trades_df.loc[key, "Cost"] = total_cost
-        trades_df.loc[key, "Realized P/L"] = realized_pl
-        trades_df.loc[key, "Market Value"] = market_value
+            total_cost = total_cost - row.Amount # type: ignore
+        trades_df.loc[row.Index, "Cost"] = total_cost
+        trades_df.loc[row.Index, "Realized P/L"] = realized_pl
+        trades_df.loc[row.Index, "Market Value"] = market_value
 
     return trades_df
 
