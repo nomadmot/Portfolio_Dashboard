@@ -89,6 +89,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     else:
         current_price = 0.0
     unrealized_pl = total_shares * current_price # type: ignore
+    realized_pl = trades_df["Realized P/L"].sum()
     global TOTAL_REALIZED, TOTAL_UNREALIZED
     TOTAL_REALIZED += realized_pl
     TOTAL_UNREALIZED += unrealized_pl # type: ignore
