@@ -246,6 +246,8 @@ def get_trades(symbols: List[str],
             trade_amount = row.quantity * row.price * 100
         else:
             trade_amount = row.quantity * row.price
+        # need to switch the sign for the trade amount
+        trade_amount = -trade_amount
 
         trades.append({
                     'Symbol': row.symbol,
@@ -253,7 +255,7 @@ def get_trades(symbols: List[str],
                     'Type': row.trade_type,
                     'Quantity': row.quantity,
                     'Price': row.price,
-                    'Amount': -round(trade_amount),
+                    'Amount': trade_amount,
                     })
 
     # sort the results and return a pandas Dataframe
