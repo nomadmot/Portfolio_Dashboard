@@ -33,7 +33,7 @@ class YfPeriods(Enum):
 def get_stock_history(ticker: str,
                       start_date=None,
                       end_date=None,
-                      days=None) -> pd.DataFrame:
+                      period=None) -> pd.DataFrame:
     """
     Use yfinance to get historical stock data for a given ticker.
 
@@ -47,20 +47,19 @@ def get_stock_history(ticker: str,
         end_date -- The end date for the fetched data. If specified, the data
          will include dates up to and including the end date. (default: {None})
 
-        days -- The number of days (starting with today) to fetch data
+        period -- The time period to fetch data (use YfPeriods enum)
          (default: {None})
          
-        **Note**: You must specify either `start_date` or `days`, not both.
+        **Note**: You must specify either `start_date` or `period`, not both.
 
     Raises:
         ValueError: The function raises a ValueError if both `start_date`
-            and `days` are provided.
-
+            and `period` are provided.
     Returns:
         A pandas DataFrame containing the historical stock data.
     """
     # call with start_date or days, not both
-    if start_date is not None and days is not None:
+    if start_date is not None and period is not None:
         raise ValueError("Specify either start_date or days, not both.")
 
     # initialize an empty DataFrame for the ticker data
@@ -81,9 +80,9 @@ def get_stock_history(ticker: str,
                                         start=start_date,
                                         auto_adjust=True
                                         )
-    elif days is not None:
+    elif period is not None:
         ticker_data: pd.DataFrame = yf_ticker.history(
-                                                period=days.value,
+                                                period=period.value,
                                                 auto_adjust=True
                                                 )
     ticker_data.reset_index(inplace=True)
