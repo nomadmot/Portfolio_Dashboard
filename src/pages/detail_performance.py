@@ -16,8 +16,10 @@ from core import (get_security_symbols,
                   get_last_trade_date,
                   lookup_associated_symbols,
                   get_basic_quote,
-                  Periods
-                  )
+                  get_security_info,
+                  Periods,
+)
+from models.portfolio import SecurityType
 
 
 # create a named tuple for summary data
@@ -27,6 +29,7 @@ Summary = namedtuple(
         "Symbol",
         "Price",
         "Holding",
+        "Market",
         "Cost",
         "Unrealized",
         "Realized",
@@ -55,11 +58,13 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     # initialize variables
     current_shares = 0.0
     current_price = 0.0
+    market_value = 0.0
     total_cost = 0.0
     market_value = 0.0
     realized_pl = 0.0
     unrealized_pl = 0.0
     symbol = trades_df.iloc[0].Symbol
+    security = get_security_info(symbol)
 
     # loop through each row to compute analysis metrics
     for row in trades_df.itertuples():
@@ -100,6 +105,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
             realized_pl = 0.0
             total_cost = -row.Amount  # type: ignore
         # calculate the current quantity
+        # NOTE: tracking number of optioncontracts for display
         current_shares += row.Quantity # type: ignore
         trades_df.loc[row.Index, "Holding"] = current_shares
         # get the stock prices as of the trade date if the trade price is 0
@@ -109,7 +115,11 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
             # otherwise use the trade price
             current_price = row.Price  # type: ignore
         # calculate the current market value
-        market_value = current_shares * current_price  # type: ignore
+        # multiply quantity by 100 for options
+        if security.security_type == SecurityType.OPTION:
+            market_value = current_shares * current_price * 100  # type: ignore
+        else:
+            market_value = current_shares * current_price  # type: ignore
         # calculate the unrealized profit/loss
         unrealized_pl = market_value - total_cost # type: ignore
         trades_df.loc[row.Index, "Cost"] = total_cost
@@ -118,10 +128,26 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         trades_df.loc[row.Index, "Unrealized P/L"] = unrealized_pl
 
     # update the summary data
-    # unrealized profit/loss is current market value minus total cost
-    unrealized_pl = current_shares * current_price - total_cost # type: ignore
+    # if current holdings is not zero, calculate the market value andunrealized profit/loss
+    # and unrealized profit/loss based on the current stock price
+    # otherwise, unrealized profit/loss is zero
+    if current_shares == 0:
+        unrealized_pl = 0.0
+        market_value = 0.0
+        current_price = 0.0
+    else:
+        # get the current stock price
+        current_price = get_basic_quote(str(symbol)).get('currentPrice', 0)
+        # multiply quantity by 100 for options
+        if security.security_type == SecurityType.OPTION:
+            market_value = current_shares * current_price * 100  # type: ignore
+            unrealized_pl = market_value - total_cost  # type: ignore
+        else:
+            market_value = current_shares * current_price  # type: ignore
+            unrealized_pl = market_value - total_cost  # type: ignore
     # calculate the sum total of realized profit/loss
     realized_pl = trades_df["Realized P/L"].sum()
+
     global TOTAL_REALIZED, TOTAL_UNREALIZED
     TOTAL_REALIZED += realized_pl
     TOTAL_UNREALIZED += unrealized_pl # type: ignore
@@ -129,6 +155,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
                         Symbol=symbol,
                         Price=current_price,
                         Holding=current_shares,
+                        Market=market_value,
                         Cost=total_cost,
                         Realized=realized_pl,
                         Unrealized=unrealized_pl,
@@ -251,10 +278,14 @@ if selected_symbols:
                  column_config={
                     "Symbol": st.column_config.TextColumn(width=150),
                     "Price": st.column_config.NumberColumn(
-                        label="Current Price    ",
+                        label="Current Price",
                         format="$%.2f",
                     ),
                     "Holding": st.column_config.NumberColumn(format="accounting", width="small"),
+                    "Market": st.column_config.NumberColumn(
+                        label="Market Value",
+                        format="$%.2f",
+                    ),
                     "Cost": st.column_config.NumberColumn(format="$%.2f"),
                     "Unrealized": st.column_config.NumberColumn(
                         label="Unrealized P/L",
