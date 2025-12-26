@@ -14,7 +14,7 @@ from core import (
     get_account,
     get_balance_history,
 )
-from services import get_stock_history
+from core import get_stock_history
 
 # function to calculate the cumulative performance for a given series
 def calculate_cumulative_performance(data: pd.Series):

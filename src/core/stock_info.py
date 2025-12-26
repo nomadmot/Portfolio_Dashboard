@@ -3,17 +3,47 @@ Use YFinance to get current stock info
 """
 # Third Party Imports
 import yfinance as yf
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 # Local Application Imports
 import config
+from models.portfolio import Security
 
 # Set up logging
 logger = config.LOGGER
 
+def get_security_info(symbol: str) -> Security:
+    """
+    Get security information for a given symbol
+
+    :param symbol: Stock symbol
+
+    :return: Security dataclass instance
+    """
+    logger.debug("In get_security_info, symbol=%s", symbol)
+    # generate a sqlalchemy select statement to retrieve the security
+    with Session(config.DB_ENGINE) as session:
+        result = session.execute(
+            select(Security).where(Security.symbol == symbol)
+            ).first()
+
+    # check if the result is None, which means the security does not exist
+    if not result:
+        raise ValueError(f"Security with symbol {symbol} does not exist.")
+    else:
+        security = result[0]
+        logger.debug("Found security: %s", security)
+
+    # return the Security object
+    return security
+
 def get_basic_quote(symbol: str) -> dict:
     """
     Get basic stock quote information for a given symbol
+
     :param symbol: Stock symbol
+
     :return: Dictionary with basic stock information
     """
     logger.debug("" \

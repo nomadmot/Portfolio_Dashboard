@@ -20,11 +20,18 @@ from core.query_portfolio import (
 )
 
 from core.stock_info import (
+    get_security_info,
     get_basic_quote,
+)
+
+from core.stock_data import (
+    YfPeriods,
+    get_stock_history,
 )
 
 __all__ = [
     "Periods",
+    "YfPeriods",
     "update_daily_balance",
     "delete_daily_balance",
     "get_account",
@@ -33,5 +40,7 @@ __all__ = [
     "get_trades",
     "get_last_trade_date",
     "lookup_associated_symbols",
-    "get_basic_quote"
+    "get_security_info",
+    "get_basic_quote",
+    "get_stock_history",
 ]
