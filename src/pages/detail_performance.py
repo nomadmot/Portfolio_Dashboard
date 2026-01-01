@@ -278,7 +278,10 @@ if len(selected_symbols) > 0:
     )
 
     # analyze the trades
-    trades = analyze_trades(selected_trades)
+    if not selected_trades.empty:
+        trades = analyze_trades(selected_trades)
+    else:
+        trades = pd.DataFrame()
 
     # display the trade details
     st.dataframe(trades,
