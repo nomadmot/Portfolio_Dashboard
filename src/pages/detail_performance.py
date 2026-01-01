@@ -10,7 +10,7 @@ import streamlit as st
 import pandas as pd
 
 # Import local modules
-from config import LOGGER
+from config import LOGGER, SYMBOL_MULTISELECT_KEY
 from core import (get_security_symbols,
                   get_trades,
                   get_last_trade_date,
@@ -20,6 +20,7 @@ from core import (get_security_symbols,
                   Periods,
 )
 from models.portfolio import SecurityType
+from utility import aumc_get_instance
 
 
 # create a named tuple for summary data
@@ -197,6 +198,16 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(analyzed)
 
 
+# main page logic
+# retrieve or create the multiselect component for selecting symbols
+multiselect_symbols = aumc_get_instance(SYMBOL_MULTISELECT_KEY)
+if not multiselect_symbols.is_initialized:
+    multiselect_symbols.configure_instance(
+                        key=SYMBOL_MULTISELECT_KEY,
+                        label="Select Symbol(s):",
+                        options=get_security_symbols(include_options=False),
+                        )
+
 # configure the page layout
 st.set_page_config(layout="wide")
 
@@ -211,11 +222,14 @@ with st.container(width="stretch"):
     with layout_inputs:
         # container for input elements
         with st.container(border=True):
-            #begin date, end date, and options checkbox in the first row
-            with st.container(horizontal=True):
+            #begin date, end date, and options button in the first row
+            with st.container(horizontal=True,
+                              horizontal_alignment="left",
+                              vertical_alignment="bottom",
+                              ):
                 layout_selected_period = st.empty()
                 #layout_end_date = st.empty()
-                layout_include_options = st.empty()
+                layout_load_options = st.empty()
             # include symbol multiselect in the second row
             with st.container(horizontal=True):
                 layout_select_symbols = st.empty()
@@ -230,52 +244,62 @@ with layout_selected_period:
                             index=1,
                             width=300)
 
-with layout_include_options:
-    # option to include options in the symbol list
-    include_options = st.checkbox("Include Options")
+with layout_load_options:
+    # button to load options into the symbol list
+    load_options = st.button("Load Options")
 
+# create a multiselect widget to select symbols for performance analysis
 with layout_select_symbols:
+    # placeholder for multiselect symbols for performance analysis
+    selected_symbols_placeholder = st.empty()
     # multiselect symbols for perormance analysis
-    selected_symbols = st.multiselect(
-        "Select Symbol(s):",
-        label_visibility="collapsed",
-        placeholder="Select Symbol(s)",
-        options=get_security_symbols(include_options=False),
-        )
+    with selected_symbols_placeholder:
+        multiselect_symbols.multiselect()
 
-if selected_symbols:
-    if include_options:
+
+# get the selected symbols from the multiselect component
+selected_symbols = multiselect_symbols.selected
+if len(selected_symbols) > 0:
+    if load_options:
+        # add any associated symbols from the database to the selectiob list
         selected_symbols = lookup_associated_symbols(selected_symbols)
+        # re-render the multiselect with updated selected symbols
+        selected_symbols_placeholder.empty()
+        with selected_symbols_placeholder:
+            multiselect_symbols.multiselect(selected_symbols)
 
+    # get the trades for the selected symbols and period
     selected_trades = get_trades(
         symbols=selected_symbols,
         period=selected_period,
         ascending=True,
     )
 
+    # analyze the trades
     trades = analyze_trades(selected_trades)
 
+    # display the trade details
     st.dataframe(trades,
-                 hide_index=True,
-                 width=1000,
-                 column_config={
-                     "Symbol": st.column_config.TextColumn(width=150),
-                     "Quantity": st.column_config.NumberColumn(format="accounting", width="small"),
-                     "Price": st.column_config.NumberColumn(format="$%.2f",),
-                     "Amount": st.column_config.NumberColumn(format="$%.2f"),
-                     "Cost": st.column_config.NumberColumn(format="$%.2f"),
-                     "Market Value": st.column_config.NumberColumn(format="$%.2f"),
-                     "Unrealized P/L": st.column_config.NumberColumn(format="$%.2f"),
-                     "Realized P/L": st.column_config.NumberColumn(format="$%.2f"),
+                hide_index=True,
+                width=1000,
+                column_config={
+                    "Symbol": st.column_config.TextColumn(width=150),
+                    "Quantity": st.column_config.NumberColumn(format="accounting", width="small"),
+                    "Price": st.column_config.NumberColumn(format="$%.2f",),
+                    "Amount": st.column_config.NumberColumn(format="$%.2f"),
+                    "Cost": st.column_config.NumberColumn(format="$%.2f"),
+                    "Market Value": st.column_config.NumberColumn(format="$%.2f"),
+                    "Unrealized P/L": st.column_config.NumberColumn(format="$%.2f"),
+                    "Realized P/L": st.column_config.NumberColumn(format="$%.2f"),
                     }
-                 )
+                )
 
     # print out the summary information
     st.subheader("Trade Summary:")
     st.dataframe(TRADE_SUMMARY,
-                 hide_index=True,
-                 width=1000,
-                 column_config={
+                hide_index=True,
+                width=1000,
+                column_config={
                     "Symbol": st.column_config.TextColumn(width=150),
                     "Price": st.column_config.NumberColumn(
                         label="Current Price",
@@ -295,7 +319,7 @@ if selected_symbols:
                         label="Realized P/L",
                         format="$%.2f",
                     ),
-                 }
+                }
     )
     st.subheader(f"Total Realized Gain/Loss: ${TOTAL_REALIZED:,.2f}")
     st.subheader(f"Total Unrealized Gain/Loss: ${TOTAL_UNREALIZED:,.2f}")

@@ -1,6 +1,9 @@
 #!/bin/zsh
 
+# activate Python virtual environment
 source .venv/bin/activate
+# set environment variables
+source ./load-env.sh
+# run the Streamlit app
 cd src
-export DATABASE_URI=sqlite://///Users/nomadmot/Library/CloudStorage/Dropbox/Apps/Investing/DATA/portfolio-test.db
 streamlit run app.py
