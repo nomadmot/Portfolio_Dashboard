@@ -69,6 +69,3 @@ assert path.isfile(DATABASE_FILENAME), f"Database file {DATABASE_FILENAME} does 
 
 # create the SQLAlchemy engine
 DB_ENGINE = create_engine(DATABASE_URI, echo=False)
-
-# the key for the detail performance multiselect component
-SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
