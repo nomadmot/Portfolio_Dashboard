@@ -86,7 +86,7 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
             # add the daily balance and percent change to the hover text
             customdata=list(zip(dly_balance, dly_pct_change)),
             hovertemplate=
-                "<extra>Balance: %${customdata[0]:,.2f}<br>" +
+                "<extra>Balance: $%{customdata[0]:,.2f}<br>" +
                 "Pct Change: %{customdata[1]:.1%}</extra>",
         ))
     fig.add_trace(go.Scatter(x=dates, y=change,

@@ -10,7 +10,7 @@ import streamlit as st
 import pandas as pd
 
 # Import local modules
-from config import LOGGER, SYMBOL_MULTISELECT_KEY
+from config import LOGGER
 from core import (get_security_symbols,
                   get_trades,
                   get_last_trade_date,
@@ -41,6 +41,8 @@ TRADE_SUMMARY = list()
 TOTAL_REALIZED = 0.0
 TOTAL_UNREALIZED = 0.0
 
+# the key for the detail performance multiselect component
+SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
 
 # utility function to analyse trades for a single symbol
 def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
@@ -276,7 +278,10 @@ if len(selected_symbols) > 0:
     )
 
     # analyze the trades
-    trades = analyze_trades(selected_trades)
+    if not selected_trades.empty:
+        trades = analyze_trades(selected_trades)
+    else:
+        trades = pd.DataFrame()
 
     # display the trade details
     st.dataframe(trades,
