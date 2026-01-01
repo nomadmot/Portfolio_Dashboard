@@ -14,7 +14,7 @@ from core import (
     get_account,
     get_balance_history,
 )
-from services import get_stock_history
+from core import get_stock_history
 
 # function to calculate the cumulative performance for a given series
 def calculate_cumulative_performance(data: pd.Series):
@@ -86,7 +86,7 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
             # add the daily balance and percent change to the hover text
             customdata=list(zip(dly_balance, dly_pct_change)),
             hovertemplate=
-                "<extra>Balance: %${customdata[0]:,.2f}<br>" +
+                "<extra>Balance: $%{customdata[0]:,.2f}<br>" +
                 "Pct Change: %{customdata[1]:.1%}</extra>",
         ))
     fig.add_trace(go.Scatter(x=dates, y=change,
