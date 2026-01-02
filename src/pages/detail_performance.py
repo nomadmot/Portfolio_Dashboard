@@ -208,6 +208,8 @@ if not multiselect_symbols.is_initialized:
                         key=SYMBOL_MULTISELECT_KEY,
                         label="Select Symbol(s):",
                         options=get_security_symbols(include_options=False),
+                        accept_new_options=True,
+                        placeholder="Select or type to add symbols...",
                         )
 
 # configure the page layout
