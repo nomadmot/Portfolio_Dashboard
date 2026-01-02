@@ -15,7 +15,7 @@ import pandas as pd
 ### local imports
 from config import LOGGER
 
-def _create_obsidian_url(vault: str, filename: str) -> str:
+def _create_obsidian_url(vault: str, filename: str, action: str) -> str:
     """
     Given a filename from the Obsidian vault, generate a URL to access the file
     in the Obsidian app. The URL has the following format and must be encoded properly:
@@ -26,8 +26,10 @@ def _create_obsidian_url(vault: str, filename: str) -> str:
     :param filename: The name of the file in the Obsidian vault.
     :return: The URL to access the file in Obsidian.
     """
-    LOGGER.debug("Creating Obsidian URL for vault: %s, filename: %s", vault, filename)
-    base_url = "obsidian://open?"
+    LOGGER.debug(
+        "Creating Obsidian URL for vault: %s, filename: %s, action: %s", vault, filename, action
+        )
+    base_url = f"obsidian://{action}?"
     query_params = {
         "vault": vault,
         "file": filename
@@ -46,9 +48,23 @@ def open_obsidian_file(vault: str, filename: str) -> None:
     :param filename: The name of the file in the Obsidian vault.
     """
     LOGGER.debug("Opening Obsidian file: %s in vault: %s", filename, vault)
-    api_url = _create_obsidian_url(vault, filename)
+    api_url = _create_obsidian_url(vault, filename, "open")
     LOGGER.debug("Opening Obsidian URL: %s", api_url)
     webbrowser.open(api_url)
+
+
+def new_obsidian_file(vault: str, filename: str, action: str, content: str|None) -> None:
+    """
+    Creates the specified file in the Obsidian app using the Local REST API plugin.
+
+    :param vault: The name of the Obsidian vault.
+    :param filename: The name of the file to be created in the Obsidian vault.
+    """
+    LOGGER.debug("Creating new Obsidian file: %s in vault: %s", filename, vault)
+    api_url = _create_obsidian_url(vault, filename, "new")
+    LOGGER.debug("Creating Obsidian URL: %s", api_url)
+    webbrowser.open(api_url)
+
 
 def search_obsidian_notes(vault: str, symbol:str) -> pd.DataFrame:
     """
