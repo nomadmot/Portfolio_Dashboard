@@ -27,7 +27,8 @@ def option_multiselect_callback(selected_input, instance):
     AutoUpdateMultiselectComponent instance.
     """
     logger.debug("in option_multiselect_callback, input=%s", selected_input)
-    instance.selected = st.session_state[selected_input].copy()
+    # convert all strings to upper case and store in instance
+    instance.selected = [s.upper() for s in st.session_state[selected_input].copy()]
 
 
 class AutoUpdateMultiselectComponent:
@@ -74,6 +75,8 @@ class AutoUpdateMultiselectComponent:
         self._options = list()
         self._default = list()
         self._selected = list()
+        self._accept_new_options: bool= False
+        self._placeholder: str|None = None
         self._isinitialized = False
 
 
@@ -81,7 +84,9 @@ class AutoUpdateMultiselectComponent:
                             key: str,
                             label: str,
                             options: list[str],
-                            default: list[str]|None = None
+                            default: list[str]|None = None,
+                            accept_new_options: bool = False,
+                            placeholder: str|None = None,
                             ) -> None:
         """
         Configures a new instance of AutoUpdateMultiselectComponent.
@@ -101,6 +106,8 @@ class AutoUpdateMultiselectComponent:
             self._default = list()
         else:
             self._default = default.copy()
+        self._accept_new_options = accept_new_options
+        self._placeholder = placeholder
         self._isinitialized = True
 
     def multiselect(self, default: list[str]|None = None) -> Any:
@@ -143,6 +150,8 @@ class AutoUpdateMultiselectComponent:
             self._label,
             options=self._options,
             default=self._default,
+            accept_new_options=self._accept_new_options,
+            placeholder=self._placeholder,
             on_change=option_multiselect_callback,
             args=(self._widget_id, self),
             key=self._widget_id
