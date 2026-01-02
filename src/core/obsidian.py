@@ -12,6 +12,9 @@ from io import StringIO
 import httpx
 import pandas as pd
 
+### local imports
+from config import LOGGER
+
 def _create_obsidian_url(vault: str, filename: str) -> str:
     """
     Given a filename from the Obsidian vault, generate a URL to access the file
@@ -23,6 +26,7 @@ def _create_obsidian_url(vault: str, filename: str) -> str:
     :param filename: The name of the file in the Obsidian vault.
     :return: The URL to access the file in Obsidian.
     """
+    LOGGER.debug("Creating Obsidian URL for vault: %s, filename: %s", vault, filename)
     base_url = "obsidian://open?"
     query_params = {
         "vault": vault,
@@ -30,6 +34,7 @@ def _create_obsidian_url(vault: str, filename: str) -> str:
     }
     encoded_params = (urlencode(query_params)).replace('+', '%20')
     full_url = f"{base_url}{encoded_params}"
+    LOGGER.debug("Generated Obsidian URL: %s", full_url)
     return full_url
 
 
@@ -40,7 +45,9 @@ def open_obsidian_file(vault: str, filename: str) -> None:
     :param vault: The name of the Obsidian vault.
     :param filename: The name of the file in the Obsidian vault.
     """
+    LOGGER.debug("Opening Obsidian file: %s in vault: %s", filename, vault)
     api_url = _create_obsidian_url(vault, filename)
+    LOGGER.debug("Opening Obsidian URL: %s", api_url)
     webbrowser.open(api_url)
 
 def search_obsidian_notes(vault: str, symbol:str) -> pd.DataFrame:
@@ -57,12 +64,14 @@ def search_obsidian_notes(vault: str, symbol:str) -> pd.DataFrame:
         columns for the note filename, symbol, and date entered, and is indexed by the
         date entered.
     """
+    LOGGER.debug("Searching Obsidian notes in vault: %s for symbol/tag: %s", vault, symbol)
     # Set the base URL for the Obsidian search function
     url_base = 'http://127.0.0.1:27123/search'
     # Define the DQL query to search for notes with the specified symbol or tag
     dql = (f'TABLE symbol,entered,file.tags WHERE symbol="{symbol}"'
            f'or contains(file.tags, "{symbol}")'
         )
+    LOGGER.debug("DQL Query: %s", dql)
 
     try:
         response = httpx.post(
@@ -76,26 +85,26 @@ def search_obsidian_notes(vault: str, symbol:str) -> pd.DataFrame:
             content=dql,
         )
     except httpx.RequestError as exc:
-        print(f"An error occurred while requesting {exc.request.url!r}.")
+        LOGGER.error("An error occurred while requesting %s: ", exc.request.url)
         raise
-
+    LOGGER.debug("Obsidian search API Response: %s", response)
     if response.text == '[]':
         df = pd.DataFrame()  # Return empty DataFrame if no results found
     else:
         df = pd.read_json(StringIO(response.text)) # Convert JSON response to DataFrame
 
-
+    LOGGER.debug("Raw DataFrame from Obsidian search API: %s", df)
     return df
 
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
     # Example usage
-    VAULT_NAME = "Stock Journal"
-    FILE_NAME = "2025-11-17 14-32-44"
-    URL = _create_obsidian_url(VAULT_NAME, FILE_NAME)
+    # VAULT_NAME = "Stock Journal"
+    # FILE_NAME = "2025-11-17 14-32-44"
+    # URL = _create_obsidian_url(VAULT_NAME, FILE_NAME)
 
-    print(URL)  # Output: obsidian://open?vault=Stock%20Journal&file=2025-11-17%2014-32-44
+    # print(URL)  # Output: obsidian://open?vault=Stock%20Journal&file=2025-11-17%2014-32-44
 
-    open_obsidian_file(VAULT_NAME, FILE_NAME)
+    # open_obsidian_file(VAULT_NAME, FILE_NAME)
 
-    print(search_obsidian_notes(VAULT_NAME, "GDX"))
+    # print(search_obsidian_notes(VAULT_NAME, "GDX"))
