@@ -53,15 +53,23 @@ def open_obsidian_file(vault: str, filename: str) -> None:
     webbrowser.open(api_url)
 
 
-def new_obsidian_file(vault: str, filename: str, action: str, content: str|None) -> None:
+def new_obsidian_file(vault: str, filename: str, content: str|None) -> None:
     """
-    Creates the specified file in the Obsidian app using the Local REST API plugin.
+    Creates the specified file in the Obsidian app using the Local REST API plugin,
+    optionally with initial content. The new note will be opened in Obsidian.
 
-    :param vault: The name of the Obsidian vault.
-    :param filename: The name of the file to be created in the Obsidian vault.
+    Arguments:
+        vault: The name of the Obsidian vault.
+        filename: The name of the file to be created in the Obsidian vault.
+        content: The initial content to be added to the new file. (Optional)
+
+    Returns:
+        None
     """
     LOGGER.debug("Creating new Obsidian file: %s in vault: %s", filename, vault)
     api_url = _create_obsidian_url(vault, filename, "new")
+    if content:
+        api_url += urlencode({"content": content}).replace('+', '%20')
     LOGGER.debug("Creating Obsidian URL: %s", api_url)
     webbrowser.open(api_url)
 
@@ -111,16 +119,3 @@ def search_obsidian_notes(vault: str, symbol:str) -> pd.DataFrame:
 
     LOGGER.debug("Raw DataFrame from Obsidian search API: %s", df)
     return df
-
-
-#if __name__ == "__main__":
-    # Example usage
-    # VAULT_NAME = "Stock Journal"
-    # FILE_NAME = "2025-11-17 14-32-44"
-    # URL = _create_obsidian_url(VAULT_NAME, FILE_NAME)
-
-    # print(URL)  # Output: obsidian://open?vault=Stock%20Journal&file=2025-11-17%2014-32-44
-
-    # open_obsidian_file(VAULT_NAME, FILE_NAME)
-
-    # print(search_obsidian_notes(VAULT_NAME, "GDX"))
