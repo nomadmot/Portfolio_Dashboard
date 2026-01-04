@@ -69,7 +69,7 @@ def new_obsidian_file(vault: str, filename: str, content: str|None) -> None:
     LOGGER.debug("Creating new Obsidian file: %s in vault: %s", filename, vault)
     api_url = _create_obsidian_url(vault, filename, "new")
     if content:
-        api_url += urlencode({"content": content}).replace('+', '%20')
+        api_url += f"&{urlencode({"content": content}).replace('+', '%20')}"
     LOGGER.debug("Creating Obsidian URL: %s", api_url)
     webbrowser.open(api_url)
 
