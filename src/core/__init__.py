@@ -32,6 +32,13 @@ from core.stock_data import (
     get_stock_history,
 )
 
+from core.obsidian import (
+    open_obsidian_file,
+    new_obsidian_file,
+    get_obsidian_file,
+    search_obsidian_notes,
+)
+
 __all__ = [
     "Periods",
     "get_period_dates",
@@ -47,4 +54,8 @@ __all__ = [
     "get_security_info",
     "get_basic_quote",
     "get_stock_history",
+    "open_obsidian_file",
+    "new_obsidian_file",
+    "get_obsidian_file",
+    "search_obsidian_notes",
 ]
