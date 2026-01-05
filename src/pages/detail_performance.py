@@ -257,8 +257,10 @@ with layout_select_symbols:
     # placeholder for multiselect symbols for performance analysis
     selected_symbols_placeholder = st.empty()
     # multiselect symbols for perormance analysis
+    # if the "symbol" query parameter is provided, pre-fill the multiselect
+    query_symbol = st.query_params.get("symbol", None)
     with selected_symbols_placeholder:
-        multiselect_symbols.multiselect()
+        multiselect_symbols.multiselect(query_symbol.upper().split(',') if query_symbol else None)
 
 
 # get the selected symbols from the multiselect component
