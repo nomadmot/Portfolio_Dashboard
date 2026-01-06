@@ -81,51 +81,7 @@ def new_obsidian_file(vault: str, filename: str, content: str|None) -> None:
     webbrowser.open(api_url)
 
 
-def get_obsidian_file(filename: str) -> str:
-    """
-    Retrieves the content of the specified file from the Obsidian vault using
-    the Local REST API plugin.
-
-    Arguments:
-        filename: The name of the file in the Obsidian vault.
-
-    Returns:
-        The content of the specified file as a markdown string.
-    """
-    logger.debug("Retrieving Obsidian file: %s", filename)
-    url_base = "http://127.0.0.1:27123/vault"
-    # query_params = {"filename": filename}
-    # encoded_params = urlencode(query_params).replace('+', '%20')
-    url=f"{url_base}/{filename.replace(' ', '%20')}"
-    logger.debug("Obsidian GET URL: %s", url)
-
-    # fetch the file content via the Local REST API``
-    try:
-        response = httpx.get(
-            url=url,
-            headers={
-                'accept': 'text/markdown',
-                'Authorization':
-                    'Bearer bffbdddf086ad4c30b6af07fdb575e3ec42da39351f8c6f9f26d3c9a19ca1612'
-                },
-        )
-    except httpx.RequestError as exc:
-        logger.error("An error occurred while requesting %s: ", exc.request.url)
-        raise
-    logger.debug("Obsidian GET API Response: %s", response)
-
-    if response.status_code != 200:
-        logger.error(
-            "Failed to retrieve file from Obsidian. Status code: %s, Response: %s",
-            response.status_code,
-            response.text,
-        )
-        raise RuntimeError(f"Failed to retrieve file: {filename}")
-
-    return response.text
-
-
-def search_obsidian_notes(symbol:str) -> pd.DataFrame:
+def search_obsidian_notes(vault: str, symbol:str) -> pd.DataFrame:
     """
     Get a list of notes from the specified Obsidian vault that have either the "symbol"
     property or a tag matching the input symbol.
@@ -162,6 +118,15 @@ def search_obsidian_notes(symbol:str) -> pd.DataFrame:
         logger.error("An error occurred while requesting %s: ", exc.request.url)
         raise
     logger.debug("Obsidian search API Response: %s", response)
+
+    if response.status_code != 200:
+        logger.error(
+            "Failed to retrieve file from Obsidian. Status code: %s, Response: %s",
+            response.status_code,
+            response.text,
+        )
+        raise RuntimeError(f"Failed searching for symbol: {symbol}")
+
     if response.text == '[]':
         df = pd.DataFrame()  # Return empty DataFrame if no results found
     else:
