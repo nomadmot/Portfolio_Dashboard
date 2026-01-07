@@ -4,13 +4,14 @@ and other criteria.
 '''
 # Import necessary libraries
 from collections import namedtuple
+import logging
 
 # Import 3rd party modules
 import streamlit as st
 import pandas as pd
 
 # Import local modules
-from config import LOGGER
+import config
 from core import (get_security_symbols,
                   get_trades,
                   get_last_trade_date,
@@ -22,6 +23,9 @@ from core import (get_security_symbols,
 from models.portfolio import SecurityType
 from utility import aumc_get_instance
 
+# Set up logging
+logger = logging.getLogger(__name__)
+logger.setLevel(config.LOGLEVEL_APPLICATION)
 
 # create a named tuple for summary data
 Summary = namedtuple(
@@ -56,7 +60,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         DataFrame with additional columns for analysis
     """
     # mark entry in log
-    LOGGER.debug("in _analyze_trades: %s rows to analyze", trades_df.shape)
+    logger.debug("in _analyze_trades: %s rows to analyze", trades_df.shape)
 
     # initialize variables
     current_shares = 0.0
@@ -71,7 +75,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
 
     # loop through each row to compute analysis metrics
     for row in trades_df.itertuples():
-        LOGGER.debug("analyzing row %s", row)
+        logger.debug("analyzing row %s", row)
         # calculate the total  cost and realized profit/loss
         if current_shares < 0: # type: ignore
             # is short position
@@ -179,7 +183,7 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         DataFrame with additional columns for analysis
     """
     # mark entry in log
-    LOGGER.debug("in analyze_trades: %s rows to analyze", trades_df.shape[0])
+    logger.debug("in analyze_trades: %s rows to analyze", trades_df.shape[0])
 
     # add columns for analysis
     trades_df.insert(6, "Holding", 0.0)

@@ -12,12 +12,10 @@ import config
 from utility import StatusMessageComponent
 
 # Initialize logging
-logger = config.LOGGER
+logger = logging.getLogger(__name__)
+logger.setLevel(config.LOGLEVEL_APPLICATION)
 # mark entry into the module
 logger.debug("Starting Portfolio Dashboard application")
-# set the sqlalchemy logging level
-sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
-sqlalchemy_logger.setLevel(config.LOGLEVEL_SQLALCHEMY)
 
 # use the stock bull icon
 st.logo(image="images/Stock-Bull.png",)

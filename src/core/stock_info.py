@@ -1,6 +1,9 @@
 """
 Use YFinance to get current stock info
 """
+# Standard Library Imports
+import logging
+
 # Third Party Imports
 import yfinance as yf
 from sqlalchemy import select
@@ -11,7 +14,8 @@ import config
 from models.portfolio import Security
 
 # Set up logging
-logger = config.LOGGER
+logger = logging.getLogger(__name__)
+logger.setLevel(config.LOGLEVEL_APPLICATION)
 
 def get_security_info(symbol: str) -> Security:
     """
@@ -71,5 +75,5 @@ def get_basic_quote(symbol: str) -> dict:
     if basic_quote["currentPrice"] == 0.0:
         basic_quote["currentPrice"] = basic_quote["previousClose"]
     logger.debug("Adjusted basic_quote: %s", basic_quote)
-    
+
     return basic_quote
