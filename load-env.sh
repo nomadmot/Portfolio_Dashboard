@@ -11,8 +11,8 @@ while IFS= read -r line; do
   # Skip comments (lines starting with #) and empty lines  
   if [[ "$line" =~ ^# || -z "$line" ]]; then  
     continue  
-  fi  
- 
+  fi 
+  echo "Loading variable: $line"
   # Export the variable (KEY=VALUE)  
   export "$line"  
 done < ".env"  

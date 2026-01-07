@@ -3,6 +3,7 @@ exercise functions from core.obsidian module
 '''
 # import standard libraries
 import sys
+import logging
 from datetime import datetime as dt
 
 # adjust path for app imports from src directory
@@ -10,10 +11,13 @@ sys.path.append("src")
 
 # import application modules
 #pylint: disable=wrong-import-position
-from config import LOGGER
 from core.obsidian import open_obsidian_file, new_obsidian_file, search_obsidian_notes
 
-LOGGER.info("Starting Obsidian module test script at %s", dt.now().isoformat())
+# Initialize logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.info("Starting Obsidian module test script at %s", dt.now().isoformat())
+
 # constants
 VAULT_NAME = "Stock Journal"
 FILE_NAME = "TEST"
