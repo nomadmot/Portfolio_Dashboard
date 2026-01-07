@@ -8,6 +8,7 @@ from os import environ, path
 
 #import 3rd-party libraries
 from sqlalchemy import create_engine
+from streamlit import logger as litlog
 import yfinance as yf
 
 # get logging configuration from the environment
@@ -23,6 +24,19 @@ match(LOGLEVEL_APPLICATION.upper()):
         LOGLEVEL_APPLICATION = logging.ERROR
     case _:
         LOGLEVEL_APPLICATION = logging.INFO
+    
+LOGLEVEL_STREAMLIT = environ.get("LOGLEVEL_STREAMLIT", "INFO")
+match(LOGLEVEL_STREAMLIT.upper()):
+    case "DEBUG":
+        LOGLEVEL_STREAMLIT = logging.DEBUG
+    case "INFO":
+        LOGLEVEL_STREAMLIT = logging.INFO
+    case "WARN":
+        LOGLEVEL_STREAMLIT = logging.WARN
+    case "ERROR":
+        LOGLEVEL_STREAMLIT = logging.ERROR
+    case _:
+        LOGLEVEL_STREAMLIT = logging.INFO
 
 LOGLEVEL_SQLALCHEMY = environ.get("LOGLEVEL_SQLALCHEMY", "WARN")
 match(LOGLEVEL_SQLALCHEMY.upper()):
@@ -54,7 +68,11 @@ sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
 sqlalchemy_logger.setLevel(LOGLEVEL_SQLALCHEMY)
 logger.info("SQLAlchemy logger initialized at level: %s", logging.getLevelName(LOGLEVEL_SQLALCHEMY))
 
-#YFinance configuration
+# set the Streamlit logging level
+litlog.set_log_level(LOGLEVEL_STREAMLIT)
+logger.info("Streamlit logger initialized at level: %s", logging.getLevelName(LOGLEVEL_STREAMLIT))
+
+# YFinance logging configuration
 YFINANCE_DEBUG = environ.get("YFINANCE_DEBUG", "FALSE").upper()
 if YFINANCE_DEBUG == "TRUE":
     logger.info("Enabling YFinance debug mode")
