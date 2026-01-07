@@ -24,7 +24,7 @@ match(LOGLEVEL_APPLICATION.upper()):
         LOGLEVEL_APPLICATION = logging.ERROR
     case _:
         LOGLEVEL_APPLICATION = logging.INFO
-    
+
 LOGLEVEL_STREAMLIT = environ.get("LOGLEVEL_STREAMLIT", "INFO")
 match(LOGLEVEL_STREAMLIT.upper()):
     case "DEBUG":
