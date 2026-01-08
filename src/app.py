@@ -28,7 +28,7 @@ st.set_page_config(
 )
 # Build the navigation menu
 pages = [
-         st.Page("pages/performance_summary.py", title="Performance Summary"),
+         st.Page("pages/performance_summary.py", title="Performance Summary", default=True),
          st.Page("pages/manage_balances.py", title="Manage Daily Balances"),
          st.Page("pages/detail_performance.py", title="Detail Performance"),
          st.Page("pages/system_info.py", title="System Info"),
