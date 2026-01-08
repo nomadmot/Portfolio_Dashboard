@@ -21,9 +21,10 @@ logger.debug("Starting Portfolio Dashboard application")
 st.logo(image="images/Stock-Bull.png",)
 # Build the navigation menu
 pages = [
-         st.Page("pages/daily_performance.py", title="Daily Performance"),
+         st.Page("pages/daily_performance.py", title="Daily Performance", default=True),
          st.Page("pages/manage_balances.py", title="Manage Daily Balances"),
          st.Page("pages/detail_performance.py", title="Detail Performance"),
+         st.Page("pages/system_info.py", title="System Information"),
         ]
 pg = st.navigation(pages,
                    position="top"
