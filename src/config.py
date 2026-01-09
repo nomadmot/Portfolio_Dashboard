@@ -54,7 +54,7 @@ match(LOGLEVEL_SQLALCHEMY.upper()):
 # Initialize logging
 logging.basicConfig(
     #level=LOGLEVEL_APPLICATION,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s %(levelname)s %(name)s - %(message)s",
     stream=sys.stdout)
 logger = logging.getLogger(__name__)
 logger.setLevel(LOGLEVEL_APPLICATION)
