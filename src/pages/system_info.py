@@ -10,7 +10,7 @@ import streamlit as st
 
 # Import local modules
 import config
-from utility.client_info import get_client_ip
+from utility import get_client_ip
 
 # Set up logging
 logger = logging.getLogger(__name__)
