@@ -1,5 +1,5 @@
 """
-Functions related to client information and management
+Functions related to system information and management
 """
 # standard imports
 import logging
