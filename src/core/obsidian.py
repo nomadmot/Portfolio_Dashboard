@@ -22,6 +22,15 @@ logger.setLevel(config.LOGLEVEL_APPLICATION)
 # mark entry into the module
 logger.debug("Starting Portfolio Dashboard application")
 
+
+# constants
+BEARER = "bffbdddf086ad4c30b6af07fdb575e3ec42da39351f8c6f9f26d3c9a19ca1612"
+OBSIDIAN_SERVER_INFO = "http://{ip_address}:{port}"
+OBSIDIAN_VAULT_URL = "http://{ip_address}:{port}/vault"
+OBSIDIAN_OPEN_URL = "http://{ip_address}:{port}/open"
+OBSIDIAN_SEARCH_URL = "http://{ip_address}:{port}/search"
+
+
 def _create_obsidian_url(vault: str, filename: str, action: str) -> str:
     """
     Given a filename from the Obsidian vault, generate a URL to access the file
