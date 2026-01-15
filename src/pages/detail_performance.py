@@ -46,8 +46,6 @@ Summary = namedtuple(
 )
 # global variables to hold the summary data
 TRADE_SUMMARY = list()
-TOTAL_REALIZED = 0.0
-TOTAL_UNREALIZED = 0.0
 
 # the key for the detail performance multiselect component
 SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
@@ -69,14 +67,15 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     # initialize variables
     current_shares = 0.0
     current_price = 0.0
-    prev_shares = 0.0
     average_price = 0.0
     market_value = 0.0
     total_invested = 0.0
     cost_basis = 0.0
     market_value = 0.0
     realized_pl = 0.0
+    realized_pl_pct = 0.0
     unrealized_pl = 0.0
+    unrealized_pl_pct = 0.0
     symbol = trades_df.iloc[0].Symbol
     security = get_security_info(symbol)
 
@@ -84,25 +83,20 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     for row in trades_df.itertuples():
         logger.debug("analyzing row %s", row)
 
-        # calculate the current holdings
+        # save previous values for transaction analysis
         prev_shares = current_shares
-        current_shares += row.Quantity # type: ignore
+        prev_avg_price = average_price
+        prev_cost_basis = prev_shares * prev_avg_price # type: ignore
 
-        # calculate the market value
         # get the stock prices as of the trade date if the trade price is 0
         if row.Price == 0.0:  # type: ignore
             current_price = get_basic_quote(str(symbol)).get('currentPrice', 0)
         else:
             # otherwise use the trade price
             current_price = row.Price  # type: ignore
-        market_value = current_shares * current_price  # type: ignore
-        # multiply value by 100 for options
-        if security.security_type == SecurityType.OPTION:
-            market_value = market_value * 100 # type: ignore
 
-        # calculate the average price
-        average_price = \
-            cost_basis / current_shares if current_shares != 0 else nan # type: ignore
+        # calculate the current holdings
+        current_shares += row.Quantity # type: ignore
 
         # calculate the total cost and realized profit/loss
         if prev_shares < 0: # type: ignore
@@ -124,42 +118,59 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
                 cost_basis = cost_basis * (
                                 current_shares / prev_shares # type: ignore
                                 )
-                if current_shares == 0.0:
-                    # closing a long position
-                    unrealized_pl = 0.0
-                    realized_pl = row.Amount + (row.Quantity * average_price)  # type: ignore
-                else:
-                    # partial sale of a long position
-                    unrealized_pl = current_shares * average_price  # type: ignore
-                    realized_pl = row.Amount + (row.Quantity * average_price)  # type: ignore
+                # calculate realized profit/loss
+                cost_of_shares = -row.Quantity * prev_avg_price #type: ignore
+                realized_pl = row.Amount - cost_of_shares  # type: ignore
+                realized_pl_pct = \
+                    realized_pl / cost_of_shares if cost_of_shares != 0 else nan # type:ignore
             else:
                 # adding to a long position
                 total_invested -= row.Amount  # type: ignore
                 cost_basis -= row.Amount  # type: ignore
-                # realized profit/loss is 0
-                realized_pl = 0.0
+                # realized profit/loss is meaningless
+                realized_pl = nan
+                realized_pl_pct = nan
         else:
             # new position
-            realized_pl = 0.0
             total_invested -= row.Amount  # type: ignore
             cost_basis = -row.Amount  # type: ignore
+            # realized profit/loss is meaningless for a new position
+            realized_pl = nan
+            realized_pl_pct = nan
+
+
+        # calculate the average price
+        average_price = \
+            cost_basis / current_shares if current_shares != 0 else nan # type: ignore
+
+        # calculate the current market value
+        market_value = current_shares * current_price if current_shares > 0 else nan  # type: ignore
+        # multiply value by 100 for options
+        if security.security_type == SecurityType.OPTION:
+            market_value = market_value * 100 # type: ignore
 
         # calculate the unrealized profit/loss
-        if current_shares > 0.0: # type: ignore
-            unrealized_pl = market_value - cost_basis # type: ignore
+        if current_shares == 0.0 or prev_cost_basis == 0.0: # type: ignore
+            unrealized_pl = nan
+            unrealized_pl_pct = nan
+        else:
+            unrealized_pl = (prev_shares * current_price) - prev_cost_basis # type: ignore
+            unrealized_pl_pct = unrealized_pl / prev_cost_basis  # type: ignore
+
+        # adjust unrealized profit/loss if any was realized
+        if realized_pl is not nan:
+            unrealized_pl = unrealized_pl - realized_pl # type: ignore
 
         # update the detail dataframe with results of the analysis
         trades_df.loc[row.Index, "Holding"] = current_shares
         trades_df.loc[row.Index, "Basis"] = cost_basis
         trades_df.loc[row.Index, "Avg Price"] = average_price
-        trades_df.loc[row.Index, "Realized P/L"] = realized_pl
-        trades_df.loc[row.Index, "Realized P/L %"] = \
-            realized_pl / total_invested if total_invested != 0 else nan  # type: ignore
         trades_df.loc[row.Index, "Market Value"] = market_value
         trades_df.loc[row.Index, "Total Invested"] = total_invested
         trades_df.loc[row.Index, "Unrealized P/L"] = unrealized_pl
-        trades_df.loc[row.Index, "Unrealized P/L %"] = \
-            unrealized_pl / total_invested if total_invested != 0 else nan  # type: ignore
+        trades_df.loc[row.Index, "Unrealized P/L %"] = unrealized_pl_pct
+        trades_df.loc[row.Index, "Realized P/L"] = realized_pl
+        trades_df.loc[row.Index, "Realized P/L %"] = realized_pl_pct
 
     # update the summary data
     # calculate the sum total of realized profit/loss for the summary
@@ -171,9 +182,6 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     # calculate the unreaqlized p/l for the summary
     unrealized_pl=market_value - cost_basis
 
-    global TOTAL_REALIZED, TOTAL_UNREALIZED
-    TOTAL_REALIZED += realized_pl
-    TOTAL_UNREALIZED += unrealized_pl # type: ignore
     TRADE_SUMMARY.append(Summary(
                 Symbol=symbol,
                 Invested=total_invested,
@@ -316,6 +324,12 @@ if len(selected_symbols) > 0:
     else:
         trades = pd.DataFrame()
 
+    # calculate the grand totals
+    df_trade_summary = pd.DataFrame(TRADE_SUMMARY)
+    grand_total_invested = df_trade_summary["Invested"].sum()
+    grand_total_realized = df_trade_summary["Realized"].sum()
+    grand_total_unrealized = df_trade_summary["Unrealized"].sum()
+
     # display the trade details
     st.dataframe(trades,
                 hide_index=True,
@@ -378,5 +392,6 @@ if len(selected_symbols) > 0:
                     ),
                 }
     )
-    st.subheader(f"Total Realized Gain/Loss: ${TOTAL_REALIZED:,.2f}")
-    st.subheader(f"Total Unrealized Gain/Loss: ${TOTAL_UNREALIZED:,.2f}")
+    st.subheader(f"Total Invested: ${grand_total_invested:,.2f}")
+    st.subheader(f"Total Realized Gain/Loss: ${grand_total_realized:,.2f}")
+    st.subheader(f"Total Unrealized Gain/Loss: ${grand_total_unrealized:,.2f}")
