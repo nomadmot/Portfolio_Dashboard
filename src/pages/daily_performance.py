@@ -145,7 +145,7 @@ with st.container(horizontal=True,
     # create a selectbox to select the comparison symbol for the chart
     selected_comparison = st.selectbox(
                             "Compare:",
-                            ["SPY", "QQQ"],
+                            ["SPY", "QQQ", "FFTY"],
                             index=0,
                             width=100)
 
