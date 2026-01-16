@@ -102,15 +102,22 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         if prev_shares < 0: # type: ignore
             # is short position
             if row.Quantity > 0: # type: ignore
-                # closing a short position
-                realized_pl = row.Amount + (
-                    total_invested * row.Quantity / current_shares  # type: ignore
-                    )
+                # covering a short position
+                cost_basis = cost_basis * (
+                                current_shares / prev_shares # type: ignore
+                                )
+                # calculate realized profit/loss
+                cost_of_shares = row.Quantity * prev_avg_price #type: ignore
+                realized_pl = row.Amount - cost_of_shares  # type: ignore
+                realized_pl_pct = \
+                    -(realized_pl / cost_of_shares) if cost_of_shares != 0 else nan # type:ignore
             else:
                 # adding to a short position
                 total_invested -= row.Amount  # type: ignore
-                # realized profit/loss is 0
-                realized_pl = 0.0
+                cost_basis += row.Amount  # type: ignore
+                # realized profit/loss is meaningless
+                realized_pl = nan
+                realized_pl_pct = nan
         elif prev_shares > 0: # type: ignore
             # is long position
             if row.Quantity < 0: # type: ignore
@@ -132,12 +139,17 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
                 realized_pl_pct = nan
         else:
             # new position
-            total_invested -= row.Amount  # type: ignore
-            cost_basis = -row.Amount  # type: ignore
+            if current_shares > 0.0: # type: ignore
+                # is new long position
+                total_invested = -row.Amount  # type: ignore
+                cost_basis = -row.Amount  # type: ignore
+            else:
+                # is new short position
+                total_invested = -row.Amount #type: ignore
+                cost_basis = row.Amount  # type: ignore
             # realized profit/loss is meaningless for a new position
             realized_pl = nan
             realized_pl_pct = nan
-
 
         # calculate the average price
         average_price = \
