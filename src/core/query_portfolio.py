@@ -259,7 +259,10 @@ def get_trades(symbols: List[str],
                     })
 
     # sort the results and return a pandas Dataframe
+    # buys are sorted in front of sells if they occur on the same day
     if trades:
-        return DataFrame(trades).sort_values(by='Date', ascending=ascending).reset_index(drop=True)
+        return DataFrame(trades).sort_values(
+            by=['Date', 'Type'],
+            ascending=ascending).reset_index(drop=True)
     else:
         return DataFrame(columns=['Symbol', 'Date', 'Type', 'Quantity', 'Price', 'Amount'])
