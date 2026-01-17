@@ -88,12 +88,8 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         prev_avg_price = average_price
         prev_cost_basis = prev_shares * prev_avg_price # type: ignore
 
-        # get the stock prices as of the trade date if the trade price is 0
-        if row.Price == 0.0:  # type: ignore
-            current_price = get_basic_quote(str(symbol)).get('currentPrice', 0)
-        else:
-            # otherwise use the trade price
-            current_price = row.Price  # type: ignore
+        # use the trade price as the current price
+        current_price = row.Price  # type: ignore
 
         # calculate the current holdings
         current_shares += row.Quantity # type: ignore
@@ -113,7 +109,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
                     -(realized_pl / cost_of_shares) if cost_of_shares != 0 else nan # type:ignore
             else:
                 # adding to a short position
-                total_invested -= row.Amount  # type: ignore
+                #   total_invested -= row.Amount  # type: ignore
                 cost_basis += row.Amount  # type: ignore
                 # realized profit/loss is meaningless
                 realized_pl = nan
@@ -145,7 +141,8 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
                 cost_basis = -row.Amount  # type: ignore
             else:
                 # is new short position
-                total_invested = -row.Amount #type: ignore
+                total_invested = 0.0 #type: ignore
+                #total_invested = -row.Amount #type: ignore
                 cost_basis = row.Amount  # type: ignore
             # realized profit/loss is meaningless for a new position
             realized_pl = nan
@@ -156,7 +153,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
             cost_basis / current_shares if current_shares != 0 else nan # type: ignore
 
         # calculate the current market value
-        market_value = current_shares * current_price if current_shares > 0 else nan  # type: ignore
+        market_value = current_shares * current_price  # type: ignore
         # multiply value by 100 for options
         if security.security_type == SecurityType.OPTION:
             market_value = market_value * 100 # type: ignore
