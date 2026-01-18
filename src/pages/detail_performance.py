@@ -213,6 +213,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
 def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     """
     Analyze the current status of a trade using the trade data from the input Dataframe
+    Calls _analyze_trades for each symbol found
 
     Arguments:
         trades_df -- input DataFrame containing trade data to be analyzed
@@ -246,7 +247,8 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(analyzed)
 
 
-# main page logic
+### main page logic
+
 # retrieve or create the multiselect component for selecting symbols
 multiselect_symbols = aumc_get_instance(SYMBOL_MULTISELECT_KEY)
 if not multiselect_symbols.is_initialized:
