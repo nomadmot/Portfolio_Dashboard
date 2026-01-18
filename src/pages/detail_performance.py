@@ -340,8 +340,12 @@ if len(selected_symbols) > 0:
     # calculate the grand totals
     df_trade_summary = pd.DataFrame(TRADE_SUMMARY)
     grand_total_invested = df_trade_summary["Invested"].sum()
+    grand_total_basis = df_trade_summary["Basis"].sum()
+    grand_total_market = df_trade_summary["Market"].sum()
     grand_total_realized = df_trade_summary["Realized"].sum()
-    grand_total_unrealized = df_trade_summary["Unrealized"].sum()
+    grand_total_unrealized = grand_total_market - grand_total_basis
+    total_realized_pct = (grand_total_invested - grand_total_basis) / grand_total_realized
+    total_unrealized_pct =  grand_total_basis / grand_total_unrealized
 
     # display the trade details
     st.dataframe(trades,
@@ -406,5 +410,7 @@ if len(selected_symbols) > 0:
                 }
     )
     st.subheader(f"Total Invested: ${grand_total_invested:,.2f}")
-    st.subheader(f"Total Realized Gain/Loss: ${grand_total_realized:,.2f}")
-    st.subheader(f"Total Unrealized Gain/Loss: ${grand_total_unrealized:,.2f}")
+    st.subheader(f"Total Current Basis: ${grand_total_basis:,.2f}")
+    st.subheader(f"Total Current Market: ${grand_total_market:,.2f}")
+    st.subheader(f"Total Realized Gain/Loss: ${grand_total_realized:,.2f} ({total_realized_pct:.1%})")
+    st.subheader(f"Total Unrealized Gain/Loss: ${grand_total_unrealized:,.2f} ({total_unrealized_pct:.1%})")
