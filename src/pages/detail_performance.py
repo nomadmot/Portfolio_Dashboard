@@ -194,8 +194,8 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
                 Symbol=symbol,
                 Invested=total_invested,
                 Realized=realized_pl,
-                RealizedPct=\
-                    realized_pl / total_invested if total_invested != 0 else nan,  # type: ignore
+                RealizedPct=realized_pl /
+                    (total_invested - cost_basis) if total_invested != 0 else nan,  # type: ignore
                 Holding=current_shares,
                 Price=current_price,
                 Market=market_value,
@@ -341,8 +341,8 @@ if len(selected_symbols) > 0:
     grand_total_market = df_trade_summary["Market"].sum()
     grand_total_realized = df_trade_summary["Realized"].sum()
     grand_total_unrealized = grand_total_market - grand_total_basis
-    total_realized_pct = (grand_total_invested - grand_total_basis) / grand_total_realized
-    total_unrealized_pct =  grand_total_basis / grand_total_unrealized
+    total_realized_pct = grand_total_realized / (grand_total_invested - grand_total_basis)
+    total_unrealized_pct =  grand_total_unrealized / grand_total_basis
 
     # display the trade details
     st.dataframe(trades,
@@ -407,7 +407,9 @@ if len(selected_symbols) > 0:
                 }
     )
     st.subheader(f"Total Invested: ${grand_total_invested:,.2f}")
-    st.subheader(f"Total Current Basis: ${grand_total_basis:,.2f}")
+    st.subheader("Total Realized Gain/Loss: $" +
+                 f"{grand_total_realized:,.2f} ({total_realized_pct:.1%})")
     st.subheader(f"Total Current Market: ${grand_total_market:,.2f}")
-    st.subheader(f"Total Realized Gain/Loss: ${grand_total_realized:,.2f} ({total_realized_pct:.1%})")
-    st.subheader(f"Total Unrealized Gain/Loss: ${grand_total_unrealized:,.2f} ({total_unrealized_pct:.1%})")
+    st.subheader(f"Total Current Basis: ${grand_total_basis:,.2f}")
+    st.subheader("Total Unrealized Gain/Loss: $" +
+                 f"{grand_total_unrealized:,.2f} ({total_unrealized_pct:.1%})")
