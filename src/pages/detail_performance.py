@@ -54,6 +54,8 @@ SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
 def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     """
     Analyze the current status of a trade using the trade data from the input Dataframe
+    Expects only one symbol... function analyze_trades groups tha dataframe and calls
+    thsi function for each group
 
     Arguments:
         trades_df -- input DataFrame containing trade data to be analyzed
@@ -243,7 +245,7 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         symbol = s[0]
         analyzed.append(_analyze_trades(grouped.get_group(symbol)))
 
-    # concatenate the analyzed trades for each symbol and return
+    # concatenate the analyzed trades and return
     return pd.concat(analyzed)
 
 
