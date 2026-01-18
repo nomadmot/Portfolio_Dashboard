@@ -111,7 +111,6 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
                     -(realized_pl / cost_of_shares) if cost_of_shares != 0 else nan # type:ignore
             else:
                 # adding to a short position
-                #   total_invested -= row.Amount  # type: ignore
                 cost_basis += row.Amount  # type: ignore
                 # realized profit/loss is meaningless
                 realized_pl = nan
@@ -139,12 +138,10 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
             # new position
             if current_shares > 0.0: # type: ignore
                 # is new long position
-                total_invested = -row.Amount  # type: ignore
+                total_invested -= row.Amount  # type: ignore
                 cost_basis = -row.Amount  # type: ignore
             else:
                 # is new short position
-                total_invested = 0.0 #type: ignore
-                #total_invested = -row.Amount #type: ignore
                 cost_basis = row.Amount  # type: ignore
             # realized profit/loss is meaningless for a new position
             realized_pl = nan
