@@ -105,13 +105,13 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
                                 current_shares / prev_shares # type: ignore
                                 )
                 # calculate realized profit/loss
-                cost_of_shares = row.Quantity * prev_avg_price #type: ignore
-                realized_pl = row.Amount - cost_of_shares  # type: ignore
+                realized_pl = row.Amount + prev_cost_basis - cost_basis  # type: ignore
                 realized_pl_pct = \
-                    -(realized_pl / cost_of_shares) if cost_of_shares != 0 else nan # type:ignore
+                    realized_pl / (prev_cost_basis - cost_basis) # type:ignore
             else:
                 # adding to a short position
-                cost_basis += row.Amount  # type: ignore
+                total_invested -= row.Amount # type: ignore
+                cost_basis += row.Amount # type: ignore
                 # realized profit/loss is meaningless
                 realized_pl = nan
                 realized_pl_pct = nan
@@ -142,6 +142,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
                 cost_basis = -row.Amount  # type: ignore
             else:
                 # is new short position
+                total_invested = -row.Amount  # type: ignore
                 cost_basis = row.Amount  # type: ignore
             # realized profit/loss is meaningless for a new position
             realized_pl = nan
@@ -157,17 +158,20 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         if security.security_type == SecurityType.OPTION:
             market_value = market_value * 100 # type: ignore
 
-        # calculate the unrealized profit/loss
-        if current_shares == 0.0 or prev_cost_basis == 0.0: # type: ignore
+        # calculate the unrealized profit/loss and percent
+        if current_shares > 0.0: # type: ignore
+            # use previous cost basis for long position percent
+            unrealized_pl = market_value - cost_basis # type: ignore
+            unrealized_pl_pct = \
+                unrealized_pl / prev_cost_basis if prev_cost_basis > 0.0 else nan  # type: ignore
+        elif current_shares < 0.0: # type: ignore
+            # use current cost basis for short position percent
+            unrealized_pl = market_value + cost_basis # type: ignore
+            unrealized_pl_pct = \
+                unrealized_pl / cost_basis if cost_basis > 0.0 else nan  # type: ignore
+        else:
             unrealized_pl = nan
             unrealized_pl_pct = nan
-        else:
-            unrealized_pl = (prev_shares * current_price) - prev_cost_basis # type: ignore
-            unrealized_pl_pct = unrealized_pl / prev_cost_basis  # type: ignore
-
-        # adjust unrealized profit/loss if any was realized
-        if realized_pl is not nan:
-            unrealized_pl = unrealized_pl - realized_pl # type: ignore
 
         # update the detail dataframe with results of the analysis
         trades_df.loc[row.Index, "Holding"] = current_shares
@@ -183,27 +187,44 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     # update the summary data
     # calculate the sum total of realized profit/loss for the summary
     realized_pl = trades_df["Realized P/L"].sum()
-    # get the current price for the summary
-    current_price = get_basic_quote(str(symbol)).get('currentPrice', 0)
-    # calculate the current market value for the summary
-    market_value = current_shares * current_price
-    # calculate the unreaqlized p/l for the summary
-    unrealized_pl=market_value - cost_basis
+    # calculate the realized p/l percent for the summary
+    if total_invested > 0.0: # type: ignore
+        # is long position
+        realized_pl_pct = realized_pl / (total_invested - cost_basis) # type: ignore
+    elif total_invested < 0.0: # type: ignore
+        # is short position
+        realized_pl_pct = -realized_pl / (total_invested + cost_basis) # type: ignore
+    else:
+        realized_pl_pct = nan
+    # calculate amounts for current holdings
+    if current_shares != 0.0:
+        # get the current price
+        current_price = \
+            get_basic_quote(str(symbol)).get('currentPrice', nan)
+        # calculate the current market value for the summary
+        market_value = current_shares * current_price
+        # calculate the unrealized p/l for the summary
+        unrealized_pl = market_value - cost_basis
+        # calculate the unrealized p/l for the summary
+        unrealized_pl_pct = unrealized_pl / cost_basis
+    else:
+        current_price = nan
+        market_value = nan
+        unrealized_pl = nan
+        unrealized_pl_pct = nan
 
     TRADE_SUMMARY.append(Summary(
                 Symbol=symbol,
                 Invested=total_invested,
                 Realized=realized_pl,
-                RealizedPct=realized_pl /
-                    (total_invested - cost_basis) if total_invested != 0 else nan,  # type: ignore
+                RealizedPct=realized_pl_pct,
                 Holding=current_shares,
                 Price=current_price,
                 Market=market_value,
                 Basis=cost_basis,
-                Unrealized=market_value - cost_basis,
-                UnrealizedPct=\
-                    unrealized_pl / cost_basis if cost_basis != 0 else nan,  # type: ignore
-            ))
+                Unrealized=unrealized_pl,
+                UnrealizedPct=unrealized_pl_pct,
+                ))
 
     return trades_df
 
@@ -406,11 +427,12 @@ if len(selected_symbols) > 0:
         grand_total_realized = df_trade_summary["Realized"].sum()
         grand_total_unrealized = grand_total_market - grand_total_basis
         total_realized_pct = grand_total_realized / (grand_total_invested - grand_total_basis)
-        total_unrealized_pct =  grand_total_unrealized / grand_total_basis
+        total_unrealized_pct = \
+            grand_total_unrealized / grand_total_basis if grand_total_basis != 0.0 else nan
         st.subheader(f"Total Invested: ${grand_total_invested:,.2f}")
-        st.subheader("Total Realized Gain/Loss: $" +
+        st.subheader("Total Realized Profit/Loss: $" +
                     f"{grand_total_realized:,.2f} ({total_realized_pct:.1%})")
         st.subheader(f"Total Current Market: ${grand_total_market:,.2f}")
         st.subheader(f"Total Current Basis: ${grand_total_basis:,.2f}")
-        st.subheader("Total Unrealized Gain/Loss: $" +
+        st.subheader("Total Unrealized Profit/Loss: $" +
                     f"{grand_total_unrealized:,.2f} ({total_unrealized_pct:.1%})")
