@@ -203,10 +203,18 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
             get_basic_quote(str(symbol)).get('currentPrice', nan)
         # calculate the current market value for the summary
         market_value = current_shares * current_price
-        # calculate the unrealized p/l for the summary
-        unrealized_pl = market_value - cost_basis
-        # calculate the unrealized p/l for the summary
-        unrealized_pl_pct = unrealized_pl / cost_basis
+        if current_shares > 0.0: # type: ignore
+            # is long position
+            # calculate the unrealized p/l for the summary
+            unrealized_pl = market_value - cost_basis
+            # calculate the unrealized p/l for the summary
+            unrealized_pl_pct = unrealized_pl / cost_basis
+        else:
+            # is short position
+            # calculate the unrealized p/l for the summary
+            unrealized_pl = market_value + cost_basis
+            # calculate the unrealized p/l for the summary
+            unrealized_pl_pct = unrealized_pl / cost_basis
     else:
         current_price = nan
         market_value = nan
