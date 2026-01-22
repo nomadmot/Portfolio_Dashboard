@@ -145,7 +145,7 @@ with st.container(horizontal=True,
     # create a selectbox to select the comparison symbol for the chart
     selected_comparison = st.selectbox(
                             "Compare:",
-                            ["SPY", "QQQ"],
+                            ["SPY", "QQQ", "FFTY"],
                             index=0,
                             width=100)
 
@@ -196,7 +196,7 @@ st.write(f"Daily Change: {merged['dly_pct_change'].iloc[-1]:.1%}")
 st.plotly_chart(plot_daily_balance(merged,
                 compare=selected_comparison,
                 account_id=1),
-                use_container_width=True
+                width='content'
                 )
 
 # summary subheader

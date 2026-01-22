@@ -2,13 +2,18 @@
 Utility component for managing and displaying a status
 message in a Streamlit page.
 """
+# standard library imports
+import logging
+
+# third party imports
 import streamlit as st
-import streamlit.logger
+
+# local application imports
 import config
 
 # Initialize logging
-logger = streamlit.logger.get_logger(st.__name__)
-logger.setLevel(config.LOGLEVEL_STREAMLIT)
+logger = logging.getLogger(__name__)
+logger.setLevel(config.LOGLEVEL_APPLICATION)
 # mark entry into the module
 logger.debug("Entering StatusMessageComponent module")
 
