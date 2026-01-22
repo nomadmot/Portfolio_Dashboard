@@ -28,6 +28,7 @@ class TradeType:
     TRANSFER = "TRAN"
     EXERCISE = "EXRC"
     EXPIRE = "EXPR"
+    ASSIGN = "ASGN"
 
     Types = (BUY, SELL, TRANSFER, EXERCISE, EXPIRE)
 
