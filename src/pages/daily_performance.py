@@ -196,7 +196,7 @@ st.write(f"Daily Change: {merged['dly_pct_change'].iloc[-1]:.1%}")
 st.plotly_chart(plot_daily_balance(merged,
                 compare=selected_comparison,
                 account_id=1),
-                width='content'
+                width='stretch'
                 )
 
 # summary subheader
