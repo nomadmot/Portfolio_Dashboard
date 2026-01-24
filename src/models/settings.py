@@ -7,12 +7,13 @@ import sys
 from os import environ, path
 
 #import 3rd-party libraries
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import create_engine
 from streamlit import logger as litlog
 import yfinance as yf
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
     loglevel_application: str = "XXX"
     loglevel_streamlit: str = "XXX"
     loglevel_sqlalchemy: str = "XXX"
