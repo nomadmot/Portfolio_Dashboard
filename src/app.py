@@ -13,7 +13,7 @@ from utility import StatusMessageComponent
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(settings.LOGLEVEL_APPLICATION)
+logger.setLevel(settings.LogLevelApplication)
 # mark entry into the module
 logger.debug("Starting Portfolio Dashboard application")
 
@@ -32,7 +32,7 @@ pg = st.navigation(pages,
 # Display the selected page
 pg.run()
 # Force the disposal of the database engine
-settings.DB_ENGINE.dispose()
+settings.DatabaseEngine.dispose()
 
 # Clear out any status messages left in the session state
 StatusMessageComponent.clear_status_message()

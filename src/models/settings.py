@@ -12,44 +12,44 @@ from streamlit import logger as litlog
 import yfinance as yf
 
 # get logging configuration from the environment
-LOGLEVEL_APPLICATION = environ.get("LOGLEVEL_APPLICATION", "INFO")
-match(LOGLEVEL_APPLICATION.upper()):
+LogLevelApplication = environ.get("LOGLEVEL_APPLICATION", "INFO")
+match(LogLevelApplication.upper()):
     case "DEBUG":
-        LOGLEVEL_APPLICATION = logging.DEBUG
+        LogLevelApplication = logging.DEBUG
     case "INFO":
-        LOGLEVEL_APPLICATION = logging.INFO
+        LogLevelApplication = logging.INFO
     case "WARN":
-        LOGLEVEL_APPLICATION = logging.WARN
+        LogLevelApplication = logging.WARN
     case "ERROR":
-        LOGLEVEL_APPLICATION = logging.ERROR
+        LogLevelApplication = logging.ERROR
     case _:
-        LOGLEVEL_APPLICATION = logging.INFO
+        LogLevelApplication = logging.INFO
 
-LOGLEVEL_STREAMLIT = environ.get("LOGLEVEL_STREAMLIT", "INFO")
-match(LOGLEVEL_STREAMLIT.upper()):
+LogLevelStreamlit = environ.get("LOGLEVEL_STREAMLIT", "INFO")
+match(LogLevelStreamlit.upper()):
     case "DEBUG":
-        LOGLEVEL_STREAMLIT = logging.DEBUG
+        LogLevelStreamlit = logging.DEBUG
     case "INFO":
-        LOGLEVEL_STREAMLIT = logging.INFO
+        LogLevelStreamlit = logging.INFO
     case "WARN":
-        LOGLEVEL_STREAMLIT = logging.WARN
+        LogLevelStreamlit = logging.WARN
     case "ERROR":
-        LOGLEVEL_STREAMLIT = logging.ERROR
+        LogLevelStreamlit = logging.ERROR
     case _:
-        LOGLEVEL_STREAMLIT = logging.INFO
+        LogLevelStreamlit = logging.INFO
 
-LOGLEVEL_SQLALCHEMY = environ.get("LOGLEVEL_SQLALCHEMY", "WARN")
-match(LOGLEVEL_SQLALCHEMY.upper()):
+LogLevelSQLAlchemy = environ.get("LOGLEVEL_SQLALCHEMY", "WARN")
+match(LogLevelSQLAlchemy.upper()):
     case "DEBUG":
-        LOGLEVEL_SQLALCHEMY = logging.DEBUG
+        LogLevelSQLAlchemy = logging.DEBUG
     case "INFO":
-        LOGLEVEL_SQLALCHEMY = logging.INFO
+        LogLevelSQLAlchemy = logging.INFO
     case "WARN":
-        LOGLEVEL_SQLALCHEMY = logging.WARN
+        LogLevelSQLAlchemy = logging.WARN
     case "ERROR":
-        LOGLEVEL_SQLALCHEMY = logging.ERROR
+        LogLevelSQLAlchemy = logging.ERROR
     case _:
-        LOGLEVEL_SQLALCHEMY = logging.WARN
+        LogLevelSQLAlchemy = logging.WARN
 
 # Initialize logging
 logging.basicConfig(
@@ -57,24 +57,24 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     stream=sys.stdout)
 logger = logging.getLogger(__name__)
-logger.setLevel(LOGLEVEL_APPLICATION)
+logger.setLevel(LogLevelApplication)
 logger.info(
     "Application logger initialized at level: %s",
-    logging.getLevelName(LOGLEVEL_APPLICATION)
+    logging.getLevelName(LogLevelApplication)
     )
 
 # set the sqlalchemy logging level
 sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
-sqlalchemy_logger.setLevel(LOGLEVEL_SQLALCHEMY)
-logger.info("SQLAlchemy logger initialized at level: %s", logging.getLevelName(LOGLEVEL_SQLALCHEMY))
+sqlalchemy_logger.setLevel(LogLevelSQLAlchemy)
+logger.info("SQLAlchemy logger initialized at level: %s", logging.getLevelName(LogLevelSQLAlchemy))
 
 # set the Streamlit logging level
-litlog.set_log_level(LOGLEVEL_STREAMLIT)
-logger.info("Streamlit logger initialized at level: %s", logging.getLevelName(LOGLEVEL_STREAMLIT))
+litlog.set_log_level(LogLevelStreamlit)
+logger.info("Streamlit logger initialized at level: %s", logging.getLevelName(LogLevelStreamlit))
 
 # YFinance logging configuration
-YFINANCE_DEBUG = environ.get("YFINANCE_DEBUG", "FALSE").upper()
-if YFINANCE_DEBUG == "TRUE":
+YFinanceDebug = environ.get("YFINANCE_DEBUG", "FALSE").upper()
+if YFinanceDebug == "TRUE":
     logger.info("Enabling YFinance debug mode")
     yf.enable_debug_mode()
 
@@ -83,16 +83,16 @@ if YFINANCE_DEBUG == "TRUE":
 #"sqlite://///Users/nomadmot/Library/CloudStorage/Dropbox/Apps/Investing/DATA/portfolio-test.db"
 # DATABASE_URI = \
 # "sqlite://///home/devuser/investorlab/DATA/portfolio-test.db"
-DATABASE_URI = environ.get("DATABASE_URI", None)
+DatabaseURI = environ.get("DATABASE_URI", None)
 
 # test to be sure the DATABASE_URI is valid
-if  DATABASE_URI:
-    logger.info("Using database URI: %s", DATABASE_URI)
+if  DatabaseURI:
+    logger.info("Using database URI: %s", DatabaseURI)
 else:
     raise ValueError("DATABASE_URI not found in environment variables")
-DATABASE_FILENAME = DATABASE_URI.split("////")[1]
-logger.info("Using database file: %s", DATABASE_FILENAME)
-assert path.isfile(DATABASE_FILENAME), f"Database file {DATABASE_FILENAME} does not exist."
+DatabaseFilename = DatabaseURI.split("////")[1]
+logger.info("Using database file: %s", DatabaseFilename)
+assert path.isfile(DatabaseFilename), f"Database file {DatabaseFilename} does not exist."
 
 # create the SQLAlchemy engine
-DB_ENGINE = create_engine(DATABASE_URI, echo=False)
+DatabaseEngine = create_engine(DatabaseURI, echo=False)

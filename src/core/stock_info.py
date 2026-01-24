@@ -15,7 +15,7 @@ from models.portfolio import Security
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logger.setLevel(settings.LOGLEVEL_APPLICATION)
+logger.setLevel(settings.LogLevelApplication)
 
 def get_security_info(symbol: str) -> Security:
     """
@@ -27,7 +27,7 @@ def get_security_info(symbol: str) -> Security:
     """
     logger.debug("In get_security_info, symbol=%s", symbol)
     # generate a sqlalchemy select statement to retrieve the security
-    with Session(settings.DB_ENGINE) as session:
+    with Session(settings.DatabaseEngine) as session:
         result = session.execute(
             select(Security).where(Security.symbol == symbol)
             ).first()
