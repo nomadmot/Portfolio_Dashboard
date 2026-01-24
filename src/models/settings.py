@@ -7,9 +7,19 @@ import sys
 from os import environ, path
 
 #import 3rd-party libraries
+from pydantic_settings import BaseSettings
 from sqlalchemy import create_engine
 from streamlit import logger as litlog
 import yfinance as yf
+
+class Settings(BaseSettings):
+    loglevel_application: str = "XXX"
+    loglevel_streamlit: str = "XXX"
+    loglevel_sqlalchemy: str = "XXX"
+    yfinance_debug: bool = False
+    database_uri: str = "XXX"
+
+print(Settings().model_dump())
 
 # get logging configuration from the environment
 LogLevelApplication = environ.get("LOGLEVEL_APPLICATION", "INFO")
