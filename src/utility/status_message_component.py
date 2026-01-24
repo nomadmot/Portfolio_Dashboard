@@ -9,11 +9,11 @@ import logging
 import streamlit as st
 
 # local application imports
-import config
+import models.settings as settings
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(config.LOGLEVEL_APPLICATION)
+logger.setLevel(settings.LOGLEVEL_APPLICATION)
 # mark entry into the module
 logger.debug("Entering StatusMessageComponent module")
 

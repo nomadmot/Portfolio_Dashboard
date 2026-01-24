@@ -12,7 +12,7 @@ import pandas as pd
 from numpy import nan
 
 # Import local modules
-import config
+import models.settings as settings
 from core import (get_security_symbols,
                   get_trades,
                   get_last_trade_date,
@@ -26,7 +26,7 @@ from utility import aumc_get_instance
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logger.setLevel(config.LOGLEVEL_APPLICATION)
+logger.setLevel(settings.LOGLEVEL_APPLICATION)
 
 # create a named tuple for summary data
 class Summary(NamedTuple):

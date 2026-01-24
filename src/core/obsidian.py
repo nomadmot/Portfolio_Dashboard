@@ -14,11 +14,11 @@ import httpx
 import pandas as pd
 
 ### local imports
-import config
+import models.settings as settings
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(config.LOGLEVEL_APPLICATION)
+logger.setLevel(settings.LOGLEVEL_APPLICATION)
 # mark entry into the module
 logger.debug("Starting Portfolio Dashboard application")
 

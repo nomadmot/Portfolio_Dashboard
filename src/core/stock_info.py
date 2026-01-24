@@ -10,12 +10,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 # Local Application Imports
-import config
+import models.settings as settings
 from models.portfolio import Security
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logger.setLevel(config.LOGLEVEL_APPLICATION)
+logger.setLevel(settings.LOGLEVEL_APPLICATION)
 
 def get_security_info(symbol: str) -> Security:
     """
@@ -27,7 +27,7 @@ def get_security_info(symbol: str) -> Security:
     """
     logger.debug("In get_security_info, symbol=%s", symbol)
     # generate a sqlalchemy select statement to retrieve the security
-    with Session(config.DB_ENGINE) as session:
+    with Session(settings.DB_ENGINE) as session:
         result = session.execute(
             select(Security).where(Security.symbol == symbol)
             ).first()

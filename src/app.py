@@ -8,12 +8,12 @@ import logging
 import streamlit as st
 
 #local application imports
-import config
+import models.settings as settings
 from utility import StatusMessageComponent
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(config.LOGLEVEL_APPLICATION)
+logger.setLevel(settings.LOGLEVEL_APPLICATION)
 # mark entry into the module
 logger.debug("Starting Portfolio Dashboard application")
 
@@ -32,7 +32,7 @@ pg = st.navigation(pages,
 # Display the selected page
 pg.run()
 # Force the disposal of the database engine
-config.DB_ENGINE.dispose()
+settings.DB_ENGINE.dispose()
 
 # Clear out any status messages left in the session state
 StatusMessageComponent.clear_status_message()
