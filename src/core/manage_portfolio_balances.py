@@ -58,7 +58,7 @@ def update_daily_balance(
         )
 
     # save the daily balance to the database
-    with Session(settings.DB_ENGINE) as session:
+    with Session(settings.DatabaseEngine) as session:
         session.add(daily_balance)
         session.commit()
 
@@ -85,7 +85,7 @@ def delete_daily_balance(
         )
 
     # ensure the account exists and get the account name
-    with Session(settings.DB_ENGINE) as session:
+    with Session(settings.DatabaseEngine) as session:
         account: Optional[Account] = session.get(Account, account_id)
         if not account:
             raise ValueError(
@@ -94,7 +94,7 @@ def delete_daily_balance(
         #account_name: str = account.name
         session.close()
 
-    with Session(settings.DB_ENGINE) as session:
+    with Session(settings.DatabaseEngine) as session:
         daily_balance: Optional[DailyBalance] = session.query(DailyBalance).filter(
             DailyBalance.account_id == account_id,
             DailyBalance.date == balance_date

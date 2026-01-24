@@ -26,7 +26,7 @@ from utility import aumc_get_instance
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logger.setLevel(settings.LOGLEVEL_APPLICATION)
+logger.setLevel(settings.LogLevelApplication)
 
 # create a named tuple for summary data
 class Summary(NamedTuple):

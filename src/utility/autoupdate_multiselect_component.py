@@ -15,7 +15,7 @@ import models.settings as settings
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(settings.LOGLEVEL_APPLICATION)
+logger.setLevel(settings.LogLevelApplication)
 
 # Dictionary to hold component instances
 _AUMC_INSTANCES = dict()
