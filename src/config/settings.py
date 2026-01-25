@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     yfinance_debug: bool = False
     database_uri: str = "XXX"
 
-print(Settings().model_dump())
+#print(Settings().model_dump())
 
 # get logging configuration from the environment
 LogLevelApplication = environ.get("LOGLEVEL_APPLICATION", "INFO")
