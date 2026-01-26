@@ -302,45 +302,23 @@ if not multiselect_symbols.is_initialized:
 # configure the page layout
 st.set_page_config(layout="wide")
 
-# page subheader
-st.subheader("Detail Performance Analysis")
+# page header
+st.title("Detail Performance Analysis")
 st.markdown(f"*Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}*",)
 
-# set page content layout
-with st.container(width="stretch"):
-    # we'll use only the first column for inputs
-    layout_inputs = st.columns([0.3, 0.7])[0]
-    with layout_inputs:
-        # container for input elements
-        with st.container(border=True):
-            #begin date, end date, and options button in the first row
-            with st.container(horizontal=True,
-                              horizontal_alignment="left",
-                              vertical_alignment="bottom",
-                              ):
-                layout_selected_period = st.empty()
-                #layout_end_date = st.empty()
-                layout_load_options = st.empty()
-            # include symbol multiselect in the second row
-            with st.container(horizontal=True):
-                layout_select_symbols = st.empty()
-
-# collect user inputs
-with layout_selected_period:
+# add widgets for user inputs to sidebar
+with st.sidebar:
     # create a selectbox to select the number of days for the chart
     selected_period = st.selectbox(
                             "Select Period:",
                             Periods.get_periods(),
                             format_func=Periods.get_label,
                             index=1,
-                            width=300)
+                            width="stretch")
 
-with layout_load_options:
     # button to load options into the symbol list
-    load_options = st.button("Load Options")
+    load_options = st.button("Load Options", width="stretch")
 
-# create a multiselect widget to select symbols for performance analysis
-with layout_select_symbols:
     # placeholder for multiselect symbols for performance analysis
     selected_symbols_placeholder = st.empty()
     # multiselect symbols for perormance analysis

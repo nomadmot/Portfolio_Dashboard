@@ -127,14 +127,11 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
 # configure the page layout
 st.set_page_config(layout="wide")
 
-# page subheader
-st.subheader("Daily Performance Chart")
+# page title
+st.title("Daily Performance Chart")
 
-# create a horizontal layout for the selectboxes
-with st.container(horizontal=True,
-                  horizontal_alignment="center",
-                  border=True,
-                  width=500):
+# add input widgets to the sidebar
+with st.sidebar:
     # create a selectbox to select the number of days for the chart
     selected_period = st.selectbox(
                             "Select Period:",
@@ -147,7 +144,7 @@ with st.container(horizontal=True,
                             "Compare:",
                             ["SPY", "QQQ", "FFTY"],
                             index=0,
-                            width=100)
+                            width=150)
 
 # get the balance history for the specified account
 df_balances = get_balance_history(account_id=1,
