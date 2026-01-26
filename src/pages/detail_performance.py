@@ -12,7 +12,7 @@ import pandas as pd
 from numpy import nan
 
 # Import local modules
-import config
+from config import SETTINGS
 from core import (get_security_symbols,
                   get_trades,
                   get_last_trade_date,
@@ -26,7 +26,7 @@ from utility import aumc_get_instance
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logger.setLevel(config.LOGLEVEL_APPLICATION)
+logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 
 # create a named tuple for summary data
 class Summary(NamedTuple):
@@ -108,7 +108,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         row_amount: float = row.Amount # type: ignore
 
         # calculate the total cost and realized profit/loss
-        if prev_shares < 0: # type: ignore
+        if prev_shares < 0:
             # is short position
             if row_shares > 0:
                 # covering a short position

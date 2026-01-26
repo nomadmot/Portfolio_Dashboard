@@ -11,11 +11,11 @@ from uuid import uuid4 as uuid
 import streamlit as st
 
 # Import local modules
-import config
+from config import SETTINGS
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(config.LOGLEVEL_APPLICATION)
+logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 
 # Dictionary to hold component instances
 _AUMC_INSTANCES = dict()

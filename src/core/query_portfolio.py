@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from pandas import DataFrame
 
 # Import local modules
-import config
+from config import DATABASE_ENGINE
 from models.portfolio import DailyBalance, Account, Security, Trade, SecurityType
 from core import Periods
 
@@ -24,7 +24,7 @@ def get_account(account_id: int) -> Account:
         The Account object corresponding to the given account_id.
     """
     # generate a sqlalchemy select statement to retrieve the account
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         result = session.execute(
             select(Account).where(Account.id == account_id)
             ).first()
@@ -83,7 +83,7 @@ def get_balance_history(account_id: int,
         stmt = stmt.where(DailyBalance.date >= begin_date)
 
     # execute the query and fetch results
-    with config.DB_ENGINE.connect() as conn:
+    with DATABASE_ENGINE.connect() as conn:
         result = conn.execute(stmt)
 
     # convert the result to a DataFrame
@@ -115,7 +115,7 @@ def get_security_symbols(include_options=False) -> List[str]:
     stmt = select(distinct(Security.symbol)).where(
         Security.security_type != SecurityType.OPTION
     )
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         result = session.execute(stmt)
     symbols = [symbol[0] for symbol in result]
 
@@ -124,7 +124,7 @@ def get_security_symbols(include_options=False) -> List[str]:
         stmt = select(distinct(Security.symbol)).where(
             Security.security_type == SecurityType.OPTION
         )
-        with Session(config.DB_ENGINE) as session:
+        with Session(DATABASE_ENGINE) as session:
             result = session.execute(stmt)
         for row in result:
             symbol = row[0]
@@ -151,7 +151,7 @@ def lookup_associated_symbols(symbols: List[str]) -> List[str]:
     stmt = select(distinct(Security.symbol)).where(
         (Security.associated_symbol.in_(symbols))
     )
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         result = session.execute(stmt)
     for row in result:
         symbol = row[0]
@@ -171,7 +171,7 @@ def get_last_trade_date():
             Trade.trade_date.desc()
         ).limit(1)
 
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         return list(session.execute(stmt))[0][0]
 
 
@@ -235,7 +235,7 @@ def get_trades(symbols: List[str],
         stmt = stmt.where(Trade.trade_date >= begin_date)
 
     # execute the query and fetch results
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         db_result = session.execute(stmt)
 
     # convert the trades to a list of Dict objects

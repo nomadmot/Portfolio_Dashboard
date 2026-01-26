@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 # Import local modules
 from models.portfolio import DailyBalance, Account
-import config
+from config import DATABASE_ENGINE
 
 # Initialize the logger
 logger = streamlit.logger.get_logger(st.__name__)
@@ -58,7 +58,7 @@ def update_daily_balance(
         )
 
     # save the daily balance to the database
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         session.add(daily_balance)
         session.commit()
 
@@ -85,7 +85,7 @@ def delete_daily_balance(
         )
 
     # ensure the account exists and get the account name
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         account: Optional[Account] = session.get(Account, account_id)
         if not account:
             raise ValueError(
@@ -94,7 +94,7 @@ def delete_daily_balance(
         #account_name: str = account.name
         session.close()
 
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         daily_balance: Optional[DailyBalance] = session.query(DailyBalance).filter(
             DailyBalance.account_id == account_id,
             DailyBalance.date == balance_date
