@@ -2,16 +2,12 @@
 Configuration settings for the application.
 """
 # import standard libraries
-#from numpy.f2py.crackfortran import f
-from tkinter import SE
 import logging
-from enum import Enum
 import sys
-from os import environ, path
+from enum import Enum
 
 #import 3rd-party libraries
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from sqlalchemy import create_engine
 from streamlit import logger as litlog
 import yfinance as yf
 
@@ -75,26 +71,6 @@ logger.info(
     )
 
 # YFinance logging configuration
-YFinanceDebug = SETTINGS.yfinance_debug
 if SETTINGS.yfinance_debug:
     logger.info("Enabling YFinance debug mode")
     yf.enable_debug_mode()
-
-# database configuration
-#DATABASE_URI = \
-#"sqlite://///Users/nomadmot/Library/CloudStorage/Dropbox/Apps/Investing/DATA/portfolio-test.db"
-# DATABASE_URI = \
-# "sqlite://///home/devuser/investorlab/DATA/portfolio-test.db"
-DatabaseURI = environ.get("DATABASE_URI", None)
-
-# test to be sure the DATABASE_URI is valid
-if  DatabaseURI:
-    logger.info("Using database URI: %s", DatabaseURI)
-else:
-    raise ValueError("DATABASE_URI not found in environment variables")
-DatabaseFilename = DatabaseURI.split("////")[1]
-logger.info("Using database file: %s", DatabaseFilename)
-assert path.isfile(DatabaseFilename), f"Database file {DatabaseFilename} does not exist."
-
-# create the SQLAlchemy engine
-DatabaseEngine = create_engine(DatabaseURI, echo=False)
