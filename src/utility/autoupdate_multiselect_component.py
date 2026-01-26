@@ -11,7 +11,7 @@ from uuid import uuid4 as uuid
 import streamlit as st
 
 # Import local modules
-from config.settings import SETTINGS
+from config import SETTINGS
 
 # Initialize logging
 logger = logging.getLogger(__name__)

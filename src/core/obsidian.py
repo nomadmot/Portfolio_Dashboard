@@ -14,13 +14,13 @@ import httpx
 import pandas as pd
 
 ### local imports
-import config.settings as settings
+from config import SETTINGS
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(settings.LogLevelApplication)
+logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 # mark entry into the module
-logger.debug("Starting Portfolio Dashboard application")
+logger.debug("Entering module %s", __name__)
 
 def _create_obsidian_url(vault: str, filename: str, action: str) -> str:
     """

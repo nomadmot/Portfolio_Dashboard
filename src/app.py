@@ -8,7 +8,7 @@ import logging
 import streamlit as st
 
 #local application imports
-from config.settings import SETTINGS, DatabaseEngine
+from config import SETTINGS, DATABASE_ENGINE
 from utility import StatusMessageComponent
 
 # Initialize logging
@@ -32,7 +32,7 @@ pg = st.navigation(pages,
 # Display the selected page
 pg.run()
 # Force the disposal of the database engine
-DatabaseEngine.dispose()
+DATABASE_ENGINE.dispose()
 
 # Clear out any status messages left in the session state
 StatusMessageComponent.clear_status_message()
