@@ -71,6 +71,5 @@ logger.info(
     )
 
 # YFinance logging configuration
-if SETTINGS.yfinance_debug:
-    logger.info("Enabling YFinance debug mode")
-    yf.enable_debug_mode()
+logger.info("YFinance debug mode is %s", SETTINGS.yfinance_debug)
+yf.config.debug.logging = SETTINGS.yfinance_debug
