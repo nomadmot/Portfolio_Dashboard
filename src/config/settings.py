@@ -3,6 +3,7 @@ Configuration settings for the application.
 """
 # import standard libraries
 #from numpy.f2py.crackfortran import f
+from tkinter import SE
 import logging
 from enum import Enum
 import sys
@@ -46,46 +47,6 @@ class Settings(BaseSettings):
 
 SETTINGS = Settings()
 
-# get logging configuration from the environment
-LogLevelApplication = environ.get("LOGLEVEL_APPLICATION", "INFO")
-match(LogLevelApplication.upper()):
-    case "DEBUG":
-        LogLevelApplication = logging.DEBUG
-    case "INFO":
-        LogLevelApplication = logging.INFO
-    case "WARN":
-        LogLevelApplication = logging.WARN
-    case "ERROR":
-        LogLevelApplication = logging.ERROR
-    case _:
-        LogLevelApplication = logging.INFO
-
-LogLevelStreamlit = environ.get("LOGLEVEL_STREAMLIT", "INFO")
-match(LogLevelStreamlit.upper()):
-    case "DEBUG":
-        LogLevelStreamlit = logging.DEBUG
-    case "INFO":
-        LogLevelStreamlit = logging.INFO
-    case "WARN":
-        LogLevelStreamlit = logging.WARN
-    case "ERROR":
-        LogLevelStreamlit = logging.ERROR
-    case _:
-        LogLevelStreamlit = logging.INFO
-
-LogLevelSQLAlchemy = environ.get("LOGLEVEL_SQLALCHEMY", "WARN")
-match(LogLevelSQLAlchemy.upper()):
-    case "DEBUG":
-        LogLevelSQLAlchemy = logging.DEBUG
-    case "INFO":
-        LogLevelSQLAlchemy = logging.INFO
-    case "WARN":
-        LogLevelSQLAlchemy = logging.WARN
-    case "ERROR":
-        LogLevelSQLAlchemy = logging.ERROR
-    case _:
-        LogLevelSQLAlchemy = logging.WARN
-
 # Initialize logging
 logging.basicConfig(
     #level=LOGLEVEL_APPLICATION,
@@ -100,16 +61,22 @@ logger.info(
 
 # set the sqlalchemy logging level
 sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
-sqlalchemy_logger.setLevel(LogLevelSQLAlchemy)
-logger.info("SQLAlchemy logger initialized at level: %s", logging.getLevelName(LogLevelSQLAlchemy))
+sqlalchemy_logger.setLevel(SETTINGS.loglevel_sqlalchemy.to_logging_level())
+logger.info(
+    "SQLAlchemy logger initialized at level: %s",
+    SETTINGS.loglevel_sqlalchemy.value
+    )
 
 # set the Streamlit logging level
-litlog.set_log_level(LogLevelStreamlit)
-logger.info("Streamlit logger initialized at level: %s", logging.getLevelName(LogLevelStreamlit))
+litlog.set_log_level(SETTINGS.loglevel_streamlit.to_logging_level())
+logger.info(
+    "Streamlit logger initialized at level: %s",
+    SETTINGS.loglevel_streamlit.value
+    )
 
 # YFinance logging configuration
-YFinanceDebug = environ.get("YFINANCE_DEBUG", "FALSE").upper()
-if YFinanceDebug == "TRUE":
+YFinanceDebug = SETTINGS.yfinance_debug
+if SETTINGS.yfinance_debug:
     logger.info("Enabling YFinance debug mode")
     yf.enable_debug_mode()
 

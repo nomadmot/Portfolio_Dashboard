@@ -10,12 +10,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 # Local Application Imports
-import config.settings as settings
+from config.settings import SETTINGS
 from models.portfolio import Security
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logger.setLevel(settings.LogLevelApplication)
+logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 
 def get_security_info(symbol: str) -> Security:
     """
