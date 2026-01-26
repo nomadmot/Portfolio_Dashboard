@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 # Local Application Imports
-import models.settings as settings
+import config.settings as settings
 from models.portfolio import Security
 
 # Set up logging

@@ -12,7 +12,7 @@ import pandas as pd
 from numpy import nan
 
 # Import local modules
-import models.settings as settings
+import config.settings as settings
 from core import (get_security_symbols,
                   get_trades,
                   get_last_trade_date,

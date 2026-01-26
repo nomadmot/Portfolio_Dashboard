@@ -14,7 +14,7 @@ import httpx
 import pandas as pd
 
 ### local imports
-import models.settings as settings
+import config.settings as settings
 
 # Initialize logging
 logger = logging.getLogger(__name__)

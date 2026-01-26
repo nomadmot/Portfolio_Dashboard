@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 # Import local modules
 from models.portfolio import DailyBalance, Account
-import models.settings as settings
+import config.settings as settings
 
 # Initialize the logger
 logger = streamlit.logger.get_logger(st.__name__)

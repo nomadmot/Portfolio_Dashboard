@@ -8,7 +8,7 @@ import logging
 import streamlit as st
 
 #local application imports
-import models.settings as settings
+import config.settings as settings
 from utility import StatusMessageComponent
 
 # Initialize logging

@@ -2,7 +2,9 @@
 Configuration settings for the application.
 """
 # import standard libraries
+#from numpy.f2py.crackfortran import f
 import logging
+from enum import Enum
 import sys
 from os import environ, path
 
@@ -12,15 +14,37 @@ from sqlalchemy import create_engine
 from streamlit import logger as litlog
 import yfinance as yf
 
+class LogLevelEnum(str, Enum):
+    """
+    define an enumeration for standard logging levels
+    """
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARN = "WARN"
+    ERROR = "ERROR"
+
+
+    def to_logging_level(self) -> int:
+        """
+        convert the LogLevelEnum to a logging module level
+        """
+        map_loglevel = {
+            "DEBUG": logging.DEBUG,
+            "INFO": logging.INFO,
+            "WARN": logging.WARN,
+            "ERROR": logging.ERROR
+        }
+        return map_loglevel[self.value]
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
-    loglevel_application: str = "XXX"
-    loglevel_streamlit: str = "XXX"
-    loglevel_sqlalchemy: str = "XXX"
+    loglevel_application: LogLevelEnum = LogLevelEnum.INFO
+    loglevel_streamlit: LogLevelEnum = LogLevelEnum.WARN
+    loglevel_sqlalchemy: LogLevelEnum = LogLevelEnum.WARN
     yfinance_debug: bool = False
-    database_uri: str = "XXX"
+    database_uri: str = "sqlite://///path/to/your/database.db"
 
-#print(Settings().model_dump())
+SETTINGS = Settings()
 
 # get logging configuration from the environment
 LogLevelApplication = environ.get("LOGLEVEL_APPLICATION", "INFO")
@@ -68,10 +92,10 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     stream=sys.stdout)
 logger = logging.getLogger(__name__)
-logger.setLevel(LogLevelApplication)
+logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 logger.info(
     "Application logger initialized at level: %s",
-    logging.getLevelName(LogLevelApplication)
+    SETTINGS.loglevel_application.value
     )
 
 # set the sqlalchemy logging level

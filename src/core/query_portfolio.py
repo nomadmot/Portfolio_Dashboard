@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from pandas import DataFrame
 
 # Import local modules
-import models.settings as settings
+import config.settings as settings
 from models.portfolio import DailyBalance, Account, Security, Trade, SecurityType
 from core import Periods
 

@@ -9,7 +9,7 @@ import logging
 import streamlit as st
 
 # local application imports
-import models.settings as settings
+import config.settings as settings
 
 # Initialize logging
 logger = logging.getLogger(__name__)
