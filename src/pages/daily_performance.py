@@ -191,6 +191,7 @@ merged['dly_comp_change'] = calculate_daily_performance(merged['Close'])
 st.subheader(f"Current Day Performance for {get_account(1).name} ({merged['Date'].iloc[-1]}):")
 st.write(f"Balance: ${merged['balance'].iloc[-1]:,.2f}")
 st.write(f"Daily Change: {merged['dly_pct_change'].iloc[-1]:.1%}")
+st.write(f"Comparison ({selected_comparison}) Daily Change: {merged['dly_comp_change'].iloc[-1]:.1%}")
 
 # plot the daily balance for the selected period
 st.plotly_chart(plot_daily_balance(merged,
