@@ -34,7 +34,7 @@ class LogLevelEnum(str, Enum):
         return map_loglevel[self.value]
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
+    model_config = SettingsConfigDict(env_file='.settings/.env', env_file_encoding='utf-8')
     loglevel_application: LogLevelEnum = LogLevelEnum.INFO
     loglevel_streamlit: LogLevelEnum = LogLevelEnum.WARN
     loglevel_sqlalchemy: LogLevelEnum = LogLevelEnum.WARN
