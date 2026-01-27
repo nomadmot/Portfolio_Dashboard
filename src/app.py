@@ -15,10 +15,17 @@ from utility import StatusMessageComponent
 logger = logging.getLogger(__name__)
 logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 # mark entry into the module
-logger.debug("Starting Portfolio Dashboard application")
+logger.debug("Starting Portfolio Dashboard application in module %s", __name__)
 
 # use the stock bull icon
-st.logo(image="images/Stock-Bull.png",)
+st.logo(image="images/Stock-Bull.png", size="large")
+
+# set the page configuration
+st.set_page_config(
+        layout="wide",
+        page_icon="images/Stock-Bull.png",
+        initial_sidebar_state="expanded",
+)
 # Build the navigation menu
 pages = [
          st.Page("pages/daily_performance.py", title="Daily Performance"),

@@ -43,36 +43,30 @@ elif UPDATE_DATE not in st.session_state:
 st.set_page_config(layout="centered")
 
 # header elements for the page
-st.subheader("Manage Daily Balances")
+st.title("Manage Daily Balances")
 
-# widgets for adding and maintaining balances
-update_container = st.container(
-                    horizontal_alignment="center",
-                    border=True,
-                    width=500,
+# add user inputwidgets for maintaining balances to the sidebar
+with st.sidebar:
+    update_date = st.date_input("Select Date",
+                    key=UPDATE_DATE,
+                    value=None,
+                    help="Select the date for which you want to manage the balance",
                     )
-with update_container:
-    with update_container.container(horizontal=True):
-        update_date = st.date_input("Select Date",
-                        key=UPDATE_DATE,
-                        value=None,
-                        help="Select the date for which you want to manage the balance",
-                        )
-        update_balance = st.number_input("Daily Balance",
-                        key=UPDATE_BALANCE,
-                        value=None,
-                        placeholder="Balance Amount",
-                        step=0.01,
-                        format="%.2f",
-                        help="Enter the daily balance amount",
-                        )
+    update_balance = st.number_input("Daily Balance",
+                    key=UPDATE_BALANCE,
+                    value=None,
+                    placeholder="Balance Amount",
+                    step=0.01,
+                    format="%.2f",
+                    help="Enter the daily balance amount",
+                    )
     st.caption("Update Database",
                 help="Click the buttons to update the database /" \
                     "with the new balance or delete an existing balance",
                 )
 
     # line up the database update buttons horizontally
-    with st.container(horizontal=True):
+    with st.container(horizontal=True, width="stretch"):
         # button to update the balance in the database
         update_record = st.button("Update",
                         help="Click to update the database with the new balance",
@@ -83,7 +77,6 @@ with update_container:
                         help="Click to delete the balance for the selected date",
                         key=DELETE_BALANCE_BUTTON,
                 )
-
     # message area for displaying update results
     update_message = st.empty()
     with update_message:

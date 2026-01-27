@@ -127,14 +127,11 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
 # configure the page layout
 st.set_page_config(layout="wide")
 
-# page subheader
-st.subheader("Daily Performance Chart")
+# page title
+st.title("Daily Performance Chart")
 
-# create a horizontal layout for the selectboxes
-with st.container(horizontal=True,
-                  horizontal_alignment="center",
-                  border=True,
-                  width=500):
+# add input widgets to the sidebar
+with st.sidebar:
     # create a selectbox to select the number of days for the chart
     selected_period = st.selectbox(
                             "Select Period:",
@@ -147,7 +144,7 @@ with st.container(horizontal=True,
                             "Compare:",
                             ["SPY", "QQQ", "FFTY"],
                             index=0,
-                            width=100)
+                            width=150)
 
 # get the balance history for the specified account
 df_balances = get_balance_history(account_id=1,
@@ -191,7 +188,8 @@ merged['dly_comp_change'] = calculate_daily_performance(merged['Close'])
 st.subheader(f"Current Day Performance for {get_account(1).name} ({merged['Date'].iloc[-1]}):")
 st.write(f"Balance: ${merged['balance'].iloc[-1]:,.2f}")
 st.write(f"Daily Change: {merged['dly_pct_change'].iloc[-1]:.1%}")
-st.write(f"Comparison ({selected_comparison}) Daily Change: {merged['dly_comp_change'].iloc[-1]:.1%}")
+st.write(f"Comparison ({selected_comparison})" +
+         f" Daily Change: {merged['dly_comp_change'].iloc[-1]:.1%}")
 
 # plot the daily balance for the selected period
 st.plotly_chart(plot_daily_balance(merged,
