@@ -18,7 +18,7 @@ logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 logger.debug("Starting Portfolio Dashboard application in module %s", __name__)
 
 # use the stock bull icon
-st.logo(image="images/Stock-Bull.png",)
+st.logo(image="images/Stock-Bull.png", size="large")
 
 # set the page configuration
 st.set_page_config(
