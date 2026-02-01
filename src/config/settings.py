@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     loglevel_sqlalchemy: LogLevelEnum = LogLevelEnum.WARN
     yfinance_debug: bool = False
     database_uri: str = "sqlite://///path/to/your/database.db"
-
+    duck_database: str = "path/to/your/duckdb"
 SETTINGS = Settings()
 
 # Initialize logging
