@@ -54,6 +54,41 @@ def get_closed_count(start_date: date, end_date: date) -> int|None:
     logger.debug("Exiting function get_closed_count with result=%s", result)
     return result
 
+def market_is_open(check_date: date) -> bool:
+    """
+    check if the market is open on the given date
+
+    :param check_date: date to check (date)
+    :return: True if market is open, False if closed (bool)
+    """
+    logger.debug("In function market_is_open with check_date=%s", check_date)
+
+    # check to see if the date is on a weekend
+    if check_date.weekday() >= 5:
+        logger.debug("Date %s is on a weekend, market is closed", check_date)
+        return False
+
+    # SQL query to check if the date is a market holiday
+    query = (
+        "SELECT Status "
+        "FROM market_holidays "
+        "WHERE Date = ?;"
+        )
+    # execute the query
+    result = DUCKDB.execute(query, (check_date,)).fetchone()
+    logger.debug("Query executed, result: %s", result)
+
+    # determine if market is open
+    if result is None:
+        # no entry means market is open
+        is_open = True
+    else:
+        status = result[0]
+        is_open = status != 'Closed'
+
+    logger.debug("Exiting function market_is_open with is_open=%s", is_open)
+    return is_open
+
 if __name__ == "__main__":
     # test the get_closed_count function
     # python -m utility.market_calendar
