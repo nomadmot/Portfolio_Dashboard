@@ -83,7 +83,7 @@ def get_period_dates(
             end_date = date.today()
 
         case Periods.ALL:
-            begin_date = None
+            begin_date = date(year=1, month=1, day=1)  # earliest possible date
             end_date = date.today()
 
         case Periods.CUS:
