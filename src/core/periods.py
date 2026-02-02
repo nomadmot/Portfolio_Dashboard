@@ -75,13 +75,16 @@ def get_period_dates(
             raise NotImplementedError("D90 period not implemented yet")
 
         case Periods.YTD:
-            raise NotImplementedError("YTD period not implemented yet")
+            begin_date = date.today().replace(month=1, day=1)
+            end_date = date.today()
 
         case Periods.YR1:
-            raise NotImplementedError("YR1 period not implemented yet")
+            begin_date = date.today().replace(year=date.today().year - 1)
+            end_date = date.today()
 
         case Periods.ALL:
-            raise NotImplementedError("ALL period not implemented yet")
+            begin_date = None
+            end_date = date.today()
 
         case Periods.CUS:
             begin_date = from_date
