@@ -4,11 +4,12 @@ Provide start and end period selections
 
 # standard library imports
 import logging
-from datetime import date
+from datetime import date, timedelta
 from enum import Enum
 
 # local application imports
 from config import SETTINGS
+from utility import market_is_open
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -45,6 +46,33 @@ class Periods(Enum):
         """
         return item.value
 
+def _calculate_begin_date(end_date: date, market_days: int) -> date:
+    """
+    calculate the begin date given an end date and number of market days
+
+    Args:
+        end_date (date): end date
+        market_days (int): number of market days
+
+    Returns:
+        date: calculated begin date
+    """
+    # log entry into the function
+    logger.debug("In function _calculate_begin_date with end_date=%s, market_days=%s",
+                 end_date, market_days)
+
+    count = 0
+    one_day = timedelta(days=1)
+    begin_date = end_date
+    # loop backwards from end_date to find the begin date
+    while count < market_days:
+        begin_date = begin_date - one_day
+        if market_is_open(begin_date):
+            count += 1
+
+    # log exit from the function
+    logger.debug("Exiting function _calculate_begin_date with begin_date=%s", begin_date)
+    return begin_date
 
 def get_period_dates(
             period: Periods,
@@ -66,13 +94,16 @@ def get_period_dates(
 
     match period:
         case Periods.D30:
-            raise NotImplementedError("D30 period not implemented yet")
+            end_date = date.today()
+            begin_date = _calculate_begin_date(end_date=end_date, market_days=30)
 
         case Periods.D50:
-            raise NotImplementedError("D50 period not implemented yet")
+            end_date = date.today()
+            begin_date = _calculate_begin_date(end_date=end_date, market_days=50)
 
         case Periods.D90:
-            raise NotImplementedError("D90 period not implemented yet")
+            end_date = date.today()
+            begin_date = _calculate_begin_date(end_date=end_date, market_days=90)
 
         case Periods.YTD:
             begin_date = date.today().replace(month=1, day=1)
