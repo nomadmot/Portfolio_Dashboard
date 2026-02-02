@@ -3,7 +3,10 @@ collect and expose data management and querying functions
 for the data module
 """
 
-from core.periods import Periods
+from core.periods import (
+    Periods,
+    get_period_dates,
+)
 
 from core.manage_portfolio_balances import (
     update_daily_balance,
@@ -31,6 +34,7 @@ from core.stock_data import (
 
 __all__ = [
     "Periods",
+    "get_period_dates",
     "YfPeriods",
     "update_daily_balance",
     "delete_daily_balance",
