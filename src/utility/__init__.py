@@ -8,10 +8,12 @@ from utility.market_calendar import (
 )
 from utility.status_message_component import StatusMessageComponent
 from utility.autoupdate_multiselect_component import aumc_get_instance
+from utility.time_machine_component import TimeMachineComponent
 
 __all__ = [
     "get_closed_count",
     "market_is_open",
     "StatusMessageComponent",
     "aumc_get_instance",
+    "TimeMachineComponent",
     ]
