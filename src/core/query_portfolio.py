@@ -37,7 +37,8 @@ def get_account(account_id: int) -> Account:
     return result[0]
 
 def get_balance_history(account_id: int,
-                        period: Periods = Periods.ALL,
+                        from_date: date,
+                        to_date: date,
                         ascending: bool = False) -> DataFrame:
     """
     Retrieve the balance history for the specified account and time period.
@@ -50,37 +51,14 @@ def get_balance_history(account_id: int,
     Returns:
         A pandas DataFrame containing the balance history, indexed by date.
     """
-    # set the number of days or begin date based on the selected period
-    chart_days = None
-    begin_date = None
-    match(period):
-        case Periods.D30:
-            chart_days = 30
-        case Periods.D50:
-            chart_days = 50
-        case Periods.D90:
-            chart_days = 90
-        case Periods.YTD:
-            begin_date = date(date.today().year-1, 12, 31)
-        case Periods.YR1:
-            begin_date = date(date.today().year -1, date.today().month, date.today().day)
-        case Periods.ALL:
-            # no specific period, return all balances
-            pass
-        case _:
-            # raise an error if the period is not recognized
-            raise ValueError(f"Invalid period: {period}")
-
     # generate a sqlalchemy select statement to retrieve the balances
-    stmt = select(DailyBalance).where(DailyBalance.account_id == account_id)
-
-    # apply date filters based on the provided parameters
-    if chart_days is not None and begin_date is not None:
-        raise ValueError("Chart days and begin date cannot both be specified.")
-    if chart_days is not None:
-        stmt = stmt.order_by(DailyBalance.date.desc()).limit(chart_days)
-    elif begin_date is not None:
-        stmt = stmt.where(DailyBalance.date >= begin_date)
+    stmt = select(DailyBalance).where(
+        DailyBalance.account_id == account_id
+        ).where(
+            DailyBalance.date >= from_date
+        ).where(
+            DailyBalance.date <= to_date
+        )
 
     # execute the query and fetch results
     with DATABASE_ENGINE.connect() as conn:
@@ -94,8 +72,9 @@ def get_balance_history(account_id: int,
 
     # ensure the DataFrame is sorted by date as requested in
     # the ascending parameter and reset the index for proper ordering
-    df_balances.sort_values('date', ascending=ascending, inplace=True)
-    df_balances.reset_index(drop=True, inplace=True)
+    if not df_balances.empty:
+        df_balances.sort_values('date', ascending=ascending, inplace=True)
+        df_balances.reset_index(drop=True, inplace=True)
 
     return df_balances
 
