@@ -19,10 +19,9 @@ from core import (get_security_symbols,
                   lookup_associated_symbols,
                   get_basic_quote,
                   get_security_info,
-                  Periods,
 )
 from models.portfolio import SecurityType
-from utility import aumc_get_instance
+from utility import aumc_get_instance, get_time_machine_component
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -309,12 +308,8 @@ st.markdown(f"*Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}*",)
 # add widgets for user inputs to sidebar
 with st.sidebar:
     # create a selectbox to select the number of days for the chart
-    selected_period = st.selectbox(
-                            "Select Period:",
-                            Periods.get_periods(),
-                            format_func=Periods.get_label,
-                            index=1,
-                            width="stretch")
+    selected_period = get_time_machine_component("detail_performance_time_machine")
+    selected_period.render()
 
     # button to load options into the symbol list
     load_options = st.button("Load Options", width="stretch")
@@ -342,7 +337,7 @@ if len(selected_symbols) > 0:
     # get the trades for the selected symbols and period
     selected_trades = get_trades(
         symbols=selected_symbols,
-        period=selected_period,
+        period=selected_period.period_selected,
         ascending=True,
     )
 
