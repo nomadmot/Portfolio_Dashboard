@@ -3,12 +3,12 @@ Plot the daily performance of the specified account compared to a selected stock
 """
 # Import necessary libraries
 from typing import List
-from datetime import date, timedelta
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
 # Import local modules
+from utility import get_time_machine_component
 from core import (
     Periods,
     get_account,
@@ -133,12 +133,8 @@ st.title("Daily Performance Chart")
 # add input widgets to the sidebar
 with st.sidebar:
     # create a selectbox to select the number of days for the chart
-    selected_period = st.selectbox(
-                            "Select Period:",
-                            Periods.get_periods(),
-                            format_func=Periods.get_label,
-                            index=1,
-                            width=300)
+    time_machine = get_time_machine_component("daily_performance_time_machine")
+    time_machine.render()
     # create a selectbox to select the comparison symbol for the chart
     selected_comparison = st.selectbox(
                             "Compare:",
@@ -148,21 +144,26 @@ with st.sidebar:
 
 # get the balance history for the specified account
 df_balances = get_balance_history(account_id=1,
-                                    period=selected_period,
-                                    ascending=True
-                                    )
+                                  from_date=time_machine.begin_date,
+                                  to_date=time_machine.end_date,
+                                  ascending=True
+                                  )
+# skip if there is no balance data
+if df_balances.empty:
+    st.warning("No balance data found for the specified period.")
+    st.stop()
 
-# get the begin and end dates from the balances dataframe
-work_dates = pd.to_datetime(df_balances['date']).astype('datetime64[ns]').tolist()
-begin_date: date = work_dates[0]
-end_date: date = work_dates[len(work_dates)-1] + timedelta(days=1)
+# # get the begin and end dates from the balances dataframe
+# work_dates = pd.to_datetime(df_balances['date']).astype('datetime64[ns]').tolist()
+# begin_date: date = work_dates[0]
+# end_date: date = work_dates[len(work_dates)-1] + timedelta(days=1)
 
 # fetch historical data for the comparison ticker
 # since the begin date
 df_comparison: pd.DataFrame = get_stock_history(
                 selected_comparison,
-                start_date=begin_date,
-                end_date=end_date,
+                start_date=time_machine.begin_date,
+                end_date=time_machine.end_date,
             )
 # drop the time component from the Date column
 df_comparison['Date'] = pd.to_datetime(df_comparison['Date']).dt.date
@@ -199,8 +200,12 @@ st.plotly_chart(plot_daily_balance(merged,
                 )
 
 # summary subheader
+if time_machine.period_selected == Periods.CUS:
+    selected_period = f"{time_machine.begin_date} to {time_machine.end_date}" # pylint: disable-msg=C0103
+else:
+    selected_period = Periods.get_label(time_machine.period_selected)
 st.subheader(f"Total Cumulative Performance for period "
-             f"{Periods.get_label(selected_period)}: {merged['pct_change'].iloc[-1]:.1%}"
+             f"{selected_period}: {merged['pct_change'].iloc[-1]:.1%}"
              )
 st.subheader(f"Comparison ({selected_comparison}) Cumulative Performance: "
          f"{merged['comp_change'].iloc[-1]:.1%}"
