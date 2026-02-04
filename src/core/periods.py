@@ -30,7 +30,7 @@ class Periods(Enum):
     CUS = "Custom"
 
     @classmethod
-    def get_periods(cls):
+    def get_periods(cls)-> list:
         """
         Provide a list of Period enum members
         """
@@ -77,7 +77,8 @@ def _calculate_begin_date(end_date: date, market_days: int) -> date:
 def get_period_dates(
             period: Periods,
             from_date: date|None = None,
-            to_date: date|None = None) -> tuple[date|None, date|None]:
+            to_date: date|None = None
+            ) -> tuple[date|None, date|None]:
     """
     provide start and end dates for the given period selection
 
@@ -91,6 +92,16 @@ def get_period_dates(
     # log entry into the function
     logger.debug("In function get_period_dates with period=%s, from_date=%s, to_date=%s",
                  period, from_date, to_date)
+
+    # check input values
+    if period is None:
+        logger.debug("nothing to do")
+        return (None, None)
+    # provide default dates
+    if from_date is None:
+        from_date = date.today()
+    if to_date is None:
+        to_date = date.today()
 
     match period:
         case Periods.D30:
@@ -114,12 +125,16 @@ def get_period_dates(
             end_date = date.today()
 
         case Periods.ALL:
-            begin_date = date(year=1, month=1, day=1)  # earliest possible date
+            begin_date = date(year=1960, month=1, day=1)  # earliest possible date
             end_date = date.today()
 
         case Periods.CUS:
             begin_date = from_date
             end_date = to_date
+
+        case _:
+            # raise an error if the period is not recognized
+            raise ValueError(f"Invalid period: {period}")
 
     # log exit from the function
     logger.debug("Exiting function get_period_dates with begin_date=%s, end_date=%s",
