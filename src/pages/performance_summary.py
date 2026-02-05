@@ -128,7 +128,7 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
 st.set_page_config(layout="wide")
 
 # page title
-st.title("Daily Performance Chart")
+st.title(f"Performance Summary for {get_account(1).name}")
 
 # add input widgets to the sidebar
 with st.sidebar:
@@ -152,11 +152,6 @@ df_balances = get_balance_history(account_id=1,
 if df_balances.empty:
     st.warning("No balance data found for the specified period.")
     st.stop()
-
-# # get the begin and end dates from the balances dataframe
-# work_dates = pd.to_datetime(df_balances['date']).astype('datetime64[ns]').tolist()
-# begin_date: date = work_dates[0]
-# end_date: date = work_dates[len(work_dates)-1] + timedelta(days=1)
 
 # fetch historical data for the comparison ticker
 # since the begin date
@@ -185,21 +180,7 @@ merged['comp_change'] = calculate_cumulative_performance(merged['Close'])
 # add the daily performance for the comparison ticker
 merged['dly_comp_change'] = calculate_daily_performance(merged['Close'])
 
-# dispplay statistics for the current day
-st.subheader(f"Current Day Performance for {get_account(1).name} ({merged['Date'].iloc[-1]}):")
-st.write(f"Balance: ${merged['balance'].iloc[-1]:,.2f}")
-st.write(f"Daily Change: {merged['dly_pct_change'].iloc[-1]:.1%}")
-st.write(f"Comparison ({selected_comparison})" +
-         f" Daily Change: {merged['dly_comp_change'].iloc[-1]:.1%}")
-
-# plot the daily balance for the selected period
-st.plotly_chart(plot_daily_balance(merged,
-                compare=selected_comparison,
-                account_id=1),
-                width='stretch'
-                )
-
-# summary subheader
+# display summary subheader
 if time_machine.period_selected == Periods.CUS:
     selected_period = f"{time_machine.begin_date} to {time_machine.end_date}" # pylint: disable-msg=C0103
 else:
@@ -210,3 +191,18 @@ st.subheader(f"Total Cumulative Performance for period "
 st.subheader(f"Comparison ({selected_comparison}) Cumulative Performance: "
          f"{merged['comp_change'].iloc[-1]:.1%}"
          )
+
+# display statistics for the current day
+st.subheader(f"Current Day Performance for {get_account(1).name} ({merged['Date'].iloc[-1]}):")
+st.write(f"- Balance: ${merged['balance'].iloc[-1]:,.2f}")
+st.write(f"- Daily Change: {merged['dly_pct_change'].iloc[-1]:.1%}")
+st.write(f"- Comparison ({selected_comparison})"
+         f" - Daily Change: {merged['dly_comp_change'].iloc[-1]:.1%}"
+         )
+
+# plot the daily balance for the selected period
+st.plotly_chart(plot_daily_balance(merged,
+                compare=selected_comparison,
+                account_id=1),
+                width='stretch'
+                )
