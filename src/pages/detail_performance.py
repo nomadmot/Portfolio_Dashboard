@@ -13,13 +13,15 @@ from numpy import nan
 
 # Import local modules
 from config import SETTINGS
-from core import (get_security_symbols,
+from core import (
+                  get_account,
+                  get_security_symbols,
                   get_trades,
                   get_last_trade_date,
                   lookup_associated_symbols,
                   get_basic_quote,
                   get_security_info,
-)
+                  )
 from models.portfolio import SecurityType
 from utility import aumc_get_instance, get_time_machine_component
 
@@ -302,7 +304,7 @@ if not multiselect_symbols.is_initialized:
 st.set_page_config(layout="wide")
 
 # page header
-st.title("Detail Performance Analysis")
+st.title(f"Detail Performance Analysis for {get_account(1).name}")
 st.markdown(f"*Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}*",)
 
 # add widgets for user inputs to sidebar
