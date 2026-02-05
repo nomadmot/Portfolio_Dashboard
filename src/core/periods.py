@@ -78,7 +78,7 @@ def get_period_dates(
             period: Periods,
             from_date: date|None = None,
             to_date: date|None = None
-            ) -> tuple[date|None, date|None]:
+            ) -> tuple[date, date]:
     """
     provide start and end dates for the given period selection
 
