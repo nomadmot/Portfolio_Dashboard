@@ -7,6 +7,8 @@ import streamlit as st
 import sqlalchemy.exc
 
 from core import (
+    get_account,
+    get_period_dates,
     get_balance_history,
     update_daily_balance,
     delete_daily_balance
@@ -24,8 +26,11 @@ DELETE_BALANCE_BUTTON = "delete_balance_button"
 
 
 # initialize data variables
+from_date, to_date = get_period_dates(Periods.ALL)
 history = get_balance_history(account_id=1,
-                              period=Periods.ALL,
+                              from_date=from_date,
+                              to_date=to_date,
+                              #period=Periods.ALL,
                               ascending=False)
 
 # if a row is selected, retrieve the date and balance
@@ -43,7 +48,7 @@ elif UPDATE_DATE not in st.session_state:
 st.set_page_config(layout="centered")
 
 # header elements for the page
-st.title("Manage Daily Balances")
+st.title(f"Manage Daily Balances for Account {get_account(1).name}")
 
 # add user inputwidgets for maintaining balances to the sidebar
 with st.sidebar:
