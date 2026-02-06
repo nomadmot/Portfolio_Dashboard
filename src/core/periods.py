@@ -21,6 +21,7 @@ class Periods(Enum):
     """
     Enumeration class for time period selections.
     """
+    NONE = "-Select Period-"
     D30 = "30 Days"
     D50 = "50 Days"
     D90 = "90 Days"
@@ -104,6 +105,10 @@ def get_period_dates(
         to_date = date.today()
 
     match period:
+        case Periods.NONE:
+            begin_date = date.today()
+            end_date = date.today()
+
         case Periods.D30:
             end_date = date.today()
             begin_date = _calculate_begin_date(end_date=end_date, market_days=30)
