@@ -1,7 +1,11 @@
 """
 routines to fetch securities data
 """
+# standard library imports
 from enum import Enum
+from datetime import timedelta
+
+# 3rd party imports
 import pandas as pd
 import yfinance as yf
 
@@ -60,7 +64,7 @@ def get_stock_history(ticker: str,
     """
     # call with start_date or days, not both
     if start_date is not None and period is not None:
-        raise ValueError("Specify either start_date or days, not both.")
+        raise ValueError("Specify either start_date or period, not both.")
 
     # initialize an empty DataFrame for the ticker data
     ticker_data: pd.DataFrame = pd.DataFrame()
@@ -70,9 +74,10 @@ def get_stock_history(ticker: str,
     yf_ticker = yf.Ticker(ticker)
     if start_date is not None:
         if end_date is not None:
+            # add one day to the end date to include the end date in the results
             ticker_data: pd.DataFrame = yf_ticker.history(
                                         start=start_date,
-                                        end=end_date,
+                                        end=end_date + timedelta(days=1),
                                         auto_adjust=True
                                         )
         else:
