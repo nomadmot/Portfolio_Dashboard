@@ -1,9 +1,11 @@
 """
 This module contains functions to access and manipulate daily balance data.
 """
-# Import necessary libraries
+# Import standard libraries
 from typing import List
 from datetime import date, timedelta
+
+# Import 3rd party libraries
 from sqlalchemy import select, distinct
 from sqlalchemy.orm import Session
 from pandas import DataFrame
@@ -156,7 +158,8 @@ def get_last_trade_date():
 
 # function to query the database for trades of the selected security
 def get_trades(symbols: List[str],
-               period: Periods = Periods.ALL,
+               begin_date: date,
+               end_date: date,
                ascending: bool = False) -> DataFrame:
     """
     Query the Trades table for the selected security symbols.
@@ -169,26 +172,6 @@ def get_trades(symbols: List[str],
     Returns:
         A pandas DataFrame containing the trades for the specified symbols.
     """
-    # set the number of days or begin/end dates based on the selected period
-    chart_days = None
-    begin_date = None
-    match(period):
-        case Periods.D30:
-            begin_date = date.today() - timedelta(days=30)
-        case Periods.D50:
-            begin_date = date.today() - timedelta(days=50)
-        case Periods.D90:
-            begin_date = date.today() - timedelta(days=90)
-        case Periods.YTD:
-            begin_date = date(date.today().year-1, 12, 31)
-        case Periods.YR1:
-            begin_date = date(date.today().year -1, date.today().month, date.today().day)
-        case Periods.ALL:
-            # no specific period, return all balances
-            pass
-        case _:
-            # raise an error if the period is not recognized
-            raise ValueError(f"Invalid period: {period}")
 
     stmt = select(
                 Security.security_type,
@@ -203,15 +186,11 @@ def get_trades(symbols: List[str],
             Trade, Security.symbol == Trade.symbol
         ).where(
             Security.symbol.in_(symbols)
-        )
-
-    # apply date filter based on the provided parameters
-    if chart_days is not None and begin_date is not None:
-        raise ValueError("Chart days and begin date cannot both be specified.")
-    if chart_days is not None:
-        stmt = stmt.order_by(Trade.trade_date.desc()).limit(chart_days)
-    elif begin_date is not None:
-        stmt = stmt.where(Trade.trade_date >= begin_date)
+        ).where(
+            Trade.trade_date >= begin_date
+        ).where(
+            Trade.trade_date <= end_date
+            )
 
     # execute the query and fetch results
     with Session(DATABASE_ENGINE) as session:

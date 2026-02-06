@@ -339,7 +339,8 @@ if len(selected_symbols) > 0:
     # get the trades for the selected symbols and period
     selected_trades = get_trades(
         symbols=selected_symbols,
-        period=selected_period.period_selected,
+        begin_date=selected_period.begin_date,
+        end_date=selected_period.end_date,
         ascending=True,
     )
 
