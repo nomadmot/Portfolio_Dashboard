@@ -3,7 +3,7 @@ This module contains functions to access and manipulate daily balance data.
 """
 # Import standard libraries
 from typing import List
-from datetime import date, timedelta
+from datetime import date
 
 # Import 3rd party libraries
 from sqlalchemy import select, distinct
@@ -13,7 +13,6 @@ from pandas import DataFrame
 # Import local modules
 from config import DATABASE_ENGINE
 from models.portfolio import DailyBalance, Account, Security, Trade, SecurityType
-from core import Periods
 
 def get_account(account_id: int) -> Account:
     """
