@@ -26,6 +26,8 @@ logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 # mark entry into the module
 logger.debug("In module %s", __name__)
 
+# set local constants
+_TIME_MACHINE_COMPONENT_KEY = "summary_performance_time_machine"
 
 # function to calculate the cumulative performance for a given series
 def calculate_cumulative_performance(data: pd.Series):
@@ -154,7 +156,7 @@ st.title(f"Performance Summary for {get_account(1).name}")
 # add input widgets to the sidebar
 with st.sidebar:
     # create a selectbox to select the number of days for the chart
-    time_machine = get_time_machine_component("daily_performance_time_machine")
+    time_machine = get_time_machine_component(_TIME_MACHINE_COMPONENT_KEY)
     time_machine.render()
     # create a selectbox to select the comparison symbol for the chart
     selected_comparison = st.selectbox(
