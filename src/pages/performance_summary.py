@@ -1,13 +1,17 @@
 """
 Plot the daily performance of the specified account compared to a selected stock ticker.
 """
-# Import necessary libraries
+# Import standard libraries
 from typing import List
+import logging
+
+# Import 3rd party libraries
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
 # Import local modules
+from config import SETTINGS
 from utility import get_time_machine_component
 from core import (
     Periods,
@@ -16,6 +20,13 @@ from core import (
 )
 from core import get_stock_history
 
+# Initialize logging
+logger = logging.getLogger(__name__)
+logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+# mark entry into the module
+logger.debug("In module %s", __name__)
+
+
 # function to calculate the cumulative performance for a given series
 def calculate_cumulative_performance(data: pd.Series):
     """
@@ -23,6 +34,8 @@ def calculate_cumulative_performance(data: pd.Series):
 
     :param series: The series over which performance will be calculated.
     """
+    # mark entry into the function
+    logger.debug("Entering function calculate_cumulative_performance with %d entries", len(data))
 
     # store the initial balance value for efficient calculation
     initial_balance = data.iloc[0]
@@ -34,6 +47,8 @@ def calculate_cumulative_performance(data: pd.Series):
     ret_val.iloc[0] = 0
 
     #return the dataframe for further processing
+    logger.debug("Exiting function calculate_cumulative_performance, ret_val length is %d",
+                 len(ret_val))
     return ret_val
 
 
@@ -44,6 +59,8 @@ def calculate_daily_performance(data: pd.Series):
 
     :param series: The series over which performance will be calculated.
     """
+    # mark entry into the function
+    logger.debug("entering function calculate_daily_performance with %d entries", len(data))
 
     # calculate the cumulative percent change
     ret_val = data.rolling(window=2).apply(
@@ -53,6 +70,7 @@ def calculate_daily_performance(data: pd.Series):
     ret_val.iloc[0] = 0
 
     #return the dataframe for further processing
+    logger.debug("Exiting function calculate_daily_performance, ret_val length is %d", len(ret_val))
     return ret_val
 
 
@@ -65,6 +83,9 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     :param compare: The comparison ticker symbol.
     :param account_id: The account ID to plot (default is 1).
     """
+    # mark entry into the function
+    logger.debug("Entering function plot_daily_balance with %d entries", len(df))
+
     # get the account name for the specified account ID
     account_name = get_account(account_id).name
 
@@ -153,12 +174,19 @@ if df_balances.empty:
     st.warning("No balance data found for the specified period.")
     st.stop()
 
+# check the returned dates against the date pickers in the time machine
+# adjust the date pickers if necessary to ensure they match the returned data
+df_begin_date = df_balances['date'].iloc[0]
+df_end_date = df_balances['date'].iloc[-1]
+if time_machine.begin_date != df_begin_date or time_machine.end_date != df_end_date:
+    time_machine.update_date_pickers(df_begin_date, df_end_date)
+
 # fetch historical data for the comparison ticker
 # since the begin date
 df_comparison: pd.DataFrame = get_stock_history(
                 selected_comparison,
-                start_date=time_machine.begin_date,
-                end_date=time_machine.end_date,
+                start_date=df_begin_date,
+                end_date=df_end_date,
             )
 # drop the time component from the Date column
 df_comparison['Date'] = pd.to_datetime(df_comparison['Date']).dt.date
@@ -182,7 +210,7 @@ merged['dly_comp_change'] = calculate_daily_performance(merged['Close'])
 
 # display summary subheader
 if time_machine.period_selected == Periods.CUS:
-    selected_period = f"{time_machine.begin_date} to {time_machine.end_date}" # pylint: disable-msg=C0103
+    selected_period = f"{df_begin_date} to {df_end_date}" # pylint: disable-msg=C0103
 else:
     selected_period = Periods.get_label(time_machine.period_selected)
 st.subheader(f"Total Cumulative Performance for period "
