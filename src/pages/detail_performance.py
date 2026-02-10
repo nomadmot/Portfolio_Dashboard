@@ -310,8 +310,8 @@ st.markdown(f"*Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}*",)
 # add widgets for user inputs to sidebar
 with st.sidebar:
     # create a selectbox to select the number of days for the chart
-    selected_period = get_time_machine_component("detail_performance_time_machine")
-    selected_period.render()
+    time_machine = get_time_machine_component("detail_performance_time_machine")
+    time_machine.render()
 
     # button to load options into the symbol list
     load_options = st.button("Load Options", width="stretch")
@@ -339,8 +339,8 @@ if len(selected_symbols) > 0:
     # get the trades for the selected symbols and period
     selected_trades = get_trades(
         symbols=selected_symbols,
-        begin_date=selected_period.begin_date,
-        end_date=selected_period.end_date,
+        begin_date=time_machine.begin_date,
+        end_date=time_machine.end_date,
         ascending=True,
     )
 
@@ -349,6 +349,12 @@ if len(selected_symbols) > 0:
         trades = analyze_trades(selected_trades)
     else:
         trades = pd.DataFrame()
+
+    # update the time machine with the dates found in the response
+    if not trades.empty:
+        df_begin_date = trades["Date"].min()
+        df_end_date = trades["Date"].max()
+        time_machine.update_date_pickers(df_begin_date, df_end_date)
 
     # display the trade details
     st.dataframe(trades,

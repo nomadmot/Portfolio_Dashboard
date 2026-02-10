@@ -31,6 +31,7 @@ pages = [
          st.Page("pages/performance_summary.py", title="Performance Summary"),
          st.Page("pages/manage_balances.py", title="Manage Daily Balances"),
          st.Page("pages/detail_performance.py", title="Detail Performance"),
+         st.Page("pages/system_info.py", title="System Info"),
         ]
 pg = st.navigation(pages,
                    position="top"
