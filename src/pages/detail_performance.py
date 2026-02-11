@@ -14,6 +14,7 @@ from numpy import nan
 # Import local modules
 from config import SETTINGS
 from core import (
+                  Periods,
                   get_account,
                   get_security_symbols,
                   get_trades,
@@ -23,7 +24,7 @@ from core import (
                   get_security_info,
                   )
 from models.portfolio import SecurityType
-from utility import aumc_get_instance, get_time_machine_component
+from utility import get_aumc_instance, get_time_machine_component
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -49,10 +50,11 @@ class Summary(NamedTuple):
     UnrealizedPct: float
 
 # global variables to hold the summary data
-TRADE_SUMMARY = list()
+_TRADE_SUMMARY = []
 
-# the key for the detail performance multiselect component
-SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
+# the key for the detail performance multiselect  and timemmachine components
+_SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
+_TIME_MACHINE_KEY = "detail_performance_time_machine"
 
 # utility function to analyse trades for a single symbol
 def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
@@ -233,7 +235,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         unrealized_pl = nan
         unrealized_pl_pct = nan
 
-    TRADE_SUMMARY.append(Summary(
+    _TRADE_SUMMARY.append(Summary(
                 Symbol=symbol,
                 Invested=total_invested,
                 Realized=realized_pl,
@@ -277,7 +279,7 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
 
     # group by symbol and analyze trades for each symbol
     indexed = trades_df
-    analyzed = list()
+    analyzed = []
     grouped = indexed.groupby("Symbol")
     for s in grouped:
         symbol = s[0]
@@ -290,15 +292,15 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
 ### main page logic
 
 # retrieve or create the multiselect component for selecting symbols
-multiselect_symbols = aumc_get_instance(SYMBOL_MULTISELECT_KEY)
-if not multiselect_symbols.is_initialized:
-    multiselect_symbols.configure_instance(
-                        key=SYMBOL_MULTISELECT_KEY,
-                        label="Select Symbol(s):",
-                        options=get_security_symbols(include_options=False),
-                        accept_new_options=False,
-                        placeholder="Select or type to add symbols...",
-                        )
+multiselect_symbols = get_aumc_instance(key=_SYMBOL_MULTISELECT_KEY,
+                                        label="Select Symbol(s):",
+                                        options=get_security_symbols(include_options=False),
+                                        accept_new_options=False,
+                                        placeholder="Select symbols...",
+                                        )
+
+# create a time machine component to select the time period for the analysis
+time_machine = get_time_machine_component(_TIME_MACHINE_KEY, Periods.ALL)
 
 # configure the page layout
 st.set_page_config(layout="wide")
@@ -309,32 +311,31 @@ st.markdown(f"*Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}*",)
 
 # add widgets for user inputs to sidebar
 with st.sidebar:
-    # create a selectbox to select the number of days for the chart
-    time_machine = get_time_machine_component("detail_performance_time_machine")
+    # render the time machine
     time_machine.render()
 
     # button to load options into the symbol list
     load_options = st.button("Load Options", width="stretch")
 
-    # placeholder for multiselect symbols for performance analysis
-    selected_symbols_placeholder = st.empty()
-    # multiselect symbols for perormance analysis
     # if the "symbol" query parameter is provided, pre-fill the multiselect
-    query_symbol = st.query_params.get("symbol", None)
-    with selected_symbols_placeholder:
-        multiselect_symbols.multiselect(query_symbol.upper().split(',') if query_symbol else None)
+    query_symbols = st.query_params.get("symbol", None)
+    query_symbols = query_symbols.upper().split(',') if query_symbols else None
+    default_symbols = multiselect_symbols.selected
+    if query_symbols:
+        for query_symbol in query_symbols:
+            default_symbols.append(query_symbol)
+    # multiselect symbols for performance analysis
+    multiselect_symbols.render(default_symbols)
 
 
 # get the selected symbols from the multiselect component
 selected_symbols = multiselect_symbols.selected
 if len(selected_symbols) > 0:
     if load_options:
-        # add any associated symbols from the database to the selectiob list
+        # add any associated symbols from the database to the selection list
         selected_symbols = lookup_associated_symbols(selected_symbols)
         # re-render the multiselect with updated selected symbols
-        selected_symbols_placeholder.empty()
-        with selected_symbols_placeholder:
-            multiselect_symbols.multiselect(selected_symbols)
+        multiselect_symbols.update_options(selected_symbols)
 
     # get the trades for the selected symbols and period
     selected_trades = get_trades(
@@ -378,7 +379,7 @@ if len(selected_symbols) > 0:
 
     # print out the summary information
     st.subheader("Trade Summary:")
-    st.dataframe(TRADE_SUMMARY,
+    st.dataframe(_TRADE_SUMMARY,
                 hide_index=True,
                 column_config={
                     "Symbol": st.column_config.TextColumn(width=150),
@@ -419,8 +420,8 @@ if len(selected_symbols) > 0:
     )
 
     # calculate the grand totals
-    if len(TRADE_SUMMARY) > 0:
-        df_trade_summary = pd.DataFrame(TRADE_SUMMARY)
+    if len(_TRADE_SUMMARY) > 0:
+        df_trade_summary = pd.DataFrame(_TRADE_SUMMARY)
         grand_total_invested = df_trade_summary["Invested"].sum()
         grand_total_basis = df_trade_summary["Basis"].sum()
         grand_total_market = df_trade_summary["Market"].sum()
