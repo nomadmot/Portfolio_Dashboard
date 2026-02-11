@@ -7,7 +7,7 @@ from utility.market_calendar import (
     market_is_open,
 )
 from utility.status_message_component import StatusMessageComponent
-from utility.autoupdate_multiselect_component import aumc_get_instance
+from utility.autoupdate_multiselect_component import get_aumc_instance
 from utility.time_machine_component import get_time_machine_component
 from utility.system_info import get_client_ip, get_memory_size
 
@@ -15,7 +15,7 @@ __all__ = [
     "get_closed_count",
     "market_is_open",
     "StatusMessageComponent",
-    "aumc_get_instance",
+    "get_aumc_instance",
     "get_time_machine_component",
     "get_client_ip",
     "get_memory_size",

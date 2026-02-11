@@ -3,7 +3,6 @@ Utility component to update selection when new options are added to a
 Streamlit multiselect component.
 """
 # Import standard libraries
-from typing import Any
 import logging
 from datetime import date
 from uuid import uuid4 as uuid
@@ -244,7 +243,7 @@ class TimeMachineComponent:
                         )
 
 
-    def render(self)-> Any:
+    def render(self):
         """
         Renders the TimeMachineComponent instance
         """
@@ -281,9 +280,8 @@ class TimeMachineComponent:
 
         # log exit from the function
         logger.debug("Exiting TimeMachineComponent render method")
-        return component
 
-def get_time_machine_component(key: str, period: Periods = Periods.NONE) -> TimeMachineComponent:
+def get_time_machine_component(key: str, period: Periods = Periods.NONE):
     """
     Returns a TimeMachineComponent for the given key. If a component doesn't exist,
     a new one is created.

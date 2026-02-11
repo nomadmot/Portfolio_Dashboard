@@ -3,7 +3,6 @@ Utility component to update selection when new options are added to a
 Streamlit multiselect component.
 """
 # Import standard libraries
-from typing import Any
 import logging
 from uuid import uuid4 as uuid
 
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 
 # Dictionary to hold component instances
-_AUMC_INSTANCES = dict()
+_COMPONENT_INSTANCES = {}
 
 
 def option_multiselect_callback(selected_input, instance):
@@ -50,44 +49,15 @@ class AutoUpdateMultiselectComponent:
     def selected(self, value: list[str]):
         self._selected = value
 
-    @property
-    def is_initialized(self):
-        """
-        (Read-only) Indicates whether the component instance has been initialized.
-        """
-        return self._isinitialized
-
 
     def __init__(self,
                 key: str,
+                label: str,
+                options: list[str],
+                default: list[str]|None = None,
+                accept_new_options: bool = False,
+                placeholder: str|None = None,
                 ):
-        """
-        Initializes the AutoUpdateMultiselectComponent with a unique key.
-
-        Args:
-            key (str): Unique key to identify the component instance.
-        """
-        logger.debug(("Entering AutoUpdateMultiselectComponent.__init__: ",
-                      "key=%s"), key)
-        self._key = key
-        self._widget_id = str()
-        self._label = str()
-        self._options = list()
-        self._default = list()
-        self._selected = list()
-        self._accept_new_options: bool= False
-        self._placeholder: str|None = None
-        self._isinitialized = False
-
-
-    def configure_instance(self,
-                            key: str,
-                            label: str,
-                            options: list[str],
-                            default: list[str]|None = None,
-                            accept_new_options: bool = False,
-                            placeholder: str|None = None,
-                            ) -> None:
         """
         Configures a new instance of AutoUpdateMultiselectComponent.
 
@@ -96,21 +66,37 @@ class AutoUpdateMultiselectComponent:
             label (str): The label for the multiselect component.
             options (list[str]): The list of options to display.
             default (list[str]): The default selected options.
+            accept_new_options (bool): Whether or not to accept user input to add
+                new options (default False)
+            placeholder (str): Default text to display in the selectbox when not selected
         """
-        logger.debug("Configuring existing AutoUpdateMultiselectComponent instance for key=%s", key)
+        logger.debug(
+            "Configuring AutoUpdateMultiselectComponent instance: key=%s\n" +
+            "label=%s\noptions=%s\ndefault=%s\naccept_new_options=%s\nplaceholder=%s",
+            key,
+            label,
+            options,
+            default,
+            accept_new_options,
+            placeholder,
+            )
 
+        #initialize instance variables
         self._key = key
         self._label = label
-        self._options = options.copy()
-        if default is None:
-            self._default = list()
-        else:
-            self._default = default.copy()
+        self._options = options
+        self._default = default
         self._accept_new_options = accept_new_options
         self._placeholder = placeholder
-        self._isinitialized = True
 
-    def multiselect(self, default: list[str]|None = None) -> Any:
+        # initialize widgets
+        self.widget_placeholder = st.empty()
+
+        # initialize working variables
+        self._selected = []
+        self._widget_id = str()
+
+    def render(self, default: list[str]|None = None):
         """
         Renders a Streamlit multiselect component that automatically updates
         its selection when new options are added.
@@ -123,7 +109,10 @@ class AutoUpdateMultiselectComponent:
             st.multiselect: A Streamlit Multiselect component with auto-updating selection.
         """
         # mark debug entry into the method
-        logger.debug("Entering AutoUpdateMultiselectComponent.multiselect")
+        logger.debug("Entering AutoUpdateMultiselectComponent.render")
+
+        # create an empty widget to eventually hold the selectbox
+        self.widget_placeholder = st.empty()
 
         # Update default selections
         if default is  None:
@@ -134,46 +123,106 @@ class AutoUpdateMultiselectComponent:
             self._default = default
             self._selected = default
 
-        # Include any new options in the provided defaultthat were not previously selected
+        # Create the multiselect component
+        self._widget_id = self._key + "_" + str(uuid())
+        with self.widget_placeholder:
+            st.multiselect(
+                self._label,
+                options=self._options,
+                default=self._default,
+                accept_new_options=self._accept_new_options,
+                placeholder=self._placeholder,
+                on_change=option_multiselect_callback,
+                args=(self._widget_id, self),
+                key=self._widget_id
+            )
+
+    def update_options(self, new_options: list[str]):
+        """
+        Update the list of options for the multiselect widget
+
+        Arguments:
+            new_options -- A list of strings to update the options
+        """
+        # mark debug entry into the method
+        logger.debug("Entering AutoUpdateMultiselectComponent.update_options with new options: %s",
+                     new_options,
+                     )
+        # Update default selections
+        self._default = new_options
+        self._selected = new_options
+
+        # Include any new options in the provided default that were not previously selected
         # Add the new options to the allowable options list
         for option in self._default:
             if option not in self._options:
                 self._options.append(option)
+        # Keep the options sorted alphabetically
+        self._options.sort()
 
         # Swap out the current multiselect widget, if necessary
         if self._widget_id in st.session_state:
-            st.session_state[self._widget_id].clear()
+            del st.session_state[self._widget_id]
         self._widget_id = self._key + "_" + str(uuid())
 
         # Create the multiselect component
-        selector = st.multiselect(
-            self._label,
-            options=self._options,
-            default=self._default,
-            accept_new_options=self._accept_new_options,
-            placeholder=self._placeholder,
-            on_change=option_multiselect_callback,
-            args=(self._widget_id, self),
-            key=self._widget_id
-        )
+        with self.widget_placeholder:
+            st.multiselect(
+                self._label,
+                options=self._options,
+                default=self._default,
+                accept_new_options=self._accept_new_options,
+                placeholder=self._placeholder,
+                on_change=option_multiselect_callback,
+                args=(self._widget_id, self),
+                key=self._widget_id
+            )
 
-        return selector
 
-
-def aumc_get_instance(key: str) -> AutoUpdateMultiselectComponent:
+def get_aumc_instance(key: str,
+                        label: str,
+                        options: list[str],
+                        default: list[str]|None = None,
+                        accept_new_options: bool = False,
+                        placeholder: str|None = None,
+                        ) -> AutoUpdateMultiselectComponent:
     """
     Retrieves an existing instance of AutoUpdateMultiselectComponent
     or creates a new one if it doesn't exist.
 
     Args:
         key (str): Unique key to identify the component instance.
-    Returns:
-        AutoUpdateMultiselectComponent: The component instance if it exists, otherwise
-        a new, unintialized instance is created and returned.
+        label (str): The label for the multiselect component.
+        options (list[str]): The list of options to display.
+        default (list[str]): The default selected options.
+        accept_new_options (bool): Whether or not to accept user input to add
+            new options (default False)
+        placeholder (str): Default text to display in the selectbox when not selected
     """
-    if key not in _AUMC_INSTANCES:
-        _ = AutoUpdateMultiselectComponent(key=key)
-        _AUMC_INSTANCES[key] = _
-        return _
-    else:
-        return _AUMC_INSTANCES[key]
+    # log entry into the function
+    logger.debug(
+        "In aumc_get_instance with parameters: key=%s\n" +
+        "label=%s\noptions=%s\ndefault=%s\naccept_new_options=%s\nplaceholder=%s",
+        key,
+        label,
+        options,
+        default,
+        accept_new_options,
+        placeholder,
+        )
+
+    # check if the component already exists
+    if key not in _COMPONENT_INSTANCES:
+        # create a new component and store it in the dictionary
+        logger.debug("Creating new component")
+        _COMPONENT_INSTANCES[key] = AutoUpdateMultiselectComponent(key,
+            label,
+            options,
+            default,
+            accept_new_options,
+            placeholder,
+            )
+
+    # log exit from the function
+    logger.debug("Exiting aumc_get_instance with key=%s", key)
+    return _COMPONENT_INSTANCES[key]
