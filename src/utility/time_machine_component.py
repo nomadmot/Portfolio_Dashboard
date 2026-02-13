@@ -281,7 +281,7 @@ class TimeMachineComponent:
         # log exit from the function
         logger.debug("Exiting TimeMachineComponent render method")
 
-def get_time_machine_component(key: str, period: Periods = Periods.NONE):
+def get_time_machine_component(key: str, period: Periods = Periods.NONE) -> TimeMachineComponent:
     """
     Returns a TimeMachineComponent for the given key. If a component doesn't exist,
     a new one is created.
