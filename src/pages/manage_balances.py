@@ -28,7 +28,6 @@ from_date, to_date = get_period_dates(Periods.ALL)
 history = get_balance_history(account_id=1,
                               from_date=from_date,
                               to_date=to_date,
-                              #period=Periods.ALL,
                               ascending=False)
 
 # if a row is selected, retrieve the date and balance
