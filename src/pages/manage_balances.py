@@ -18,9 +18,9 @@ from utility import get_status_message_component
 
 # local constants
 _STATUS_MESSAGE_COMPONENT_KEY = "manage-balances-status-message"
-_DAILY_BALANCE_TABLE = "daily_balance_table"
-_UPDATE_BALANCE = "update_balance_session_key"
-_UPDATE_DATE = "update_date_session_key"
+_DAILY_BALANCE_TABLE_SESSION_KEY = "daily_balance_table"
+_UPDATE_BALANCE_SESSION_KEY = "update_balance_session_key"
+_UPDATE_DATE_SESSION_KEY = "update_date_session_key"
 
 
 # initialize data variables
@@ -32,15 +32,15 @@ history = get_balance_history(account_id=1,
                               ascending=False)
 
 # if a row is selected, retrieve the date and balance
-selected_row = st.session_state.get(_DAILY_BALANCE_TABLE)
+selected_row = st.session_state.get(_DAILY_BALANCE_TABLE_SESSION_KEY)
 if selected_row is not None and selected_row != [] and selected_row["selection"]["rows"] != []:
     selected_row = selected_row["selection"]["rows"][0]
     # set the values for the update date and balance widgets
-    st.session_state[_UPDATE_DATE] = history.iloc[selected_row]["date"]
-    st.session_state[_UPDATE_BALANCE] = float(history.iloc[selected_row]["balance"])
+    st.session_state[_UPDATE_DATE_SESSION_KEY] = history.iloc[selected_row]["date"]
+    st.session_state[_UPDATE_BALANCE_SESSION_KEY] = float(history.iloc[selected_row]["balance"])
 # if the update fate is not set, initialize it to today's date
-elif _UPDATE_DATE not in st.session_state:
-    st.session_state[_UPDATE_DATE] = date.today()
+elif _UPDATE_DATE_SESSION_KEY not in st.session_state:
+    st.session_state[_UPDATE_DATE_SESSION_KEY] = date.today()
 
 # configure the page layout
 st.set_page_config(layout="centered")
@@ -54,15 +54,14 @@ status_message = get_status_message_component(
                                             "Status messages will appear here"
                                             )
 
-# add user inputwidgets for maintaining balances to the sidebar
+# add user input widgets for maintaining balances to the sidebar
 with st.sidebar:
-    status_message.render()
     update_date = st.date_input("Select Date",
-                    value=st.session_state.get(_UPDATE_DATE),
+                    key=_UPDATE_DATE_SESSION_KEY,
                     help="Select the date for which you want to manage the balance",
                     )
     update_balance = st.number_input("Daily Balance",
-                    value=st.session_state.get(_UPDATE_BALANCE),
+                    key=_UPDATE_BALANCE_SESSION_KEY,
                     placeholder="Balance Amount",
                     step=0.01,
                     format="%.2f",
@@ -83,11 +82,13 @@ with st.sidebar:
         delete_record = st.button("Delete",
                         help="Click to delete the balance for the selected date",
                 )
+    # render the status message component
+    status_message.render()
 
 # display the balance history for a specific account
 daily_balance_table = st.dataframe(
             history,
-            key=_DAILY_BALANCE_TABLE,
+            key=_DAILY_BALANCE_TABLE_SESSION_KEY,
             width=500,
             hide_index=True,
             selection_mode="single-row",
