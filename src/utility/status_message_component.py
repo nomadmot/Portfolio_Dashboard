@@ -87,13 +87,20 @@ class StatusMessageComponent:
 
     def set_status_message(
         self,
-        msg_function,
-        msg_text,
-        msg_icon
+        msg_function: MethodType,
+        msg_text: str,
+        msg_icon:str|None = None
     ):
         """
         Store the data needed to display the current status message
         into the session state for later retrieval and display.
+        
+        :param msg_function: the Streamlit method to use for posting the message
+            (st.info, st.warn, or st.error)
+        :param msg_text: the text to display in the status message
+        :param msg_icon: an icon to display in the status message
+            (defaults to None)
+        
         """
         self._current_message = StatusMessage(
                                             msg_function,
@@ -115,7 +122,7 @@ class StatusMessageComponent:
         self._current_message = self._default_message
 
 
-def get_status_message_component(key: str, default_text: str|None = None):
+def get_status_message_component(key: str, default_text: str|None = None) -> StatusMessageComponent:
     """
     Returns a StatusMessageComponent for the given key. If a component doesn't exist,
     a new one is created.
