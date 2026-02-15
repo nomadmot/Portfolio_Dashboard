@@ -9,6 +9,7 @@ from uuid import uuid4 as uuid
 
 # Import 3rd party libraries
 import streamlit as st
+from streamlit.delta_generator import DeltaGenerator
 
 # Import local modules
 from config import SETTINGS
@@ -46,6 +47,7 @@ def period_select_callback(key: str, instance):
 
     # update the period_selected property
     instance.period_selected = st.session_state[key]
+    logger.debug("period selected is: %s", instance.period_selected)
 
 
 def begin_date_picker_callback(key: str, instance):
@@ -63,6 +65,7 @@ def begin_date_picker_callback(key: str, instance):
 
     # update the begin_date property
     instance.begin_date = st.session_state[key]
+    logger.debug("begin date updated to %s", instance.begin_date)
     # update the period_selected widget to "Custom"
     instance.period_selected = Periods.CUS
 
@@ -82,6 +85,7 @@ def end_date_picker_callback(key: str, instance):
 
     # update the end_date property
     instance.end_date = st.session_state[key]
+    logger.debug("end date updated to %s", instance.end_date)
     # update the period_selected widget to "Custom"
     instance.period_selected = Periods.CUS
 
@@ -90,16 +94,6 @@ class TimeMachineComponent:
     """
     Implements a composite component to select and mangage time period selection
     """
-    # instance variables
-    _component_key: str
-    _period_selected: Periods
-    _begin_date: date
-    _end_date: date
-
-    # placeholders for Streamlit widgets
-    _begin_date_picker_key: str|None
-    _end_date_picker_key: str|None
-
     # class properties
     @property
     def period_selected(self) -> Periods:
@@ -122,7 +116,6 @@ class TimeMachineComponent:
 
         # do we need to calculate the period?
         if value != Periods.CUS:
-
             # calculate the dates for the selected option and update the instance properties
             self.begin_date, self.end_date = get_period_dates(value)
 
@@ -144,7 +137,7 @@ class TimeMachineComponent:
         logger.debug("In begin_date setter for key=%s, setting begin_date to %s",
                         self._component_key, value)
         # update the begin date picker to reflect the new date
-        st.session_state[self._component_key + _BEGIN_DATE_PICKER_KEY] = self.begin_date
+        st.session_state[self._component_key + _BEGIN_DATE_PICKER_KEY] = value
 
     @property
     def end_date(self) -> date:
@@ -163,7 +156,7 @@ class TimeMachineComponent:
                         self._component_key, value)
         self._end_date = value
         # update the end date picker to reflect the new date
-        st.session_state[self._component_key + _END_DATE_PICKER_KEY] = self.end_date
+        st.session_state[self._component_key + _END_DATE_PICKER_KEY] = value
 
     def __init__(self, component_key: str, period: Periods):
         """
@@ -176,20 +169,20 @@ class TimeMachineComponent:
 
         # store the component key
         self._component_key = component_key
-        # initialize empty streamlit components
-        self._select_period = st.empty()
-        self._begin_date_picker = st.empty()
-        self._end_date_picker = st.empty()
-        # initialize the begin and end date widgets
-        self._begin_date_picker_key = None
-        self._begin_date = date.today()
-        self._end_date_picker_key = None
-        self._end_date = date.today()
 
         # initialize the period_selected to the provided value
         # NOTE: this will also calculate the begin and end dates for the selected period
         self.period_selected = period
 
+        # initialize date picker keys to none
+        self._select_period_key = None
+        self._begin_date_picker_key = None
+        self._end_date_picker_key = None
+
+        # define instance variables to hold Streamlit components
+        self._select_period: DeltaGenerator|None
+        self._begin_date_picker: DeltaGenerator
+        self._end_date_picker: DeltaGenerator
 
 
     def update_date_pickers(self, begin_date: date, end_date: date):
@@ -253,35 +246,30 @@ class TimeMachineComponent:
         # create a box to hold the component
         component = st.container(border=True)
 
-
-        # calculate the keys for the  widgets
-        select_period_key = self._component_key + _SELECT_PERIOD_KEY
-
         # render the Streamlit widgets for the component
+        self._select_period_key = self._component_key + _SELECT_PERIOD_KEY
         with component:
-            # create the period selection widget for the component
+            # render the period selector
             self._select_period = st.selectbox(
                 "Period",
                 options=Periods.get_periods(),
                 format_func=Periods.get_label,
-                index=0,
                 placeholder="Select Period",
                 on_change=period_select_callback,
-                args=(select_period_key, self),
-                key=select_period_key
+                args=(self._select_period_key, self),
+                key=self._select_period_key
             )
 
             # create empty placeholders for the date picker widgets
             self._begin_date_picker = st.empty()
             self._end_date_picker = st.empty()
-
             # update the date picker widgets with current data
             self.update_date_pickers(self._begin_date, self._end_date)
 
         # log exit from the function
         logger.debug("Exiting TimeMachineComponent render method")
 
-def get_time_machine_component(key: str, period: Periods = Periods.NONE):
+def get_time_machine_component(key: str, period: Periods = Periods.NONE) -> TimeMachineComponent:
     """
     Returns a TimeMachineComponent for the given key. If a component doesn't exist,
     a new one is created.

@@ -12,13 +12,17 @@ import plotly.graph_objects as go
 
 # Import local modules
 from config import SETTINGS
-from utility import get_time_machine_component
+from utility import (
+    get_time_machine_component,
+    get_status_message_component,
+)
 from core import (
     Periods,
     get_account,
     get_balance_history,
+    get_stock_history,
 )
-from core import get_stock_history
+
 
 # Initialize logging
 logger = logging.getLogger(__name__)
@@ -27,7 +31,8 @@ logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 logger.debug("In module %s", __name__)
 
 # set local constants
-_TIME_MACHINE_COMPONENT_KEY = "summary_performance_time_machine"
+_TIME_MACHINE_COMPONENT_KEY = "summary-performance-time-machine"
+_STATUS_MESSAGE_COMPONENT_KEY = "summary-performance-status-message"
 
 # function to calculate the cumulative performance for a given series
 def calculate_cumulative_performance(data: pd.Series):
@@ -146,6 +151,13 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
 
     return fig
 
+# get the time machine component
+time_machine = get_time_machine_component(_TIME_MACHINE_COMPONENT_KEY)
+# get the status message component
+status_message = get_status_message_component(
+                            _STATUS_MESSAGE_COMPONENT_KEY,
+                            "Select a period or date",
+                            )
 
 # configure the page layout
 st.set_page_config(layout="wide")
@@ -155,15 +167,22 @@ st.title(f"Performance Summary for {get_account(1).name}")
 
 # add input widgets to the sidebar
 with st.sidebar:
-    # create a selectbox to select the number of days for the chart
-    time_machine = get_time_machine_component(_TIME_MACHINE_COMPONENT_KEY)
+    # render the time machine component
     time_machine.render()
+
     # create a selectbox to select the comparison symbol for the chart
     selected_comparison = st.selectbox(
                             "Compare:",
                             ["SPY", "QQQ", "FFTY"],
                             index=0,
                             width=150)
+
+    # render the status message component
+    status_message.render()
+
+# if the time machine isn't set, don't continue
+if time_machine.period_selected == Periods.NONE:
+    st.stop()
 
 # get the balance history for the specified account
 df_balances = get_balance_history(account_id=1,
@@ -173,8 +192,15 @@ df_balances = get_balance_history(account_id=1,
                                   )
 # skip if there is no balance data
 if df_balances.empty:
-    st.warning("No balance data found for the specified period.")
+    status_message.set_status_message(
+                                     st.warning,
+                                     "No balance data found for the specified period",
+                                     "⚠️"
+                                     )
     st.stop()
+else:
+    # clear any status messages
+    status_message.clear_status_message()
 
 # check the returned dates against the date pickers in the time machine
 # adjust the date pickers if necessary to ensure they match the returned data
@@ -182,6 +208,7 @@ df_begin_date = df_balances['date'].iloc[0]
 df_end_date = df_balances['date'].iloc[-1]
 if time_machine.begin_date != df_begin_date or time_machine.end_date != df_end_date:
     time_machine.update_date_pickers(df_begin_date, df_end_date)
+    status_message.set_status_message(st.info, "Dates updated to reflect dates on file")
 
 # fetch historical data for the comparison ticker
 # since the begin date
