@@ -119,7 +119,10 @@ class StatusMessageComponent:
         Clear the current status message and initialize to defaults
         """
         logger.debug("Setting status message to default: %s", self._default_message)
-        self._current_message = self._default_message
+        self.set_status_message(self._default_message.msg_function,
+                                self._default_message.msg_text,
+                                self._default_message.msg_icon
+                                )
 
 
 def get_status_message_component(key: str, default_text: str|None = None) -> StatusMessageComponent:
