@@ -1,17 +1,18 @@
 """
 This module contains functions to access and manipulate daily balance data.
 """
-# Import necessary libraries
+# Import standard libraries
 from typing import List
-from datetime import date, timedelta
+from datetime import date
+
+# Import 3rd party libraries
 from sqlalchemy import select, distinct
 from sqlalchemy.orm import Session
 from pandas import DataFrame
 
 # Import local modules
-import config
+from config import DATABASE_ENGINE
 from models.portfolio import DailyBalance, Account, Security, Trade, SecurityType
-from core import Periods
 
 def get_account(account_id: int) -> Account:
     """
@@ -24,7 +25,7 @@ def get_account(account_id: int) -> Account:
         The Account object corresponding to the given account_id.
     """
     # generate a sqlalchemy select statement to retrieve the account
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         result = session.execute(
             select(Account).where(Account.id == account_id)
             ).first()
@@ -37,7 +38,8 @@ def get_account(account_id: int) -> Account:
     return result[0]
 
 def get_balance_history(account_id: int,
-                        period: Periods = Periods.ALL,
+                        from_date: date,
+                        to_date: date,
                         ascending: bool = False) -> DataFrame:
     """
     Retrieve the balance history for the specified account and time period.
@@ -50,40 +52,17 @@ def get_balance_history(account_id: int,
     Returns:
         A pandas DataFrame containing the balance history, indexed by date.
     """
-    # set the number of days or begin date based on the selected period
-    chart_days = None
-    begin_date = None
-    match(period):
-        case Periods.D30:
-            chart_days = 30
-        case Periods.D50:
-            chart_days = 50
-        case Periods.D90:
-            chart_days = 90
-        case Periods.YTD:
-            begin_date = date(date.today().year-1, 12, 31)
-        case Periods.YR1:
-            begin_date = date(date.today().year -1, date.today().month, date.today().day)
-        case Periods.ALL:
-            # no specific period, return all balances
-            pass
-        case _:
-            # raise an error if the period is not recognized
-            raise ValueError(f"Invalid period: {period}")
-
     # generate a sqlalchemy select statement to retrieve the balances
-    stmt = select(DailyBalance).where(DailyBalance.account_id == account_id)
-
-    # apply date filters based on the provided parameters
-    if chart_days is not None and begin_date is not None:
-        raise ValueError("Chart days and begin date cannot both be specified.")
-    if chart_days is not None:
-        stmt = stmt.order_by(DailyBalance.date.desc()).limit(chart_days)
-    elif begin_date is not None:
-        stmt = stmt.where(DailyBalance.date >= begin_date)
+    stmt = select(DailyBalance).where(
+        DailyBalance.account_id == account_id
+        ).where(
+            DailyBalance.date >= from_date
+        ).where(
+            DailyBalance.date <= to_date
+        )
 
     # execute the query and fetch results
-    with config.DB_ENGINE.connect() as conn:
+    with DATABASE_ENGINE.connect() as conn:
         result = conn.execute(stmt)
 
     # convert the result to a DataFrame
@@ -94,8 +73,9 @@ def get_balance_history(account_id: int,
 
     # ensure the DataFrame is sorted by date as requested in
     # the ascending parameter and reset the index for proper ordering
-    df_balances.sort_values('date', ascending=ascending, inplace=True)
-    df_balances.reset_index(drop=True, inplace=True)
+    if not df_balances.empty:
+        df_balances.sort_values('date', ascending=ascending, inplace=True)
+        df_balances.reset_index(drop=True, inplace=True)
 
     return df_balances
 
@@ -115,7 +95,7 @@ def get_security_symbols(include_options=False) -> List[str]:
     stmt = select(distinct(Security.symbol)).where(
         Security.security_type != SecurityType.OPTION
     )
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         result = session.execute(stmt)
     symbols = [symbol[0] for symbol in result]
 
@@ -124,7 +104,7 @@ def get_security_symbols(include_options=False) -> List[str]:
         stmt = select(distinct(Security.symbol)).where(
             Security.security_type == SecurityType.OPTION
         )
-        with Session(config.DB_ENGINE) as session:
+        with Session(DATABASE_ENGINE) as session:
             result = session.execute(stmt)
         for row in result:
             symbol = row[0]
@@ -151,7 +131,7 @@ def lookup_associated_symbols(symbols: List[str]) -> List[str]:
     stmt = select(distinct(Security.symbol)).where(
         (Security.associated_symbol.in_(symbols))
     )
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         result = session.execute(stmt)
     for row in result:
         symbol = row[0]
@@ -171,13 +151,14 @@ def get_last_trade_date():
             Trade.trade_date.desc()
         ).limit(1)
 
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         return list(session.execute(stmt))[0][0]
 
 
 # function to query the database for trades of the selected security
 def get_trades(symbols: List[str],
-               period: Periods = Periods.ALL,
+               begin_date: date,
+               end_date: date,
                ascending: bool = False) -> DataFrame:
     """
     Query the Trades table for the selected security symbols.
@@ -190,26 +171,6 @@ def get_trades(symbols: List[str],
     Returns:
         A pandas DataFrame containing the trades for the specified symbols.
     """
-    # set the number of days or begin/end dates based on the selected period
-    chart_days = None
-    begin_date = None
-    match(period):
-        case Periods.D30:
-            begin_date = date.today() - timedelta(days=30)
-        case Periods.D50:
-            begin_date = date.today() - timedelta(days=50)
-        case Periods.D90:
-            begin_date = date.today() - timedelta(days=90)
-        case Periods.YTD:
-            begin_date = date(date.today().year-1, 12, 31)
-        case Periods.YR1:
-            begin_date = date(date.today().year -1, date.today().month, date.today().day)
-        case Periods.ALL:
-            # no specific period, return all balances
-            pass
-        case _:
-            # raise an error if the period is not recognized
-            raise ValueError(f"Invalid period: {period}")
 
     stmt = select(
                 Security.security_type,
@@ -224,18 +185,14 @@ def get_trades(symbols: List[str],
             Trade, Security.symbol == Trade.symbol
         ).where(
             Security.symbol.in_(symbols)
-        )
-
-    # apply date filter based on the provided parameters
-    if chart_days is not None and begin_date is not None:
-        raise ValueError("Chart days and begin date cannot both be specified.")
-    if chart_days is not None:
-        stmt = stmt.order_by(Trade.trade_date.desc()).limit(chart_days)
-    elif begin_date is not None:
-        stmt = stmt.where(Trade.trade_date >= begin_date)
+        ).where(
+            Trade.trade_date >= begin_date
+        ).where(
+            Trade.trade_date <= end_date
+            )
 
     # execute the query and fetch results
-    with Session(config.DB_ENGINE) as session:
+    with Session(DATABASE_ENGINE) as session:
         db_result = session.execute(stmt)
 
     # convert the trades to a list of Dict objects

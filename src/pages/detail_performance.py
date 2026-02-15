@@ -3,7 +3,7 @@ Generate a portfolio performance page based on selected symbols
 and other criteria.
 '''
 # Import necessary libraries
-from collections import namedtuple
+from typing import NamedTuple
 import logging
 
 # Import 3rd party modules
@@ -12,43 +12,49 @@ import pandas as pd
 from numpy import nan
 
 # Import local modules
-import config
-from core import (get_security_symbols,
+from config import SETTINGS
+from core import (
+                  Periods,
+                  get_account,
+                  get_security_symbols,
                   get_trades,
                   get_last_trade_date,
                   lookup_associated_symbols,
                   get_basic_quote,
                   get_security_info,
-                  Periods,
-)
+                  )
 from models.portfolio import SecurityType
-from utility import aumc_get_instance
+from utility import get_aumc_instance, get_time_machine_component
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logger.setLevel(config.LOGLEVEL_APPLICATION)
+logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 
 # create a named tuple for summary data
-Summary = namedtuple(
-    "Summary",
-    [
-        "Symbol",
-        "Invested",
-        "Realized",
-        "RealizedPct",
-        "Holding",
-        "Price",
-        "Market",
-        "Basis",
-        "Unrealized",
-        "UnrealizedPct",
-    ]
-)
-# global variables to hold the summary data
-TRADE_SUMMARY = list()
+class Summary(NamedTuple):
+    """
+    Create a NamedTuple class to contain summary and total information for trades
 
-# the key for the detail performance multiselect component
-SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
+    Arguments:
+        NamedTuple -- derived class
+    """
+    Symbol: str
+    Invested: float
+    Realized: float
+    RealizedPct: float
+    Holding: float
+    Price: float
+    Market: float
+    Basis: float
+    Unrealized: float
+    UnrealizedPct: float
+
+# global variables to hold the summary data
+_TRADE_SUMMARY = []
+
+# the key for the detail performance multiselect  and timemmachine components
+_SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
+_TIME_MACHINE_KEY = "detail_performance_time_machine"
 
 # utility function to analyse trades for a single symbol
 def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
@@ -67,17 +73,20 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     logger.debug("in _analyze_trades: %s rows to analyze", trades_df.shape)
 
     # initialize variables
-    current_shares = 0.0
-    current_price = 0.0
-    average_price = 0.0
-    market_value = 0.0
-    total_invested = 0.0
-    cost_basis = 0.0
-    market_value = 0.0
-    realized_pl = 0.0
-    realized_pl_pct = 0.0
-    unrealized_pl = 0.0
-    unrealized_pl_pct = 0.0
+    current_shares: float = 0.0
+    current_price: float = 0.0
+    average_price: float = 0.0
+    market_value: float = 0.0
+    total_invested: float = 0.0
+    cost_basis: float = 0.0
+    market_value: float = 0.0
+    realized_pl: float = 0.0
+    realized_pl_pct: float = 0.0
+    unrealized_pl: float = 0.0
+    unrealized_pl_pct: float = 0.0
+    prev_shares: float = 0.0
+    prev_avg_price: float = 0.0
+    prev_cost_basis: float = 0.0
     symbol = trades_df.iloc[0].Symbol
     security = get_security_info(symbol)
 
@@ -88,87 +97,92 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         # save previous values for transaction analysis
         prev_shares = current_shares
         prev_avg_price = average_price
-        prev_cost_basis = prev_shares * prev_avg_price # type: ignore
+        prev_cost_basis = prev_shares * prev_avg_price
 
         # use the trade price as the current price
-        current_price = row.Price  # type: ignore
+        row_price: float = row.Price # type: ignore
+        current_price = row_price
 
         # calculate the current holdings
-        current_shares += row.Quantity # type: ignore
+        row_shares: float = row.Quantity # type: ignore
+        current_shares += row_shares
+
+        # get the transaction amount
+        row_amount: float = row.Amount # type: ignore
 
         # calculate the total cost and realized profit/loss
-        if prev_shares < 0: # type: ignore
+        if prev_shares < 0:
             # is short position
-            if row.Quantity > 0: # type: ignore
+            if row_shares > 0:
                 # covering a short position
                 cost_basis = cost_basis * (
-                                current_shares / prev_shares # type: ignore
+                                current_shares / prev_shares
                                 )
                 # calculate realized profit/loss
-                realized_pl = row.Amount + prev_cost_basis - cost_basis  # type: ignore
+                realized_pl = row_amount + prev_cost_basis - cost_basis
                 realized_pl_pct = \
-                    realized_pl / (prev_cost_basis - cost_basis) # type:ignore
+                    realized_pl / (prev_cost_basis - cost_basis)
             else:
                 # adding to a short position
-                total_invested -= row.Amount # type: ignore
-                cost_basis += row.Amount # type: ignore
+                total_invested -= row_amount
+                cost_basis += row_amount
                 # realized profit/loss is meaningless
                 realized_pl = nan
                 realized_pl_pct = nan
-        elif prev_shares > 0: # type: ignore
+        elif prev_shares > 0:
             # is long position
-            if row.Quantity < 0: # type: ignore
+            if row_shares < 0:
                 # sale of shares
                 cost_basis = cost_basis * (
-                                current_shares / prev_shares # type: ignore
+                                current_shares / prev_shares
                                 )
                 # calculate realized profit/loss
-                cost_of_shares = -row.Quantity * prev_avg_price #type: ignore
-                realized_pl = row.Amount - cost_of_shares  # type: ignore
+                cost_of_shares = -row_shares * prev_avg_price
+                realized_pl = row_amount - cost_of_shares
                 realized_pl_pct = \
-                    realized_pl / cost_of_shares if cost_of_shares != 0 else nan # type:ignore
+                    realized_pl / cost_of_shares if cost_of_shares != 0 else nan
             else:
                 # adding to a long position
-                total_invested -= row.Amount  # type: ignore
-                cost_basis -= row.Amount  # type: ignore
+                total_invested -= row_amount
+                cost_basis -= row_amount
                 # realized profit/loss is meaningless
                 realized_pl = nan
                 realized_pl_pct = nan
         else:
             # new position
-            if current_shares > 0.0: # type: ignore
+            if current_shares > 0.0:
                 # is new long position
-                total_invested -= row.Amount  # type: ignore
-                cost_basis = -row.Amount  # type: ignore
+                total_invested -= row_amount
+                cost_basis = -row_amount
             else:
                 # is new short position
-                total_invested = -row.Amount  # type: ignore
-                cost_basis = row.Amount  # type: ignore
+                total_invested = -row_amount
+                cost_basis = row_amount
             # realized profit/loss is meaningless for a new position
             realized_pl = nan
             realized_pl_pct = nan
 
         # calculate the average price
         average_price = \
-            cost_basis / current_shares if current_shares != 0 else nan # type: ignore
+            cost_basis / current_shares if current_shares != 0 else nan
 
         # calculate the current market value
-        market_value = current_shares * current_price  # type: ignore
+        market_value = current_shares * current_price
         # multiply value by 100 for options
         if security.security_type == SecurityType.OPTION:
-            market_value = market_value * 100 # type: ignore
+            market_value = market_value * 100
 
         # calculate the unrealized profit/loss and percent
-        if current_shares > 0.0: # type: ignore
+        if current_shares > 0.0:
             # use previous cost basis for long position percent
-            unrealized_pl = market_value - cost_basis # type: ignore
+            unrealized_pl = market_value - cost_basis
             unrealized_pl_pct = \
-                unrealized_pl / prev_cost_basis if prev_cost_basis > 0.0 else nan  # type: ignore
-        elif current_shares < 0.0: # type: ignore
+                unrealized_pl / prev_cost_basis if prev_cost_basis > 0.0 else nan
+        elif current_shares < 0.0:
             # use current cost basis for short position percent
-            unrealized_pl = market_value + cost_basis # type: ignore
+            unrealized_pl = market_value + cost_basis
             unrealized_pl_pct = \
-                unrealized_pl / cost_basis if cost_basis > 0.0 else nan  # type: ignore
+                unrealized_pl / cost_basis if cost_basis > 0.0 else nan
         else:
             unrealized_pl = nan
             unrealized_pl_pct = nan
@@ -188,12 +202,12 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     # calculate the sum total of realized profit/loss for the summary
     realized_pl = trades_df["Realized P/L"].sum()
     # calculate the realized p/l percent for the summary
-    if total_invested > 0.0: # type: ignore
+    if total_invested > 0.0:
         # is long position
-        realized_pl_pct = realized_pl / (total_invested - cost_basis) # type: ignore
-    elif total_invested < 0.0: # type: ignore
+        realized_pl_pct = realized_pl / (total_invested - cost_basis)
+    elif total_invested < 0.0:
         # is short position
-        realized_pl_pct = -realized_pl / (total_invested + cost_basis) # type: ignore
+        realized_pl_pct = -realized_pl / (total_invested + cost_basis)
     else:
         realized_pl_pct = nan
     # calculate amounts for current holdings
@@ -203,7 +217,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
             get_basic_quote(str(symbol)).get('currentPrice', nan)
         # calculate the current market value for the summary
         market_value = current_shares * current_price
-        if current_shares > 0.0: # type: ignore
+        if current_shares > 0.0:
             # is long position
             # calculate the unrealized p/l for the summary
             unrealized_pl = market_value - cost_basis
@@ -221,7 +235,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         unrealized_pl = nan
         unrealized_pl_pct = nan
 
-    TRADE_SUMMARY.append(Summary(
+    _TRADE_SUMMARY.append(Summary(
                 Symbol=symbol,
                 Invested=total_invested,
                 Realized=realized_pl,
@@ -265,7 +279,7 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
 
     # group by symbol and analyze trades for each symbol
     indexed = trades_df
-    analyzed = list()
+    analyzed = []
     grouped = indexed.groupby("Symbol")
     for s in grouped:
         symbol = s[0]
@@ -278,82 +292,56 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
 ### main page logic
 
 # retrieve or create the multiselect component for selecting symbols
-multiselect_symbols = aumc_get_instance(SYMBOL_MULTISELECT_KEY)
-if not multiselect_symbols.is_initialized:
-    multiselect_symbols.configure_instance(
-                        key=SYMBOL_MULTISELECT_KEY,
-                        label="Select Symbol(s):",
-                        options=get_security_symbols(include_options=False),
-                        accept_new_options=False,
-                        placeholder="Select or type to add symbols...",
-                        )
+multiselect_symbols = get_aumc_instance(key=_SYMBOL_MULTISELECT_KEY,
+                                        label="Select Symbol(s):",
+                                        options=get_security_symbols(include_options=False),
+                                        accept_new_options=False,
+                                        placeholder="Select symbols...",
+                                        )
+
+# create a time machine component to select the time period for the analysis
+time_machine = get_time_machine_component(_TIME_MACHINE_KEY, Periods.ALL)
 
 # configure the page layout
 st.set_page_config(layout="wide")
 
-# page subheader
-st.subheader("Detail Performance Analysis")
+# page header
+st.title(f"Detail Performance Analysis for {get_account(1).name}")
 st.markdown(f"*Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}*",)
 
-# set page content layout
-with st.container(width="stretch"):
-    # we'll use only the first column for inputs
-    layout_inputs = st.columns([0.3, 0.7])[0]
-    with layout_inputs:
-        # container for input elements
-        with st.container(border=True):
-            #begin date, end date, and options button in the first row
-            with st.container(horizontal=True,
-                              horizontal_alignment="left",
-                              vertical_alignment="bottom",
-                              ):
-                layout_selected_period = st.empty()
-                #layout_end_date = st.empty()
-                layout_load_options = st.empty()
-            # include symbol multiselect in the second row
-            with st.container(horizontal=True):
-                layout_select_symbols = st.empty()
+# add widgets for user inputs to sidebar
+with st.sidebar:
+    # render the time machine
+    time_machine.render()
 
-# collect user inputs
-with layout_selected_period:
-    # create a selectbox to select the number of days for the chart
-    selected_period = st.selectbox(
-                            "Select Period:",
-                            Periods.get_periods(),
-                            format_func=Periods.get_label,
-                            index=1,
-                            width=300)
-
-with layout_load_options:
     # button to load options into the symbol list
-    load_options = st.button("Load Options")
+    load_options = st.button("Load Options", width="stretch")
 
-# create a multiselect widget to select symbols for performance analysis
-with layout_select_symbols:
-    # placeholder for multiselect symbols for performance analysis
-    selected_symbols_placeholder = st.empty()
-    # multiselect symbols for perormance analysis
     # if the "symbol" query parameter is provided, pre-fill the multiselect
-    query_symbol = st.query_params.get("symbol", None)
-    with selected_symbols_placeholder:
-        multiselect_symbols.multiselect(query_symbol.upper().split(',') if query_symbol else None)
+    query_symbols = st.query_params.get("symbol", None)
+    query_symbols = query_symbols.upper().split(',') if query_symbols else None
+    default_symbols = multiselect_symbols.selected
+    if query_symbols:
+        for query_symbol in query_symbols:
+            default_symbols.append(query_symbol)
+    # multiselect symbols for performance analysis
+    multiselect_symbols.render(default_symbols)
 
 
 # get the selected symbols from the multiselect component
 selected_symbols = multiselect_symbols.selected
 if len(selected_symbols) > 0:
     if load_options:
-        # add any associated symbols from the database to the selectiob list
+        # add any associated symbols from the database to the selection list
         selected_symbols = lookup_associated_symbols(selected_symbols)
         # re-render the multiselect with updated selected symbols
-        selected_symbols_placeholder.empty()
-        with selected_symbols_placeholder:
-            multiselect_symbols.multiselect(selected_symbols)
+        multiselect_symbols.update_options(selected_symbols)
 
     # get the trades for the selected symbols and period
     selected_trades = get_trades(
         symbols=selected_symbols,
-        period=selected_period,
+        begin_date=time_machine.begin_date,
+        end_date=time_machine.end_date,
         ascending=True,
     )
 
@@ -363,10 +351,15 @@ if len(selected_symbols) > 0:
     else:
         trades = pd.DataFrame()
 
+    # update the time machine with the dates found in the response
+    if not trades.empty:
+        df_begin_date = trades["Date"].min()
+        df_end_date = trades["Date"].max()
+        time_machine.update_date_pickers(df_begin_date, df_end_date)
+
     # display the trade details
     st.dataframe(trades,
                 hide_index=True,
-                #width=1000,
                 column_config={
                     "Symbol": st.column_config.TextColumn(width=150),
                     "Quantity": st.column_config.NumberColumn(format="accounting", width="small"),
@@ -386,7 +379,7 @@ if len(selected_symbols) > 0:
 
     # print out the summary information
     st.subheader("Trade Summary:")
-    st.dataframe(TRADE_SUMMARY,
+    st.dataframe(_TRADE_SUMMARY,
                 hide_index=True,
                 column_config={
                     "Symbol": st.column_config.TextColumn(width=150),
@@ -427,8 +420,8 @@ if len(selected_symbols) > 0:
     )
 
     # calculate the grand totals
-    if len(TRADE_SUMMARY) > 0:
-        df_trade_summary = pd.DataFrame(TRADE_SUMMARY)
+    if len(_TRADE_SUMMARY) > 0:
+        df_trade_summary = pd.DataFrame(_TRADE_SUMMARY)
         grand_total_invested = df_trade_summary["Invested"].sum()
         grand_total_basis = df_trade_summary["Basis"].sum()
         grand_total_market = df_trade_summary["Market"].sum()

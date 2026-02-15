@@ -1,20 +1,38 @@
 """
 Plot the daily performance of the specified account compared to a selected stock ticker.
 """
-# Import necessary libraries
+# Import standard libraries
 from typing import List
-from datetime import date, timedelta
+import logging
+
+# Import 3rd party libraries
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
 # Import local modules
+from config import SETTINGS
+from utility import (
+    get_time_machine_component,
+    get_status_message_component,
+)
 from core import (
     Periods,
     get_account,
     get_balance_history,
+    get_stock_history,
 )
-from core import get_stock_history
+
+
+# Initialize logging
+logger = logging.getLogger(__name__)
+logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+# mark entry into the module
+logger.debug("In module %s", __name__)
+
+# set local constants
+_TIME_MACHINE_COMPONENT_KEY = "summary-performance-time-machine"
+_STATUS_MESSAGE_COMPONENT_KEY = "summary-performance-status-message"
 
 # function to calculate the cumulative performance for a given series
 def calculate_cumulative_performance(data: pd.Series):
@@ -23,6 +41,8 @@ def calculate_cumulative_performance(data: pd.Series):
 
     :param series: The series over which performance will be calculated.
     """
+    # mark entry into the function
+    logger.debug("Entering function calculate_cumulative_performance with %d entries", len(data))
 
     # store the initial balance value for efficient calculation
     initial_balance = data.iloc[0]
@@ -34,6 +54,8 @@ def calculate_cumulative_performance(data: pd.Series):
     ret_val.iloc[0] = 0
 
     #return the dataframe for further processing
+    logger.debug("Exiting function calculate_cumulative_performance, ret_val length is %d",
+                 len(ret_val))
     return ret_val
 
 
@@ -44,6 +66,8 @@ def calculate_daily_performance(data: pd.Series):
 
     :param series: The series over which performance will be calculated.
     """
+    # mark entry into the function
+    logger.debug("entering function calculate_daily_performance with %d entries", len(data))
 
     # calculate the cumulative percent change
     ret_val = data.rolling(window=2).apply(
@@ -53,6 +77,7 @@ def calculate_daily_performance(data: pd.Series):
     ret_val.iloc[0] = 0
 
     #return the dataframe for further processing
+    logger.debug("Exiting function calculate_daily_performance, ret_val length is %d", len(ret_val))
     return ret_val
 
 
@@ -65,6 +90,9 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     :param compare: The comparison ticker symbol.
     :param account_id: The account ID to plot (default is 1).
     """
+    # mark entry into the function
+    logger.debug("Entering function plot_daily_balance with %d entries", len(df))
+
     # get the account name for the specified account ID
     account_name = get_account(account_id).name
 
@@ -123,49 +151,71 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
 
     return fig
 
+# get the time machine component
+time_machine = get_time_machine_component(_TIME_MACHINE_COMPONENT_KEY)
+# get the status message component
+status_message = get_status_message_component(
+                            _STATUS_MESSAGE_COMPONENT_KEY,
+                            "Select a period or date",
+                            )
 
 # configure the page layout
 st.set_page_config(layout="wide")
 
-# page subheader
-st.subheader("Daily Performance Chart")
+# page title
+st.title(f"Performance Summary for {get_account(1).name}")
 
-# create a horizontal layout for the selectboxes
-with st.container(horizontal=True,
-                  horizontal_alignment="center",
-                  border=True,
-                  width=500):
-    # create a selectbox to select the number of days for the chart
-    selected_period = st.selectbox(
-                            "Select Period:",
-                            Periods.get_periods(),
-                            format_func=Periods.get_label,
-                            index=1,
-                            width=300)
+# add input widgets to the sidebar
+with st.sidebar:
+    # render the time machine component
+    time_machine.render()
+
     # create a selectbox to select the comparison symbol for the chart
     selected_comparison = st.selectbox(
                             "Compare:",
                             ["SPY", "QQQ", "FFTY"],
                             index=0,
-                            width=100)
+                            width=150)
+
+    # render the status message component
+    status_message.render()
+
+# if the time machine isn't set, don't continue
+if time_machine.period_selected == Periods.NONE:
+    st.stop()
 
 # get the balance history for the specified account
 df_balances = get_balance_history(account_id=1,
-                                    period=selected_period,
-                                    ascending=True
-                                    )
+                                  from_date=time_machine.begin_date,
+                                  to_date=time_machine.end_date,
+                                  ascending=True
+                                  )
+# skip if there is no balance data
+if df_balances.empty:
+    status_message.set_status_message(
+                                     st.warning,
+                                     "No balance data found for the specified period",
+                                     "⚠️"
+                                     )
+    st.stop()
+else:
+    # clear any status messages
+    status_message.clear_status_message()
 
-# get the begin and end dates from the balances dataframe
-work_dates = pd.to_datetime(df_balances['date']).astype('datetime64[ns]').tolist()
-begin_date: date = work_dates[0]
-end_date: date = work_dates[len(work_dates)-1] + timedelta(days=1)
+# check the returned dates against the date pickers in the time machine
+# adjust the date pickers if necessary to ensure they match the returned data
+df_begin_date = df_balances['date'].iloc[0]
+df_end_date = df_balances['date'].iloc[-1]
+if time_machine.begin_date != df_begin_date or time_machine.end_date != df_end_date:
+    time_machine.update_date_pickers(df_begin_date, df_end_date)
+    status_message.set_status_message(st.info, "Dates updated to reflect dates on file")
 
 # fetch historical data for the comparison ticker
 # since the begin date
 df_comparison: pd.DataFrame = get_stock_history(
                 selected_comparison,
-                start_date=begin_date,
-                end_date=end_date,
+                start_date=df_begin_date,
+                end_date=df_end_date,
             )
 # drop the time component from the Date column
 df_comparison['Date'] = pd.to_datetime(df_comparison['Date']).dt.date
@@ -187,22 +237,29 @@ merged['comp_change'] = calculate_cumulative_performance(merged['Close'])
 # add the daily performance for the comparison ticker
 merged['dly_comp_change'] = calculate_daily_performance(merged['Close'])
 
-# dispplay statistics for the current day
+# display summary subheader
+if time_machine.period_selected == Periods.CUS:
+    selected_period = f"{df_begin_date} to {df_end_date}" # pylint: disable-msg=C0103
+else:
+    selected_period = Periods.get_label(time_machine.period_selected)
+st.subheader(f"Total Cumulative Performance for period "
+             f"{selected_period}: {merged['pct_change'].iloc[-1]:.1%}"
+             )
+st.subheader(f"Comparison ({selected_comparison}) Cumulative Performance: "
+         f"{merged['comp_change'].iloc[-1]:.1%}"
+         )
+
+# display statistics for the current day
 st.subheader(f"Current Day Performance for {get_account(1).name} ({merged['Date'].iloc[-1]}):")
-st.write(f"Balance: ${merged['balance'].iloc[-1]:,.2f}")
-st.write(f"Daily Change: {merged['dly_pct_change'].iloc[-1]:.1%}")
+st.write(f"- Balance: ${merged['balance'].iloc[-1]:,.2f}")
+st.write(f"- Daily Change: {merged['dly_pct_change'].iloc[-1]:.1%}")
+st.write(f"- Comparison ({selected_comparison})"
+         f" - Daily Change: {merged['dly_comp_change'].iloc[-1]:.1%}"
+         )
 
 # plot the daily balance for the selected period
 st.plotly_chart(plot_daily_balance(merged,
                 compare=selected_comparison,
                 account_id=1),
-                width='content'
+                width='stretch'
                 )
-
-# summary subheader
-st.subheader(f"Total Cumulative Performance for period "
-             f"{Periods.get_label(selected_period)}: {merged['pct_change'].iloc[-1]:.1%}"
-             )
-st.subheader(f"Comparison ({selected_comparison}) Cumulative Performance: "
-         f"{merged['comp_change'].iloc[-1]:.1%}"
-         )

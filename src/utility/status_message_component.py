@@ -4,77 +4,148 @@ message in a Streamlit page.
 """
 # standard library imports
 import logging
+from types import MethodType
+from typing import NamedTuple
 
 # third party imports
 import streamlit as st
+from streamlit.delta_generator import DeltaGenerator
 
 # local application imports
-import config
+from config import SETTINGS
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(config.LOGLEVEL_APPLICATION)
+logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 # mark entry into the module
 logger.debug("Entering StatusMessageComponent module")
+
+# Named tuple contains parameters for a status message
+class StatusMessage(NamedTuple):
+    """
+    Structure to contain all the elements of a status message
+    """
+    # the Streamlit function to set the message (info, warn, error)
+    msg_function: MethodType
+    # the text to display in the message area
+    msg_text: str
+    # the icon (if any) to display in the message area
+    msg_icon: str|None
+
+_DEFAULT_TEXT = ""
+_COMPONENT_INSTANCES = {}
 
 class StatusMessageComponent:
     """
     Implements a utility component for managing and displaying
-    a status message in a Streamlit page. Uses class methods for
-    all functionality to avoid the need for instantiation.
+    a status message in a Streamlit page.
     """
-    STATUS_MESSAGE_KEY = "status_message_component"
+    def __init__(self, key: str, default_text: str|None):
+        """
+        Initialize a StatusMessageComponent instance. Optionally specify default text
+        to use in an empty component
 
-    @classmethod
+        Arguments:
+            key (str) -- A string to use as the key for this instance
+            default_text -- Text to be displayed when there is no other message
+        """
+        # mark entry into the function
+        logger.debug("initializing status message with key = %s and default text = %s",
+                     key, default_text)
+        # store the unique key assigned to this instance
+        self._component_key: str = key
+        # set the default text
+        if default_text:
+            self._default_text = default_text
+        else:
+            self._default_text = _DEFAULT_TEXT
+        # create the default message to display the default text
+        self._default_message: StatusMessage = StatusMessage(st.info,
+                                                            self._default_text,
+                                                            None
+                                                            )
+        # initialize the current message to display the default
+        self._current_message = self._default_message
+        # Streamlit placeholder for the message component
+        self._placeholder: DeltaGenerator
+
+    def render(self):
+        """
+        Place the status message component on the Streamlit page
+        """
+        logger.debug("in render, current message is %s", self._current_message)
+        # create the streamlit placeholder
+        self._placeholder = st.empty()
+
+        # display the message
+        with self._placeholder:
+            # unpack the current message
+            msg_function, msg_text, msg_icon = self._current_message
+            # display the current message
+            msg_function(msg_text, icon=msg_icon)
+
+
     def set_status_message(
-        cls,
-        msg_function,
-        msg_text,
-        msg_icon
+        self,
+        msg_function: MethodType,
+        msg_text: str,
+        msg_icon:str|None = None
     ):
         """
         Store the data needed to display the current status message
         into the session state for later retrieval and display.
+        
+        :param msg_function: the Streamlit method to use for posting the message
+            (st.info, st.warn, or st.error)
+        :param msg_text: the text to display in the status message
+        :param msg_icon: an icon to display in the status message
+            (defaults to None)
+        
         """
-        status_message = (
-            msg_function,
-            msg_text,
-            msg_icon
-        )
+        self._current_message = StatusMessage(
+                                            msg_function,
+                                            msg_text,
+                                            msg_icon
+                                            )
 
         # Write out the message to the current interface
-        logger.debug("Writing status message to UI: %s", status_message)
-        msg_function(msg_text, icon=msg_icon)
-
-        # Store the message in session state for later retrieval
-        logger.debug("Setting status message in session state: %s",
-                     status_message
-                     )
-        st.session_state[cls.STATUS_MESSAGE_KEY] = status_message
-
-    @classmethod
-    def display_status_message(cls):
-        """
-        Display the current status message stored in the session state.
-        If no status message is stored, display a default informational message.
-        """
-        status_message = st.session_state.get(cls.STATUS_MESSAGE_KEY, None)
-        logger.debug("Received status message from session state: %s",
-                     status_message
-                     )
-        if status_message is not None:
-            msg_function, msg_text, msg_icon = status_message
+        logger.debug("Writing status message to UI: %s", self._current_message)
+        with self._placeholder:
             msg_function(msg_text, icon=msg_icon)
-        else:
-            st.info("This area will display status messages")
 
-    @classmethod
-    def clear_status_message(cls):
+
+    def clear_status_message(self):
         """
-        Clear the current status message from the session state.
+        Clear the current status message and initialize to defaults
         """
-        if cls.STATUS_MESSAGE_KEY in st.session_state:
-            logger.debug("Clearing status message from session state")
-            del st.session_state[cls.STATUS_MESSAGE_KEY]
-        else:
-            logger.debug("No status message found in session state to clear")
+        logger.debug("Setting status message to default: %s", self._default_message)
+        self.set_status_message(self._default_message.msg_function,
+                                self._default_message.msg_text,
+                                self._default_message.msg_icon
+                                )
+
+
+def get_status_message_component(key: str, default_text: str|None = None) -> StatusMessageComponent:
+    """
+    Returns a StatusMessageComponent for the given key. If a component doesn't exist,
+    a new one is created.
+
+    Arguments:
+        key -- the key for the requested TimeMachineComponent
+        default_text -- the default text to display
+
+    Returns:
+        A TimeMachineComponent instance
+    """
+    # log entry into the function
+    logger.debug("In get_status_message_component with key=%s, default_text=%s", key, default_text)
+
+    # check if the component already exists
+    if key not in _COMPONENT_INSTANCES:
+        # create a new component and store it in the dictionary
+        logger.debug("Creating new instance")
+        _COMPONENT_INSTANCES[key] = StatusMessageComponent(key, default_text)
+
+    # log exit from the function
+    logger.debug("Exiting get_status_message_component with key=%s", key)
+    return _COMPONENT_INSTANCES[key]

@@ -8,22 +8,29 @@ import logging
 import streamlit as st
 
 #local application imports
-import config
-from utility import StatusMessageComponent
+from config import SETTINGS, DATABASE_ENGINE
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(config.LOGLEVEL_APPLICATION)
+logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 # mark entry into the module
-logger.debug("Starting Portfolio Dashboard application")
+logger.debug("Starting Portfolio Dashboard application in module %s", __name__)
 
 # use the stock bull icon
-st.logo(image="images/Stock-Bull.png",)
+st.logo(image="images/Stock-Bull.png", size="large")
+
+# set the page configuration
+st.set_page_config(
+        layout="wide",
+        page_icon="images/Stock-Bull.png",
+        initial_sidebar_state="expanded",
+)
 # Build the navigation menu
 pages = [
-         st.Page("pages/daily_performance.py", title="Daily Performance"),
+         st.Page("pages/performance_summary.py", title="Performance Summary"),
          st.Page("pages/manage_balances.py", title="Manage Daily Balances"),
          st.Page("pages/detail_performance.py", title="Detail Performance"),
+         st.Page("pages/system_info.py", title="System Info"),
         ]
 pg = st.navigation(pages,
                    position="top"
@@ -32,7 +39,4 @@ pg = st.navigation(pages,
 # Display the selected page
 pg.run()
 # Force the disposal of the database engine
-config.DB_ENGINE.dispose()
-
-# Clear out any status messages left in the session state
-StatusMessageComponent.clear_status_message()
+DATABASE_ENGINE.dispose()

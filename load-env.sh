@@ -1,5 +1,8 @@
-#!/bin/bash  
- 
+#!/bin/bash 
+
+# Change to the settings directory
+cd src/.settings
+
 # Check if .env file exists  
 if [ ! -f ".env" ]; then  
   echo "Error: .env file not found in current directory." >&2  
@@ -15,6 +18,9 @@ while IFS= read -r line; do
   echo "Loading variable: $line"
   # Export the variable (KEY=VALUE)  
   export "$line"  
-done < ".env"  
+done < ".env"
+
+# Change back to the old directory
+cd  $OLDPWD
  
 echo "✅ Successfully loaded environment variables from .env"
