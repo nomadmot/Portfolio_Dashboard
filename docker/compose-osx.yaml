@@ -3,6 +3,7 @@ services:
     image: localhost/portfolio-dashboard
     environment:
       - DATABASE_URI=sqlite://///home/devuser/investorlab/DATA/portfolio.db
+      - DUCK_DATABASE=/home/devuser/investorlab/DUCK_POND/pond.duckdb
       - LOGLEVEL_STREAMLIT=INFO
       - LOGLEVEL_SQLALCHEMY=WARN
       - YFINANCE_DEBUG=FALSE

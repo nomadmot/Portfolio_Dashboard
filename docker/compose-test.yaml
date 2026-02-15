@@ -3,6 +3,7 @@ services:
     image: tdamon/nomadmot:portfolio-dashboard-test
     environment:
       - DATABASE_URI=sqlite://///home/devuser/investorlab/DATA/portfolio-test.db
+      - DUCK_DATABASE=/home/devuser/investorlab/DUCK_POND/pond.duckdb
       - LOGLEVEL_STREAMLIT=INFO
       - LOGLEVEL_SQLALCHEMY=INFO
       - YFINANCE_DEBUG=FALSE
