@@ -9,17 +9,17 @@ import logging
 from duckdb import connect
 
 # local application imports
-from config import SETTINGS
+from config import ENVIRONMENT
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 # mark entry into the module
 logger.debug("In module %s", __name__)
 
 # connect to the duckdb database
-DUCKDB = connect(SETTINGS.duck_database)
-logger.info("Connected to duckdb database at %s", SETTINGS.duck_database)
+DUCKDB = connect(ENVIRONMENT.duck_database)
+logger.info("Connected to duckdb database at %s", ENVIRONMENT.duck_database)
 
 def get_closed_count(start_date: date, end_date: date) -> int|None:
     """

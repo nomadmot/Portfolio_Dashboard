@@ -33,18 +33,20 @@ class LogLevelEnum(str, Enum):
         }
         return map_loglevel[self.value]
 
-class Settings(BaseSettings):
+class EnvSettings(BaseSettings):
     """
     Use Pydantic BaseSettings to define application settings
     """
-    model_config = SettingsConfigDict(env_file='.settings/.env', env_file_encoding='utf-8')
+    model_config = SettingsConfigDict(
+        env_file='.settings/.env', env_file_encoding='utf-8',
+        )
     loglevel_application: LogLevelEnum = LogLevelEnum.INFO
     loglevel_streamlit: LogLevelEnum = LogLevelEnum.WARN
     loglevel_sqlalchemy: LogLevelEnum = LogLevelEnum.WARN
     yfinance_debug: bool = False
     database_uri: str = "sqlite://///path/to/your/database.db"
     duck_database: str = "path/to/your/duckdb"
-SETTINGS = Settings()
+ENVIRONMENT = EnvSettings()
 
 # Initialize logging
 logging.basicConfig(
@@ -52,27 +54,27 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     stream=sys.stdout)
 logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 logger.info(
     "Application logger initialized at level: %s",
-    SETTINGS.loglevel_application.value
+    ENVIRONMENT.loglevel_application.value
     )
 
 # set the sqlalchemy logging level
 sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
-sqlalchemy_logger.setLevel(SETTINGS.loglevel_sqlalchemy.to_logging_level())
+sqlalchemy_logger.setLevel(ENVIRONMENT.loglevel_sqlalchemy.to_logging_level())
 logger.info(
     "SQLAlchemy logger initialized at level: %s",
-    SETTINGS.loglevel_sqlalchemy.value
+    ENVIRONMENT.loglevel_sqlalchemy.value
     )
 
 # set the Streamlit logging level
-litlog.set_log_level(SETTINGS.loglevel_streamlit.to_logging_level())
+litlog.set_log_level(ENVIRONMENT.loglevel_streamlit.to_logging_level())
 logger.info(
     "Streamlit logger initialized at level: %s",
-    SETTINGS.loglevel_streamlit.value
+    ENVIRONMENT.loglevel_streamlit.value
     )
 
 # YFinance logging configuration
-logger.info("YFinance debug mode is %s", SETTINGS.yfinance_debug)
-yf.config.debug.logging = SETTINGS.yfinance_debug
+logger.info("YFinance debug mode is %s", ENVIRONMENT.yfinance_debug)
+yf.config.debug.logging = ENVIRONMENT.yfinance_debug

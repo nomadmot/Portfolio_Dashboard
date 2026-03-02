@@ -11,7 +11,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 # Import local modules
-from config import SETTINGS
+from config import ENVIRONMENT
 from utility import (
     get_time_machine_component,
     get_status_message_component,
@@ -26,7 +26,7 @@ from core import (
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 # mark entry into the module
 logger.debug("In module %s", __name__)
 

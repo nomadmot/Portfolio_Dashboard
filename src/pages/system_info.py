@@ -9,13 +9,13 @@ import logging
 import streamlit as st
 
 # Import local modules
-from config import SETTINGS
+from config import ENVIRONMENT
 from utility import get_client_ip, get_memory_size
 
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 # Mark entry into page'
 logger.debug("entering module: %s", __name__)
 

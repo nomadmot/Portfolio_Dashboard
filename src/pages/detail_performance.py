@@ -12,7 +12,7 @@ import pandas as pd
 from numpy import nan
 
 # Import local modules
-from config import SETTINGS
+from config import ENVIRONMENT
 from core import (
                   Periods,
                   get_account,
@@ -28,7 +28,7 @@ from utility import get_aumc_instance, get_time_machine_component
 
 # Set up logging
 logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 
 # create a named tuple for summary data
 class Summary(NamedTuple):

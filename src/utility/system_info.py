@@ -9,12 +9,12 @@ import sys
 from streamlit import context
 
 #local imports
-from config import SETTINGS
+from config import ENVIRONMENT
 
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 
 # mark entry into the module
 logger.debug("Entering module %s", __name__)

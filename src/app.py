@@ -8,11 +8,11 @@ import logging
 import streamlit as st
 
 #local application imports
-from config import SETTINGS, DATABASE_ENGINE
+from config import ENVIRONMENT, DATABASE_ENGINE
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 # mark entry into the module
 logger.debug("Starting Portfolio Dashboard application in module %s", __name__)
 

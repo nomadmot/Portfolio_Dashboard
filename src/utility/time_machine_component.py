@@ -12,12 +12,12 @@ import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
 # Import local modules
-from config import SETTINGS
+from config import ENVIRONMENT
 from core import Periods, get_period_dates
 
 # Initialize logging
 logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 
 # Dictionary to hold component instances
 _COMPONENT_INSTANCES = {}
