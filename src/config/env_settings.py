@@ -6,10 +6,13 @@ import logging
 import sys
 from enum import Enum
 
-#import 3rd-party libraries
+# import 3rd-party libraries
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from streamlit import logger as litlog
 import yfinance as yf
+
+# import local libraries]
+#from core import Periods
 
 class LogLevelEnum(str, Enum):
     """
@@ -35,7 +38,7 @@ class LogLevelEnum(str, Enum):
 
 class EnvSettings(BaseSettings):
     """
-    Use Pydantic BaseSettings to define application settings
+    Use Pydantic BaseSettings to define application environment
     """
     model_config = SettingsConfigDict(
         env_file='.settings/.env', env_file_encoding='utf-8',
@@ -47,6 +50,15 @@ class EnvSettings(BaseSettings):
     database_uri: str = "sqlite://///path/to/your/database.db"
     duck_database: str = "path/to/your/duckdb"
 ENVIRONMENT = EnvSettings()
+
+class AppSettings(BaseSettings):
+    """
+    Use Pydantic BaseSettings to define application settings
+    """
+    model_config = SettingsConfigDict(toml_file='.settings/app_config.toml')
+    default_period: str = 'ALL'
+    default_symbol: str = 'SPY'
+SETTINGS = AppSettings()
 
 # Initialize logging
 logging.basicConfig(
