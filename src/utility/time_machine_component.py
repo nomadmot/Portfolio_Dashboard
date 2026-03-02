@@ -255,6 +255,7 @@ class TimeMachineComponent:
                 options=Periods.get_periods(),
                 format_func=Periods.get_label,
                 placeholder="Select Period",
+                index=Periods.get_periods().index(self.period_selected),
                 on_change=period_select_callback,
                 args=(self._select_period_key, self),
                 key=self._select_period_key
