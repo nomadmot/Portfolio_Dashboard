@@ -3,7 +3,6 @@ Utility component for managing and displaying a status
 message in a Streamlit page.
 """
 # standard library imports
-import logging
 from types import MethodType
 from typing import NamedTuple
 
@@ -12,13 +11,11 @@ import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
 # local application imports
-from config import ENVIRONMENT
+from utility import get_logger
 
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 # mark entry into the module
-logger.debug("Entering StatusMessageComponent module")
+logger = get_logger(__name__)
+logger.debug("In module %s", __name__)
 
 # Named tuple contains parameters for a status message
 class StatusMessage(NamedTuple):

@@ -3,7 +3,6 @@ Utility component to update selection when new options are added to a
 Streamlit multiselect component.
 """
 # Import standard libraries
-import logging
 from datetime import date
 from uuid import uuid4 as uuid
 
@@ -12,12 +11,12 @@ import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
 # Import local modules
-from config import ENVIRONMENT
 from core import Periods, get_period_dates
+from utility import get_logger
 
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
+# mark entry into the module
+logger = get_logger(__name__)
+logger.debug("In module %s", __name__)
 
 # Dictionary to hold component instances
 _COMPONENT_INSTANCES = {}

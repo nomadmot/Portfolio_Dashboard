@@ -3,18 +3,14 @@ Provide start and end period selections
 """
 
 # standard library imports
-import logging
 from datetime import date, timedelta
 from enum import Enum
 
 # local application imports
-from config import ENVIRONMENT
-from utility import market_is_open
+from utility import get_logger, market_is_open
 
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 # mark entry into the module
+logger = get_logger(__name__)
 logger.debug("In module %s", __name__)
 
 class Periods(Enum):

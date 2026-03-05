@@ -2,7 +2,6 @@
 Use YFinance to get current stock info
 """
 # Standard Library Imports
-import logging
 
 # Third Party Imports
 import yfinance as yf
@@ -10,12 +9,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 # Local Application Imports
-from config import ENVIRONMENT, DATABASE_ENGINE
+from config import DATABASE_ENGINE
 from models.portfolio import Security
+from utility import get_logger
 
-# Set up logging
-logger = logging.getLogger(__name__)
-logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
+# mark entry into the module
+logger = get_logger(__name__)
+logger.debug("In module %s", __name__)
 
 def get_security_info(symbol: str) -> Security:
     """

@@ -2,19 +2,27 @@
 This page allows users to manage their daily balances.
 It displays a dataframe of balance history for a specific account.
 """
+# import standard libraries
 from datetime import date
+
+# import 3rd party libraries
 import streamlit as st
 import sqlalchemy.exc
 
-from core import (
-    get_account,
-    get_period_dates,
-    get_balance_history,
-    update_daily_balance,
-    delete_daily_balance
+# local imports
+from core import (Periods,
+                  get_account,
+                  get_period_dates,
+                  get_balance_history,
+                  update_daily_balance,
+                  delete_daily_balance,
 )
-from core import Periods
-from utility import get_status_message_component
+from utility import (get_status_message_component,
+                     get_logger)
+
+# mark entry into the module
+logger = get_logger(__name__)
+logger.debug("In module %s", __name__)
 
 # local constants
 _STATUS_MESSAGE_COMPONENT_KEY = "manage-balances-status-message"

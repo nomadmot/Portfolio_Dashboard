@@ -2,18 +2,16 @@
 Main application file for the Portfolio Dashboard using Streamlit
 '''
 #standard library imports
-import logging
 
 #import 3rd-party libraries
 import streamlit as st
 
 #local application imports
-from config import ENVIRONMENT, DATABASE_ENGINE
+from config import DATABASE_ENGINE
+from utility import get_logger
 
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 # mark entry into the module
+logger = get_logger(__name__)
 logger.debug("Starting Portfolio Dashboard application in module %s", __name__)
 
 # use the stock bull icon

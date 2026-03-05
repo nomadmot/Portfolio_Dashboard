@@ -1,17 +1,17 @@
 """Database configuration module."""
 # import standard libraries
-import logging
 from os import path
+
 # import 3rd-party libraries
 from sqlalchemy import create_engine
+
 # import local libraries
+# from utility import get_logger
 from config import ENVIRONMENT
 
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
-# mark entry into the module
-logger.debug("Entering module %s", __name__)
+# # mark entry into the module
+# logger = get_logger(__name__)
+# logger.debug("In module %s", __name__)
 
 def _database_engine():
     """
@@ -21,11 +21,12 @@ def _database_engine():
 
     # test to be sure the DATABASE_URI is valid
     if  database_uri:
-        logger.info("Using database URI: %s", database_uri)
+        pass
+        #logger.info("Using database URI: %s", database_uri)
     else:
-        raise ValueError("DATABASE_URI not found in environment variables")
+        raise ValueError("DATABASE_URI not found in settings")
     database_filename = database_uri.split("////")[1]
-    logger.info("Using database file: %s", database_filename)
+    #logger.info("Using database file: %s", database_filename)
     assert path.isfile(database_filename), f"Database file {database_filename} does not exist."
 
     # create the SQLAlchemy engine

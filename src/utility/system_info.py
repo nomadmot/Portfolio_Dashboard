@@ -2,22 +2,17 @@
 Functions related to system information and management
 """
 # standard imports
-import logging
 import sys
 
 # 3rd party imports
 from streamlit import context
 
 #local imports
-from config import ENVIRONMENT
-
-
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
+from utility import get_logger
 
 # mark entry into the module
-logger.debug("Entering module %s", __name__)
+logger = get_logger(__name__)
+logger.debug("In module %s", __name__)
 
 
 def get_client_ip() -> str:
@@ -47,5 +42,5 @@ def get_memory_size() -> int:
     Returns:
         number of memory blocks currently allocated
     """
-    
+
     return sys.getallocatedblocks()

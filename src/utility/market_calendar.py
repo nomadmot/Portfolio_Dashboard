@@ -3,18 +3,16 @@ functions to query market holidays
 """
 # standard library imports
 from datetime import date
-import logging
 
 # third-party imports
 from duckdb import connect
 
 # local application imports
 from config import ENVIRONMENT
+from utility import get_logger
 
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 # mark entry into the module
+logger = get_logger(__name__)
 logger.debug("In module %s", __name__)
 
 # connect to the duckdb database

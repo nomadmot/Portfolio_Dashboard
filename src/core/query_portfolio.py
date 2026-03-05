@@ -13,6 +13,11 @@ from pandas import DataFrame
 # Import local modules
 from config import DATABASE_ENGINE
 from models.portfolio import DailyBalance, Account, Security, Trade, SecurityType
+from utility import get_logger
+
+# mark entry into the module
+logger = get_logger(__name__)
+logger.debug("In module %s", __name__)
 
 def get_account(account_id: int) -> Account:
     """

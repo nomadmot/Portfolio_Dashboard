@@ -4,7 +4,6 @@ and other criteria.
 '''
 # Import necessary libraries
 from typing import NamedTuple
-import logging
 
 # Import 3rd party modules
 import streamlit as st
@@ -12,7 +11,6 @@ import pandas as pd
 from numpy import nan
 
 # Import local modules
-from config import ENVIRONMENT
 from core import (
                   Periods,
                   get_account,
@@ -24,12 +22,13 @@ from core import (
                   get_security_info,
                   )
 from models.portfolio import SecurityType
-from utility import get_aumc_instance, get_time_machine_component
+from utility import (get_aumc_instance,
+                     get_time_machine_component,
+                     get_logger)
 
-# Set up logging
-logger = logging.getLogger(__name__)
-logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
-
+# mark entry into the module
+logger = get_logger(__name__)
+logger.debug("In module %s", __name__)
 # create a named tuple for summary data
 class Summary(NamedTuple):
     """

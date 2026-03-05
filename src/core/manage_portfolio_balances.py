@@ -4,18 +4,16 @@ Routines for accessing and manipulating the portfolio database.
 # Import necessary libraries
 from datetime import date
 from typing import Optional
-import streamlit as st
-import streamlit.logger
 from sqlalchemy.orm import Session
 
 # Import local modules
-from models.portfolio import DailyBalance, Account
+from utility import get_logger
 from config import DATABASE_ENGINE
+from models.portfolio import DailyBalance, Account
 
-# Initialize the logger
-logger = streamlit.logger.get_logger(st.__name__)
 # mark entry into the module
-logger.debug("Entering manage_daily_balances module")
+logger = get_logger(__name__)
+logger.debug("In module %s", __name__)
 
 
 # function to update the portfolio balance for a specified account and day
