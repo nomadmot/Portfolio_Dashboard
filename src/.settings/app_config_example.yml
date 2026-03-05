@@ -1,0 +1,4 @@
+defaults:
+  # default settings for daily performance summary
+  performance_summary_period: D50 # default period for the time machine
+  performance_summary_symbol: QQQ # default comparison symbol
