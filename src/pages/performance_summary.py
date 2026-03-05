@@ -18,6 +18,7 @@ from utility import (
 )
 from core import (
     Periods,
+    get_period,
     get_account,
     get_balance_history,
     get_stock_history,
@@ -152,7 +153,11 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     return fig
 
 # get the time machine component
-time_machine = get_time_machine_component(_TIME_MACHINE_COMPONENT_KEY)
+default_period = get_period(ENVIRONMENT.defaults.perf_sum_default_period)
+time_machine = get_time_machine_component(
+                                          _TIME_MACHINE_COMPONENT_KEY,
+                                          period=default_period,
+                                         )
 # get the status message component
 status_message = get_status_message_component(
                             _STATUS_MESSAGE_COMPONENT_KEY,

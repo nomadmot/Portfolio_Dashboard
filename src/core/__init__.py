@@ -6,6 +6,7 @@ for the data module
 from core.periods import (
     Periods,
     get_period_dates,
+    get_period,
 )
 
 from core.manage_portfolio_balances import (
@@ -35,6 +36,7 @@ from core.stock_data import (
 __all__ = [
     "Periods",
     "get_period_dates",
+    "get_period",
     "YfPeriods",
     "update_daily_balance",
     "delete_daily_balance",

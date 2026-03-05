@@ -10,12 +10,19 @@ sys.path.append("src")
 
 # import application modules
 #pylint: disable=wrong-import-position
-from core import Periods, get_period_dates
+from core import Periods, get_period_dates, get_period
 
 
 # Initialize logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+period_string = "D90"
+period_test = get_period(period_string)
+logger.info("get_period(%s) returns %s", period_string, period_test)
+
+# invalid period
+logger.info("Invalid test period returns %s", get_period("XXX"))
 
 begin_date, end_date = get_period_dates(Periods.D30)
 logger.info("D30 Period: begin_date=%s, end_date=%s", begin_date, end_date)
