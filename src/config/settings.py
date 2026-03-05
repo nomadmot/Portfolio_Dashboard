@@ -88,7 +88,7 @@ class Settings(BaseSettings):
             file_secret_settings, # Values from secret files
         )
 
-ENVIRONMENT = Settings() # pyright: ignore[reportCallIssue]
+SETTINGS = Settings() # pyright: ignore[reportCallIssue]
 
 if __name__  == "__main__":
-    print(ENVIRONMENT.model_dump())
+    print(SETTINGS.model_dump())

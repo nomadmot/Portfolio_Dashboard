@@ -10,7 +10,7 @@ from streamlit import logger as litlog
 import yfinance as yf
 
 # import local libraries
-from config import ENVIRONMENT
+from config import SETTINGS
 
 def get_logger(name: str) -> logging.Logger:
     """
@@ -24,7 +24,7 @@ def get_logger(name: str) -> logging.Logger:
     """
     # create a pre-configured logger
     ret_logger = logging.getLogger(name)
-    ret_logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
+    ret_logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 
     # return the pre-configured logger
     return ret_logger
@@ -39,24 +39,24 @@ logging.basicConfig(
     stream=sys.stdout)
 logger.info(
     "Application logger initialized at level: %s",
-    ENVIRONMENT.loglevel_application.value
+    SETTINGS.loglevel_application.value
     )
 
 # set the sqlalchemy logging level
 sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
-sqlalchemy_logger.setLevel(ENVIRONMENT.loglevel_sqlalchemy.to_logging_level())
+sqlalchemy_logger.setLevel(SETTINGS.loglevel_sqlalchemy.to_logging_level())
 logger.info(
     "SQLAlchemy logger initialized at level: %s",
-    ENVIRONMENT.loglevel_sqlalchemy.value
+    SETTINGS.loglevel_sqlalchemy.value
     )
 
 # set the Streamlit logging level
-litlog.set_log_level(ENVIRONMENT.loglevel_streamlit.to_logging_level())
+litlog.set_log_level(SETTINGS.loglevel_streamlit.to_logging_level())
 logger.info(
     "Streamlit logger initialized at level: %s",
-    ENVIRONMENT.loglevel_streamlit.value
+    SETTINGS.loglevel_streamlit.value
     )
 
 # YFinance logging configuration
-logger.info("YFinance debug mode is %s", ENVIRONMENT.yfinance_debug)
-yf.config.debug.logging = ENVIRONMENT.yfinance_debug
+logger.info("YFinance debug mode is %s", SETTINGS.yfinance_debug)
+yf.config.debug.logging = SETTINGS.yfinance_debug

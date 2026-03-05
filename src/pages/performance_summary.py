@@ -10,7 +10,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 # Import local modules
-from config import ENVIRONMENT
+from config import SETTINGS
 from utility import (
     get_time_machine_component,
     get_status_message_component,
@@ -150,7 +150,7 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     return fig
 
 # get the time machine component
-default_period = get_period(ENVIRONMENT.defaults.performance_summary_period)
+default_period = get_period(SETTINGS.defaults.performance_summary_period)
 time_machine = get_time_machine_component(
                                           _TIME_MACHINE_COMPONENT_KEY,
                                           period=default_period,

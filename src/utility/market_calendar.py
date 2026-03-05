@@ -8,7 +8,7 @@ from datetime import date
 from duckdb import connect
 
 # local application imports
-from config import ENVIRONMENT
+from config import SETTINGS
 from utility import get_logger
 
 # mark entry into the module
@@ -16,8 +16,8 @@ logger = get_logger(__name__)
 logger.debug("In module %s", __name__)
 
 # connect to the duckdb database
-DUCKDB = connect(ENVIRONMENT.duck_database)
-logger.info("Connected to duckdb database at %s", ENVIRONMENT.duck_database)
+DUCKDB = connect(SETTINGS.duck_database)
+logger.info("Connected to duckdb database at %s", SETTINGS.duck_database)
 
 def get_closed_count(start_date: date, end_date: date) -> int|None:
     """

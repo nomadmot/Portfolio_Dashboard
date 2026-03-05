@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 
 # import local libraries
 # from utility import get_logger
-from config import ENVIRONMENT
+from config import SETTINGS
 
 # # mark entry into the module
 # logger = get_logger(__name__)
@@ -17,7 +17,7 @@ def _database_engine():
     """
     Returns the SQLAlchemy database engine for the application.
     """
-    database_uri = ENVIRONMENT.database_uri
+    database_uri = SETTINGS.database_uri
 
     # test to be sure the DATABASE_URI is valid
     if  database_uri:

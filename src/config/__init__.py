@@ -3,11 +3,11 @@ configuration module for the Portfolio Dashboard project
 """
 # package-level exports
 from config.settings import (
-    ENVIRONMENT,
+    SETTINGS,
 )
 from config.database import DATABASE_ENGINE
 
 __all__= [
-    "ENVIRONMENT",
+    "SETTINGS",
     "DATABASE_ENGINE",
 ]
