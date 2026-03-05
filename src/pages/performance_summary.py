@@ -3,7 +3,6 @@ Plot the daily performance of the specified account compared to a selected stock
 """
 # Import standard libraries
 from typing import List
-import logging
 
 # Import 3rd party libraries
 import streamlit as st
@@ -15,6 +14,7 @@ from config import ENVIRONMENT
 from utility import (
     get_time_machine_component,
     get_status_message_component,
+    get_logger,
 )
 from core import (
     Periods,
@@ -24,11 +24,8 @@ from core import (
     get_stock_history,
 )
 
-
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(ENVIRONMENT.loglevel_application.to_logging_level())
 # mark entry into the module
+logger = get_logger(__name__)
 logger.debug("In module %s", __name__)
 
 # set local constants
@@ -153,7 +150,7 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     return fig
 
 # get the time machine component
-default_period = get_period(ENVIRONMENT.defaults.perf_sum_default_period)
+default_period = get_period(ENVIRONMENT.defaults.performance_summary_period)
 time_machine = get_time_machine_component(
                                           _TIME_MACHINE_COMPONENT_KEY,
                                           period=default_period,
