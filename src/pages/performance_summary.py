@@ -26,7 +26,7 @@ from core import (
 
 # mark entry into the module
 logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+logger.debug("In module %s\n\tfile:%s", __name__, __file__)
 
 # set local constants
 _TIME_MACHINE_COMPONENT_KEY = "summary-performance-time-machine"
