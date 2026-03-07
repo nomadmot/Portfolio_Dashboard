@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     loglevel_streamlit: LogLevelEnum = LogLevelEnum.WARN
     loglevel_sqlalchemy: LogLevelEnum = LogLevelEnum.WARN
     yfinance_debug: bool = False
+    debug: list[str] = []
     database_uri: str = "sqlite://///path/to/your/database.db"
     duck_database: str = "path/to/your/duckdb"
 
@@ -92,3 +93,4 @@ SETTINGS = Settings() # pyright: ignore[reportCallIssue]
 
 if __name__  == "__main__":
     print(SETTINGS.model_dump())
+    print(SETTINGS.debug)

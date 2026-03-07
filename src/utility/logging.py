@@ -14,17 +14,23 @@ from config import SETTINGS
 
 def get_logger(name: str) -> logging.Logger:
     """
-    get a pre-configured logger with the specified name
+    Get a pre-configured logger with the specified name. The loglevel will be initialized
+    to DEBUG for any modules listed in SETTINGS.debug, or the default selected in
+    SETTING.loglevel_application
 
     Arguments:
         name -- The name to use for the logger
 
     Returns:
-        A pre-configured logger using the input name
+        A pre-configured logger using the input name and specified loglevel
     """
     # create a pre-configured logger
     ret_logger = logging.getLogger(name)
-    ret_logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+    if name in SETTINGS.debug:
+        logger.info("Set logging for module %s to DEBUG", name)
+        ret_logger.setLevel(logging.DEBUG)
+    else:
+        ret_logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 
     # return the pre-configured logger
     return ret_logger
