@@ -47,7 +47,7 @@ class AppDefaults(BaseModel):
     # The default Period for the Performance Summary page
     performance_summary_period: str
     # The default comparison symbol for the Performance Summary page
-    performance_summary_symbol: str
+    performance_summary_symbols: list[str]
 
 class Settings(BaseSettings):
     """

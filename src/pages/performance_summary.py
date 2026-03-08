@@ -175,7 +175,7 @@ with st.sidebar:
     # create a selectbox to select the comparison symbol for the chart
     selected_comparison = st.selectbox(
                             "Compare:",
-                            ["SPY", "QQQ", "FFTY"],
+                            SETTINGS.defaults.performance_summary_symbols,
                             index=0,
                             width=150)
 
