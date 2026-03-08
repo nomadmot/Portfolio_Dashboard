@@ -26,7 +26,7 @@ from core import (
 
 # mark entry into the module
 logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+logger.debug("In module %s\n\tfile:%s", __name__, __file__)
 
 # set local constants
 _TIME_MACHINE_COMPONENT_KEY = "summary-performance-time-machine"
@@ -175,7 +175,7 @@ with st.sidebar:
     # create a selectbox to select the comparison symbol for the chart
     selected_comparison = st.selectbox(
                             "Compare:",
-                            ["SPY", "QQQ", "FFTY"],
+                            SETTINGS.defaults.performance_summary_symbols,
                             index=0,
                             width=150)
 
