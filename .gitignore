@@ -7,4 +7,4 @@ Portfolio-Dashboard/logs/portfolio_dashboard.log
 image_id
 .env
 src/.settings/app_config.yml
-.vscode/*
+.vscode/settings.json
