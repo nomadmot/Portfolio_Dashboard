@@ -18,7 +18,9 @@ from core import (Periods,
                   delete_daily_balance,
 )
 from utility import (get_status_message_component,
-                     get_logger)
+                     get_logger,
+                     StatusType as stat,
+                     )
 
 # mark entry into the module
 logger = get_logger(__name__)
@@ -56,10 +58,7 @@ st.set_page_config(layout="centered")
 st.title(f"Manage Daily Balances for Account {get_account(1).name}")
 
 # create the status message component
-status_message = get_status_message_component(
-                                            _STATUS_MESSAGE_COMPONENT_KEY,
-                                            "Status messages will appear here"
-                                            )
+status_message = get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY)
 
 # add user input widgets for maintaining balances to the sidebar
 with st.sidebar:
@@ -89,8 +88,6 @@ with st.sidebar:
         delete_record = st.button("Delete",
                         help="Click to delete the balance for the selected date",
                 )
-    # render the status message component
-    status_message.render()
 
 # display the balance history for a specific account
 daily_balance_table = st.dataframe(
@@ -113,29 +110,25 @@ if update_record:
             update_daily_balance(1, update_balance, update_date)
         except ValueError as e:
             status_message.set_status_message(
-                                            st.warning,
+                                            stat.WARNING,
                                             str(e),
-                                            "⚠️"
                                             )
         except sqlalchemy.exc.IntegrityError as e:
             status_message.set_status_message(
-                                            st.warning,
+                                            stat.WARNING,
                                             "The balance for this date already exists",
-                                            "⚠️"
                                             )
         except sqlalchemy.exc.SQLAlchemyError as e:
             status_message.set_status_message(
-                                            st.error,
+                                            stat.ERROR,
                                             f"Unexpected SQL error: {str(e)}",
-                                            "❗"
                                             )
         else:
             # if the update is successful, display a success message and refresh the dataframe
             status_message.set_status_message(
-                                        st.success,
+                                        stat.SUCCESS,
                                         f"Balance for {update_date} updated to"
                                         f" {update_balance:.2f} successfully!",
-                                        "✅"
                                         )
             # rerun now to display the results of the operatio
             st.rerun()
@@ -147,26 +140,23 @@ if delete_record:
             delete_daily_balance(1, update_date)
         except ValueError as e:
             status_message.set_status_message(
-                                        st.warning,
+                                        stat.WARNING,
                                         str(e),
-                                        "⚠️"
                                         )
         except sqlalchemy.exc.SQLAlchemyError as e:
             status_message.set_status_message(
-                                        st.error,
+                                        stat.ERROR,
                                         f"Unexpected SQL error: {str(e)}",
-                                        "❗"
                                         )
 
         else:
             # if the update is successful, display a success message
             status_message.set_status_message(
-                                        st.success,
+                                        stat.SUCCESS,
                                         f"Balance for {update_date} deleted successfully!",
-                                        "✅"
                                         )
             # rerun now to display the results of the operatio
             st.rerun()
 
-# clear the status message
-status_message.clear_status_message()
+# display any status messages
+status_message.show_status_messages()

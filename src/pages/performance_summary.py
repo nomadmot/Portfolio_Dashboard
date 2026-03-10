@@ -15,6 +15,7 @@ from utility import (
     get_time_machine_component,
     get_status_message_component,
     get_logger,
+    StatusType as stat
 )
 from core import (
     Periods,
@@ -156,10 +157,7 @@ time_machine = get_time_machine_component(
                                           period=default_period,
                                          )
 # get the status message component
-status_message = get_status_message_component(
-                            _STATUS_MESSAGE_COMPONENT_KEY,
-                            "Select a period or date",
-                            )
+status_message = get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY)
 
 # configure the page layout
 st.set_page_config(layout="wide")
@@ -179,9 +177,6 @@ with st.sidebar:
                             index=0,
                             width=150)
 
-    # render the status message component
-    status_message.render()
-
 # if the time machine isn't set, don't continue
 if time_machine.period_selected == Periods.NONE:
     st.stop()
@@ -195,14 +190,10 @@ df_balances = get_balance_history(account_id=1,
 # skip if there is no balance data
 if df_balances.empty:
     status_message.set_status_message(
-                                     st.warning,
+                                     stat.WARNING,
                                      "No balance data found for the specified period",
-                                     "⚠️"
                                      )
     st.stop()
-else:
-    # clear any status messages
-    status_message.clear_status_message()
 
 # check the returned dates against the date pickers in the time machine
 # adjust the date pickers if necessary to ensure they match the returned data
@@ -210,7 +201,7 @@ df_begin_date = df_balances['date'].iloc[0]
 df_end_date = df_balances['date'].iloc[-1]
 if time_machine.begin_date != df_begin_date or time_machine.end_date != df_end_date:
     time_machine.update_date_pickers(df_begin_date, df_end_date)
-    status_message.set_status_message(st.info, "Dates updated to reflect dates on file")
+    status_message.set_status_message(stat.INFO, "Dates updated to reflect dates on file")
 
 # fetch historical data for the comparison ticker
 # since the begin date
@@ -265,3 +256,6 @@ st.plotly_chart(plot_daily_balance(merged,
                 account_id=1),
                 width='stretch'
                 )
+
+# show the status messages
+status_message.show_status_messages()
