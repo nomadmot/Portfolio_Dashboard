@@ -9,9 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 # Local Application Imports
-from config import DATABASE_ENGINE
 from models.portfolio import Security
-from utility import get_logger
+from utility import get_logger, DATABASE_ENGINE
 
 # mark entry into the module
 logger = get_logger(__name__)

@@ -11,9 +11,8 @@ from sqlalchemy.orm import Session
 from pandas import DataFrame
 
 # Import local modules
-from config import DATABASE_ENGINE
 from models.portfolio import DailyBalance, Account, Security, Trade, SecurityType
-from utility import get_logger
+from utility import get_logger, DATABASE_ENGINE
 
 # mark entry into the module
 logger = get_logger(__name__)
