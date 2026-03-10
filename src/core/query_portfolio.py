@@ -28,6 +28,9 @@ def get_account(account_id: int) -> Account:
     Returns:
         The Account object corresponding to the given account_id.
     """
+    # mark entry into the method
+    logger.debug("Entering get_account with account_id = %s", account_id)
+    #if DATABASE_ENGINE.ping
     # generate a sqlalchemy select statement to retrieve the account
     with Session(DATABASE_ENGINE) as session:
         result = session.execute(
@@ -42,27 +45,37 @@ def get_account(account_id: int) -> Account:
     return result[0]
 
 def get_balance_history(account_id: int,
-                        from_date: date,
-                        to_date: date,
+                        begin_date: date,
+                        end_date: date,
                         ascending: bool = False) -> DataFrame:
     """
     Retrieve the balance history for the specified account and time period.
 
     Arguments:
         account_id -- The ID of the account to retrieve balances for.
-        period -- The time period for which to retrieve balances.
+        begin_date -- The begin date for which to retrieve balances.
+        end_date -- The end date for which to retrieve balances.
         ascending -- Whether to sort the results in ascending order by date (default is False).
         
     Returns:
         A pandas DataFrame containing the balance history, indexed by date.
     """
+    # mark entry into the method
+    logger.debug(("Entering method get_balance_history with: ",
+                 "account_id = %s ",
+                 "from_date = %s ",
+                 "to_date = %s ",
+                 "ascending = %s"),
+                 account_id, begin_date, end_date, ascending,
+                 )
+
     # generate a sqlalchemy select statement to retrieve the balances
     stmt = select(DailyBalance).where(
         DailyBalance.account_id == account_id
         ).where(
-            DailyBalance.date >= from_date
+            DailyBalance.date >= begin_date
         ).where(
-            DailyBalance.date <= to_date
+            DailyBalance.date <= end_date
         )
 
     # execute the query and fetch results
@@ -96,6 +109,12 @@ def get_security_symbols(include_options=False) -> List[str]:
     Returns:
         A list of all security symbols in the database, optionally including options.
     """
+    # mark entry into the method
+    logger.debug(("Entering method get_security_symbols with: ",
+                 "include_options = %s "),
+                 include_options,
+                 )
+
     stmt = select(distinct(Security.symbol)).where(
         Security.security_type != SecurityType.OPTION
     )
@@ -131,6 +150,12 @@ def lookup_associated_symbols(symbols: List[str]) -> List[str]:
     Returns:
         The input list of security symbols, including associated options.
     """
+    # mark entry into the method
+    logger.debug(("Entering method lookup_associated_symbols with: ",
+                 "symbols = %s "),
+                 symbols,
+                 )
+
     # add the associated symbols for options if include_options is True
     stmt = select(distinct(Security.symbol)).where(
         (Security.associated_symbol.in_(symbols))
@@ -149,6 +174,8 @@ def lookup_associated_symbols(symbols: List[str]) -> List[str]:
 
 def get_last_trade_date():
     """Get the last trade date from the Trades table."""
+    # mark entry into the method
+    logger.debug("Entering method get_last_trade_date")
     stmt = select(
                 Trade.trade_date
         ).order_by(
@@ -169,12 +196,21 @@ def get_trades(symbols: List[str],
 
     Arguments:
         symbols -- a list of security symbols to query trades for.
-        period -- The time period for which to retrieve trades (defaut is ALL).
+        begin_date -- The begin date for which to retrieve trades
+        end_date -- The end date for which to retrieve trades
         ascending -- Whether to sort the results in ascending order by date (default is False).
 
     Returns:
         A pandas DataFrame containing the trades for the specified symbols.
     """
+    # mark entry into the method
+    logger.debug(("Entering method get_trades with: ",
+                 "symbols = %s ",
+                 "begin_date = %s ",
+                 "end_date = %s ",
+                 "ascending = %s"),
+                 symbols, begin_date, end_date, ascending,
+                 )
 
     stmt = select(
                 Security.security_type,
