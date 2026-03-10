@@ -12,7 +12,7 @@ from models.portfolio import DailyBalance, Account
 
 # mark entry into the module
 logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+logger.debug("In module: %s\n\tfile: %s", __name__, __file__)
 
 
 # function to update the portfolio balance for a specified account and day
