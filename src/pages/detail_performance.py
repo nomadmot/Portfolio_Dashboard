@@ -24,6 +24,8 @@ from core import (
 from models.portfolio import SecurityType
 from utility import (get_aumc_instance,
                      get_time_machine_component,
+                     get_status_message_component,
+                     StatusType as stat,
                      get_logger)
 
 # mark entry into the module
@@ -51,7 +53,8 @@ class Summary(NamedTuple):
 # global variables to hold the summary data
 _TRADE_SUMMARY = []
 
-# the key for the detail performance multiselect  and timemmachine components
+# the key for the detail performance multiselect, status message, and timemachine components
+_STATUS_MESSAGE_COMPONENT_KEY = "manage-balances-status-message"
 _SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
 _TIME_MACHINE_KEY = "detail_performance_time_machine"
 
@@ -301,6 +304,9 @@ multiselect_symbols = get_aumc_instance(key=_SYMBOL_MULTISELECT_KEY,
 # create a time machine component to select the time period for the analysis
 time_machine = get_time_machine_component(_TIME_MACHINE_KEY, Periods.ALL)
 
+# create a StatusMessageComponent to display messages to the user
+stat_message = get_status_message_component(key=_STATUS_MESSAGE_COMPONENT_KEY)
+
 # configure the page layout
 st.set_page_config(layout="wide")
 
@@ -329,8 +335,12 @@ with st.sidebar:
 
 # get the selected symbols from the multiselect component
 selected_symbols = multiselect_symbols.selected
-if len(selected_symbols) > 0:
+if len(selected_symbols) == 0:
+    # the user needs to select a symbol
+    stat_message.set_status_message(stat.INFO, "Please select at least one symbol")
+else:
     if load_options:
+        stat_message.set_status_message(stat.INFO, "Loading options")
         # add any associated symbols from the database to the selection list
         selected_symbols = lookup_associated_symbols(selected_symbols)
         # re-render the multiselect with updated selected symbols
@@ -348,6 +358,7 @@ if len(selected_symbols) > 0:
     if not selected_trades.empty:
         trades = analyze_trades(selected_trades)
     else:
+        stat_message.set_status_message(stat.WARNING, "No trades found")
         trades = pd.DataFrame()
 
     # update the time machine with the dates found in the response
@@ -436,3 +447,6 @@ if len(selected_symbols) > 0:
         st.subheader(f"Total Current Basis: ${grand_total_basis:,.2f}")
         st.subheader("Total Unrealized Profit/Loss: $" +
                     f"{grand_total_unrealized:,.2f} ({total_unrealized_pct:.1%})")
+        
+# display any status messages
+stat_message.show_status_messages()
