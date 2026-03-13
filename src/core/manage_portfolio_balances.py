@@ -59,7 +59,12 @@ def update_daily_balance(
         session.add(daily_balance)
         session.commit()
 
-    logger.info("Daily balance updated successfully")
+    logger.info("Daily balance for account %s updated successfully - "
+                "balance_date: %s balance_amount %s",
+                account_id,
+                balance_date,
+                balance_amount
+                )
 
 
 # function to delete the daily balance for a specified account and day
@@ -107,5 +112,3 @@ def delete_daily_balance(
             account_id,
             balance_date
             )
-
-#update_daily_balance(balance_amount=1000.0, account_id=1, balance_date=date.today())
