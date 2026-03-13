@@ -33,7 +33,7 @@ _UPDATE_BALANCE_SESSION_KEY = "update_balance_session_key"
 _UPDATE_DATE_SESSION_KEY = "update_date_session_key"
 
 
-# initialize data variables
+# initialize balance history
 from_date, to_date = get_period_dates(Periods.ALL)
 history = get_balance_history(account_id=1,
                               begin_date=from_date,
@@ -47,12 +47,9 @@ if selected_row is not None and selected_row != [] and selected_row["selection"]
     # set the values for the update date and balance widgets
     st.session_state[_UPDATE_DATE_SESSION_KEY] = history.iloc[selected_row]["date"]
     st.session_state[_UPDATE_BALANCE_SESSION_KEY] = float(history.iloc[selected_row]["balance"])
-# if the update fate is not set, initialize it to today's date
+# if the update date is not set, initialize it to today's date
 elif _UPDATE_DATE_SESSION_KEY not in st.session_state:
     st.session_state[_UPDATE_DATE_SESSION_KEY] = date.today()
-
-# configure the page layout
-st.set_page_config(layout="centered")
 
 # header elements for the page
 st.title(f"Manage Daily Balances for Account {get_account(1).name}")
@@ -89,19 +86,6 @@ with st.sidebar:
                         help="Click to delete the balance for the selected date",
                 )
 
-# display the balance history for a specific account
-daily_balance_table = st.dataframe(
-            history,
-            key=_DAILY_BALANCE_TABLE_SESSION_KEY,
-            width=500,
-            hide_index=True,
-            selection_mode="single-row",
-            on_select="rerun",
-            column_config={
-                "date": st.column_config.DateColumn("Date"),
-                "balance": st.column_config.NumberColumn("Balance", format="accounting"),
-                },
-            )
 
 # handle the update button click
 if update_record:
@@ -130,10 +114,8 @@ if update_record:
                                         f"Balance for {update_date} updated to"
                                         f" {update_balance:.2f} successfully!",
                                         )
-            # rerun now to display the results of the operatio
-            st.rerun()
 
-    # handle the delete button click
+# handle the delete button click
 if delete_record:
     if update_date is not None:
         try:
@@ -155,8 +137,27 @@ if delete_record:
                                         stat.SUCCESS,
                                         f"Balance for {update_date} deleted successfully!",
                                         )
-            # rerun now to display the results of the operatio
-            st.rerun()
+
+# fetch the updated balance history
+from_date, to_date = get_period_dates(Periods.ALL)
+history = get_balance_history(account_id=1,
+                              begin_date=from_date,
+                              end_date=to_date,
+                              ascending=False)
+
+# display the balance history for a specific account
+daily_balance_table = st.dataframe(
+            history,
+            key=_DAILY_BALANCE_TABLE_SESSION_KEY,
+            width=500,
+            hide_index=True,
+            selection_mode="single-row",
+            on_select="rerun",
+            column_config={
+                "date": st.column_config.DateColumn("Date"),
+                "balance": st.column_config.NumberColumn("Balance", format="accounting"),
+                },
+            )
 
 # display any status messages
 status_message.show_status_messages()
