@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     yfinance_debug: bool = False
     debug: list[str] = []
     database_uri: str = "sqlite://///path/to/your/database.db"
-    duck_database: str = "path/to/your/duckdb"
+    duck_puddle: str = "path/to/your/duckdb/files"
 
     defaults: AppDefaults
 

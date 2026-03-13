@@ -15,9 +15,9 @@ from utility import get_logger
 logger = get_logger(__name__)
 logger.debug("In module %s", __name__)
 
-# connect to the duckdb database
-_DUCKDB = f"{SETTINGS.duck_database}market_holidays.parquet"
-logger.info("Using duckdb file at %s", _DUCKDB)
+# resolve duckdb filename
+_MARKET_HOLIDAYS = f"{SETTINGS.duck_puddle}market_holidays.parquet"
+logger.info("Using duckdb file at %s", _MARKET_HOLIDAYS)
 
 def get_closed_count(start_date: date, end_date: date) -> int|None:
     """
@@ -33,7 +33,7 @@ def get_closed_count(start_date: date, end_date: date) -> int|None:
     # SQL query to get the count of closed market holidays
     result = sql(
         f"SELECT COUNT(*) AS holiday_count "
-        f"FROM '{_DUCKDB}' "
+        f"FROM '{_MARKET_HOLIDAYS}' "
         f"WHERE Status = 'Closed' "
         f"AND Date >= '{start_date}' "
         f"AND Date <= '{end_date}';"
@@ -68,7 +68,7 @@ def market_is_open(check_date: date) -> bool:
     # SQL query to check if the date is a market holiday
     result = sql(
         f"SELECT Status "
-        f"FROM '{_DUCKDB}' "
+        f"FROM '{_MARKET_HOLIDAYS}' "
         f"WHERE Date = '{check_date}';"
         )
     logger.debug("Query executed, result: %s", result)
