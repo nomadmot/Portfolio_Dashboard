@@ -2,13 +2,10 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 # install system dependencies
-RUN apt-get update && apt-get install -y curl sqlite3
+RUN apt-get update && apt-get install -y curl nodejs sqlite3
 
 # install VS Code (code-server)
-RUN apt-get update && apt-get install -y curl nodejs sqlite3 sudo
 RUN curl -fsSL https://code-server.dev/install.sh | sh
-# To have systemd start code-server now and restart on boot:
-# sudo systemctl enable --now code-server@$USER
 
 # Expose ports
 EXPOSE 8080
@@ -24,7 +21,7 @@ USER devuser
 WORKDIR /home/devuser
 
 # Install the application code
-ADD --exclude=__pycache__  --chown=devuser:devuser ../src .
+ADD --exclude=**/.settings --exclude=**/.streamlit --chown=devuser:devuser ../src .
 
 # Create the Python virtual environment
 ADD --chown=devuser:devuser ../uv.lock ../pyproject.toml ../run_app.sh ./
@@ -33,9 +30,9 @@ RUN uv export > requirements.txt
 RUN uv pip install --requirements requirements.txt
 
 # Copy production configurations and scripts
-COPY docker/files .
+COPY --chown=devuser:devuser docker/files .
 
 # Start the application
 CMD ./run_app.sh
 # Use this if the application won't start:
-#CMD /bin/bash
+#CMD /bin/sh

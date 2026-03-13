@@ -30,7 +30,8 @@ from utility import (get_aumc_instance,
 
 # mark entry into the module
 logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+logger.debug("In module %s\n\tfile:%s", __name__, __file__)
+
 # create a named tuple for summary data
 class Summary(NamedTuple):
     """
@@ -340,7 +341,7 @@ if len(selected_symbols) == 0:
     stat_message.set_status_message(stat.INFO, "Please select at least one symbol")
 else:
     if load_options:
-        stat_message.set_status_message(stat.INFO, "Loading options")
+        stat_message.set_status_message(stat.INFO, "Options loaded")
         # add any associated symbols from the database to the selection list
         selected_symbols = lookup_associated_symbols(selected_symbols)
         # re-render the multiselect with updated selected symbols

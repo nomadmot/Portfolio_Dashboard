@@ -7,8 +7,7 @@ Main application file for the Portfolio Dashboard using Streamlit
 import streamlit as st
 
 #local application imports
-from config import DATABASE_ENGINE
-from utility import get_logger
+from utility import get_logger, DATABASE_ENGINE
 
 # mark entry into the module
 logger = get_logger(__name__)

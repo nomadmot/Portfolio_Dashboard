@@ -2,9 +2,8 @@
 Initialize the utility module
 """
 # Export all utility module components for easy access
-from utility.logging import (
-    get_logger,
-)
+from utility.logging import get_logger
+from utility.database import DATABASE_ENGINE
 from utility.market_calendar import (
     get_closed_count,
     market_is_open,
@@ -16,6 +15,7 @@ from utility.system_info import get_client_ip, get_memory_size
 
 __all__ = [
     "get_logger",
+    "DATABASE_ENGINE",
     "get_closed_count",
     "market_is_open",
     "get_status_message_component",

@@ -7,13 +7,12 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 # Import local modules
-from utility import get_logger
-from config import DATABASE_ENGINE
+from utility import get_logger, DATABASE_ENGINE
 from models.portfolio import DailyBalance, Account
 
 # mark entry into the module
 logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+logger.debug("In module: %s\n\tfile: %s", __name__, __file__)
 
 
 # function to update the portfolio balance for a specified account and day

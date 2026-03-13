@@ -183,8 +183,8 @@ if time_machine.period_selected == Periods.NONE:
 
 # get the balance history for the specified account
 df_balances = get_balance_history(account_id=1,
-                                  from_date=time_machine.begin_date,
-                                  to_date=time_machine.end_date,
+                                  begin_date=time_machine.begin_date,
+                                  end_date=time_machine.end_date,
                                   ascending=True
                                   )
 # skip if there is no balance data

@@ -36,8 +36,8 @@ _UPDATE_DATE_SESSION_KEY = "update_date_session_key"
 # initialize data variables
 from_date, to_date = get_period_dates(Periods.ALL)
 history = get_balance_history(account_id=1,
-                              from_date=from_date,
-                              to_date=to_date,
+                              begin_date=from_date,
+                              end_date=to_date,
                               ascending=False)
 
 # if a row is selected, retrieve the date and balance

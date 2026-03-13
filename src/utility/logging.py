@@ -49,12 +49,14 @@ logger.info(
     )
 
 # set the sqlalchemy logging level
-sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
-sqlalchemy_logger.setLevel(SETTINGS.loglevel_sqlalchemy.to_logging_level())
 logger.info(
     "SQLAlchemy logger initialized at level: %s",
     SETTINGS.loglevel_sqlalchemy.value
     )
+logging.getLogger("sqlalchemy.engine").setLevel(SETTINGS.loglevel_sqlalchemy.to_logging_level())
+logging.getLogger("sqlalchemy.pool").setLevel(SETTINGS.loglevel_sqlalchemy.to_logging_level())
+logging.getLogger("sqlalchemy.dialects").setLevel(SETTINGS.loglevel_sqlalchemy.to_logging_level())
+logging.getLogger("sqlalchemy.orm").setLevel(SETTINGS.loglevel_sqlalchemy.to_logging_level())
 
 # set the Streamlit logging level
 litlog.set_log_level(SETTINGS.loglevel_streamlit.to_logging_level())

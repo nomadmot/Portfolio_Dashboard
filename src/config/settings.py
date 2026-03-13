@@ -56,10 +56,12 @@ class Settings(BaseSettings):
     loglevel_application: LogLevelEnum = LogLevelEnum.INFO
     loglevel_streamlit: LogLevelEnum = LogLevelEnum.WARN
     loglevel_sqlalchemy: LogLevelEnum = LogLevelEnum.WARN
+    sqlalchemy_echo: bool = False
+    sqlalchemy_echo_pool: bool = False
     yfinance_debug: bool = False
     debug: list[str] = []
     database_uri: str = "sqlite://///path/to/your/database.db"
-    duck_database: str = "path/to/your/duckdb"
+    duck_puddle: str = "path/to/your/duckdb/files"
 
     defaults: AppDefaults
 
