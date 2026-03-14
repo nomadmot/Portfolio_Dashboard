@@ -4,6 +4,7 @@ and other criteria.
 '''
 # Import necessary libraries
 from typing import NamedTuple
+from pathlib import Path
 
 # Import 3rd party modules
 import streamlit as st
@@ -28,9 +29,12 @@ from utility import (get_aumc_instance,
                      StatusType as stat,
                      get_logger)
 
+# initialize the logger
+file_stem = Path(__file__).stem
+logger_name = f"pages.{file_stem}"
+logger = get_logger(logger_name)
 # mark entry into the module
-logger = get_logger(__name__)
-logger.debug("In module %s\n\tfile:%s", __name__, __file__)
+logger.debug("In module %s", logger_name)
 
 # create a named tuple for summary data
 class Summary(NamedTuple):
@@ -448,6 +452,6 @@ else:
         st.subheader(f"Total Current Basis: ${grand_total_basis:,.2f}")
         st.subheader("Total Unrealized Profit/Loss: $" +
                     f"{grand_total_unrealized:,.2f} ({total_unrealized_pct:.1%})")
-        
+
 # display any status messages
 stat_message.show_status_messages()
