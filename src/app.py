@@ -7,6 +7,7 @@ Main application file for the Portfolio Dashboard using Streamlit
 import streamlit as st
 
 #local application imports
+import __version__ as ver
 from utility import get_logger, DATABASE_ENGINE
 
 # mark entry into the module
@@ -22,6 +23,7 @@ st.set_page_config(
         page_icon="images/Stock-Bull.png",
         initial_sidebar_state="expanded",
 )
+
 # Build the navigation menu
 pages = [
          st.Page("pages/performance_summary.py", title="Performance Summary"),
@@ -32,6 +34,10 @@ pages = [
 pg = st.navigation(pages,
                    position="top"
                    )
+
+# display a development header
+if ver.__environment__ == "DEV":
+    st.header("*** DEVELOPMENT ***", text_alignment="center")
 
 # Display the selected page
 pg.run()
