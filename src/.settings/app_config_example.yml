@@ -7,7 +7,6 @@ defaults:
   performance_summary_symbols: [SPY, QQQ, FFTY, ARKK]
 
 # set the log mode for the specified modules to debug
-# NOTE: Streamlit pages run under the name "__main__"
   debug: [
 #    __main__,
 #    pages.detail_performance,
