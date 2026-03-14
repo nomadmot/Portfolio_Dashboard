@@ -3,6 +3,7 @@ Plot the daily performance of the specified account compared to a selected stock
 """
 # Import standard libraries
 from typing import List
+from pathlib import Path
 
 # Import 3rd party libraries
 import streamlit as st
@@ -25,9 +26,12 @@ from core import (
     get_stock_history,
 )
 
+# initialize the logger
+file_stem = Path(__file__).stem
+logger_name = f"pages.{file_stem}"
+logger = get_logger(logger_name)
 # mark entry into the module
-logger = get_logger(__name__)
-logger.debug("In module %s\n\tfile:%s", __name__, __file__)
+logger.debug("In module %s", logger_name)
 
 # set local constants
 _TIME_MACHINE_COMPONENT_KEY = "summary-performance-time-machine"

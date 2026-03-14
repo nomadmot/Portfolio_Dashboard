@@ -4,6 +4,7 @@ It displays a dataframe of balance history for a specific account.
 """
 # import standard libraries
 from datetime import date
+from pathlib import Path
 
 # import 3rd party libraries
 import streamlit as st
@@ -22,9 +23,12 @@ from utility import (get_status_message_component,
                      StatusType as stat,
                      )
 
+# initialize the logger
+file_stem = Path(__file__).stem
+logger_name = f"pages.{file_stem}"
+logger = get_logger(logger_name)
 # mark entry into the module
-logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+logger.debug("In module %s", logger_name)
 
 # local constants
 _STATUS_MESSAGE_COMPONENT_KEY = "manage-balances-status-message"
