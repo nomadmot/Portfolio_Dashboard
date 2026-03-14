@@ -9,6 +9,7 @@ from pathlib import Path
 import streamlit as st
 
 # Import local modules
+import __version__ as ver
 from utility import (get_client_ip,
                      get_memory_size,
                      get_logger
@@ -20,6 +21,8 @@ logger = get_logger(logger_name)
 # mark entry into the module
 logger.debug("In module %s", logger_name)
 
+st.title(f"Environment: {ver.__environment__}")
+st.write(f"Version: {ver.__version__}")
 st.write(f"Your client IP is: {get_client_ip()}")
 st.write(f"Current Memory Size: {get_memory_size()} blocks")
 st.write("Session State Contents:")
