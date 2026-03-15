@@ -1,12 +1,15 @@
 services:
-  PortfolioDashboard:
+  PortfolioDashboardTest:
     image: tdamon/nomadmot:portfolio-dashboard-test
     environment:
       - DATABASE_URI=sqlite://///home/devuser/investorlab/DATA/portfolio-test.db
-      - DUCK_DATABASE=/home/devuser/investorlab/DUCK_POND/pond.duckdb
-      - LOGLEVEL_STREAMLIT=INFO
-      - LOGLEVEL_SQLALCHEMY=INFO
+      - DUCK_PUDDLE=/home/devuser/investorlab/DUCK_PUDDLE
+      - LOGLEVEL_APPLICATION=INFO
+      - LOGLEVEL_STREAMLIT=WARN
+      - LOGLEVEL_SQLALCHEMY=WARN
       - YFINANCE_DEBUG=FALSE
+      - SQLALCHEMY_ECHO=FALSE
+      - SQLALCHEMY_ECHO_POOL=FALSE
     ports:
       - target: 8080
         published: "8089"
@@ -26,7 +29,7 @@ x-casaos:
   hostname: ""
   icon: https://github.com/nomadmot/Portfolio_Dashboard/blob/main/src/images/Stock-Bull_192px.png
   index: /
-  main: PortfolioDashboard
+  main: PortfolioDashboardTest
   title:
     custom: ""
     en_us: PortfolioDashboardTest

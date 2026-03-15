@@ -1,150 +1,120 @@
 """
-Utility component for managing and displaying a status
-message in a Streamlit page.
+Utility component for managing and displaying status
+messages in a Streamlit page.
 """
 # standard library imports
-import logging
-from types import MethodType
 from typing import NamedTuple
+from enum import Enum
 
 # third party imports
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
 # local application imports
-from config import SETTINGS
+from utility import get_logger
 
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 # mark entry into the module
-logger.debug("Entering StatusMessageComponent module")
+logger = get_logger(__name__)
+logger.debug("In module %s", __name__)
+
+class StatusTypeStyle(NamedTuple):
+    """
+    Styling parameters for StatusType
+    """
+    material: str   # the icon to display
+    color: str      # the text color to be used
+
+class StatusType(Enum):
+    """
+    Enumeration to define status types and corresponding styles
+    """
+    INFO = StatusTypeStyle(":material/thumb_up:","blue"),
+    SUCCESS = StatusTypeStyle(":material/check:","green"),
+    WARNING = StatusTypeStyle(":material/warning:","yellow"),
+    ERROR = StatusTypeStyle(":material/error:","red"),
 
 # Named tuple contains parameters for a status message
 class StatusMessage(NamedTuple):
     """
     Structure to contain all the elements of a status message
     """
-    # the Streamlit function to set the message (info, warn, error)
-    msg_function: MethodType
+    # the StatusType for the message (INFO, SUCCESS, WARNING, ERROR)
+    msg_status: StatusType
     # the text to display in the message area
     msg_text: str
-    # the icon (if any) to display in the message area
-    msg_icon: str|None
 
-_DEFAULT_TEXT = ""
 _COMPONENT_INSTANCES = {}
 
 class StatusMessageComponent:
     """
-    Implements a utility component for managing and displaying
-    a status message in a Streamlit page.
+    Implements a utility component for managing and displaying status messages in a Streamlit page.
     """
-    def __init__(self, key: str, default_text: str|None):
+    def __init__(self, key: str):
         """
-        Initialize a StatusMessageComponent instance. Optionally specify default text
-        to use in an empty component
+        Initialize a StatusMessageComponent instance.
 
         Arguments:
             key (str) -- A string to use as the key for this instance
-            default_text -- Text to be displayed when there is no other message
         """
         # mark entry into the function
-        logger.debug("initializing status message with key = %s and default text = %s",
-                     key, default_text)
+        logger.debug("initializing status message with key = %s", key)
         # store the unique key assigned to this instance
         self._component_key: str = key
-        # set the default text
-        if default_text:
-            self._default_text = default_text
-        else:
-            self._default_text = _DEFAULT_TEXT
-        # create the default message to display the default text
-        self._default_message: StatusMessage = StatusMessage(st.info,
-                                                            self._default_text,
-                                                            None
-                                                            )
-        # initialize the current message to display the default
-        self._current_message = self._default_message
-        # Streamlit placeholder for the message component
-        self._placeholder: DeltaGenerator
 
-    def render(self):
-        """
-        Place the status message component on the Streamlit page
-        """
-        logger.debug("in render, current message is %s", self._current_message)
-        # create the streamlit placeholder
-        self._placeholder = st.empty()
-
-        # display the message
-        with self._placeholder:
-            # unpack the current message
-            msg_function, msg_text, msg_icon = self._current_message
-            # display the current message
-            msg_function(msg_text, icon=msg_icon)
-
+        # initialize the list of messages
+        self._status_messages: list[StatusMessage] = []
 
     def set_status_message(
         self,
-        msg_function: MethodType,
+        msg_status: StatusType,
         msg_text: str,
-        msg_icon:str|None = None
     ):
         """
         Store the data needed to display the current status message
         into the session state for later retrieval and display.
         
-        :param msg_function: the Streamlit method to use for posting the message
-            (st.info, st.warn, or st.error)
+        :param msg_status: the StatusType to use for displaying the message
         :param msg_text: the text to display in the status message
-        :param msg_icon: an icon to display in the status message
-            (defaults to None)
-        
         """
-        self._current_message = StatusMessage(
-                                            msg_function,
-                                            msg_text,
-                                            msg_icon
-                                            )
-
-        # Write out the message to the current interface
-        logger.debug("Writing status message to UI: %s", self._current_message)
-        with self._placeholder:
-            msg_function(msg_text, icon=msg_icon)
+        status_message = StatusMessage(msg_status, msg_text)
+        logger.debug("Received status message: %s", status_message)
+        self._status_messages.append(status_message)
 
 
-    def clear_status_message(self):
+    def show_status_messages(self):
         """
-        Clear the current status message and initialize to defaults
+        Display the current list of status message and initialize to defaults
         """
-        logger.debug("Setting status message to default: %s", self._default_message)
-        self.set_status_message(self._default_message.msg_function,
-                                self._default_message.msg_text,
-                                self._default_message.msg_icon
-                                )
+        logger.debug("Displaying %s status messages", len(self._status_messages))
+        for message in self._status_messages:
+            status_style = message.msg_status.value[0]
+            st.toast(
+                    f":{status_style.color}[{message.msg_text}]",
+                    icon=status_style.material,
+                    )
 
+        # reset the list of messages
+        self._status_messages = []
 
-def get_status_message_component(key: str, default_text: str|None = None) -> StatusMessageComponent:
+def get_status_message_component(key: str) -> StatusMessageComponent:
     """
     Returns a StatusMessageComponent for the given key. If a component doesn't exist,
     a new one is created.
 
     Arguments:
-        key -- the key for the requested TimeMachineComponent
-        default_text -- the default text to display
+        key -- the key for the requested StatusMessageComponent
 
     Returns:
-        A TimeMachineComponent instance
+        A StatusMessageComponent instance
     """
     # log entry into the function
-    logger.debug("In get_status_message_component with key=%s, default_text=%s", key, default_text)
+    logger.debug("In get_status_message_component with key=%s", key)
 
     # check if the component already exists
     if key not in _COMPONENT_INSTANCES:
         # create a new component and store it in the dictionary
         logger.debug("Creating new instance")
-        _COMPONENT_INSTANCES[key] = StatusMessageComponent(key, default_text)
+        _COMPONENT_INSTANCES[key] = StatusMessageComponent(key)
 
     # log exit from the function
     logger.debug("Exiting get_status_message_component with key=%s", key)

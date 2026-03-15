@@ -3,18 +3,14 @@ Provide start and end period selections
 """
 
 # standard library imports
-import logging
 from datetime import date, timedelta
 from enum import Enum
 
 # local application imports
-from config import SETTINGS
-from utility import market_is_open
+from utility import get_logger, market_is_open
 
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 # mark entry into the module
+logger = get_logger(__name__)
 logger.debug("In module %s", __name__)
 
 class Periods(Enum):
@@ -145,3 +141,23 @@ def get_period_dates(
     logger.debug("Exiting function get_period_dates with begin_date=%s, end_date=%s",
                  begin_date, end_date)
     return (begin_date, end_date)
+
+
+def get_period(period: str) -> Periods:
+    """
+    Given an input string, (i.e. 'D90'), return the correspond Periods enum member
+
+    Arguments:
+        period -- A string corresponding to the requested Periods enum member (i.e. 'D90')
+
+    Returns:
+        The Periods enum member corresponding to the input string. If the member is not found,
+        a warning message is logged in the default Periods.D30 is returned.
+    """
+    try:
+        ret = Periods[period]
+    except KeyError:
+        logger.warning("Period %s is not found, returning D30", period)
+        ret = Periods.D30
+
+    return ret

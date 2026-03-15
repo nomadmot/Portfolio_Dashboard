@@ -3,7 +3,7 @@ Plot the daily performance of the specified account compared to a selected stock
 """
 # Import standard libraries
 from typing import List
-import logging
+from pathlib import Path
 
 # Import 3rd party libraries
 import streamlit as st
@@ -15,20 +15,23 @@ from config import SETTINGS
 from utility import (
     get_time_machine_component,
     get_status_message_component,
+    get_logger,
+    StatusType as stat
 )
 from core import (
     Periods,
+    get_period,
     get_account,
     get_balance_history,
     get_stock_history,
 )
 
-
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+# initialize the logger
+file_stem = Path(__file__).stem
+logger_name = f"pages.{file_stem}"
+logger = get_logger(logger_name)
 # mark entry into the module
-logger.debug("In module %s", __name__)
+logger.debug("In module %s", logger_name)
 
 # set local constants
 _TIME_MACHINE_COMPONENT_KEY = "summary-performance-time-machine"
@@ -152,12 +155,13 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     return fig
 
 # get the time machine component
-time_machine = get_time_machine_component(_TIME_MACHINE_COMPONENT_KEY)
+default_period = get_period(SETTINGS.defaults.performance_summary_period)
+time_machine = get_time_machine_component(
+                                          _TIME_MACHINE_COMPONENT_KEY,
+                                          period=default_period,
+                                         )
 # get the status message component
-status_message = get_status_message_component(
-                            _STATUS_MESSAGE_COMPONENT_KEY,
-                            "Select a period or date",
-                            )
+status_message = get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY)
 
 # configure the page layout
 st.set_page_config(layout="wide")
@@ -173,12 +177,9 @@ with st.sidebar:
     # create a selectbox to select the comparison symbol for the chart
     selected_comparison = st.selectbox(
                             "Compare:",
-                            ["SPY", "QQQ", "FFTY"],
+                            SETTINGS.defaults.performance_summary_symbols,
                             index=0,
                             width=150)
-
-    # render the status message component
-    status_message.render()
 
 # if the time machine isn't set, don't continue
 if time_machine.period_selected == Periods.NONE:
@@ -186,21 +187,17 @@ if time_machine.period_selected == Periods.NONE:
 
 # get the balance history for the specified account
 df_balances = get_balance_history(account_id=1,
-                                  from_date=time_machine.begin_date,
-                                  to_date=time_machine.end_date,
+                                  begin_date=time_machine.begin_date,
+                                  end_date=time_machine.end_date,
                                   ascending=True
                                   )
 # skip if there is no balance data
 if df_balances.empty:
     status_message.set_status_message(
-                                     st.warning,
+                                     stat.WARNING,
                                      "No balance data found for the specified period",
-                                     "⚠️"
                                      )
     st.stop()
-else:
-    # clear any status messages
-    status_message.clear_status_message()
 
 # check the returned dates against the date pickers in the time machine
 # adjust the date pickers if necessary to ensure they match the returned data
@@ -208,7 +205,7 @@ df_begin_date = df_balances['date'].iloc[0]
 df_end_date = df_balances['date'].iloc[-1]
 if time_machine.begin_date != df_begin_date or time_machine.end_date != df_end_date:
     time_machine.update_date_pickers(df_begin_date, df_end_date)
-    status_message.set_status_message(st.info, "Dates updated to reflect dates on file")
+    status_message.set_status_message(stat.INFO, "Dates updated to reflect dates on file")
 
 # fetch historical data for the comparison ticker
 # since the begin date
@@ -263,3 +260,6 @@ st.plotly_chart(plot_daily_balance(merged,
                 account_id=1),
                 width='stretch'
                 )
+
+# show the status messages
+status_message.show_status_messages()

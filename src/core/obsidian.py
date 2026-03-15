@@ -3,8 +3,7 @@ Routines to query notes from the "Stock Journal" vault in obsidian.
 Uses the "Local REST API" plugin in Obsidian.
 """
 
-### standard library imports
-import logging
+### standard library import
 import webbrowser
 from urllib.parse import urlencode
 from io import StringIO
@@ -14,13 +13,11 @@ import httpx
 import pandas as pd
 
 ### local imports
-from config import SETTINGS
+from utility import get_logger
 
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
 # mark entry into the module
-logger.debug("Entering module %s", __name__)
+logger = get_logger(__name__)
+logger.debug("In module %s", __name__)
 
 def _create_obsidian_url(vault: str, filename: str, action: str) -> str:
     """

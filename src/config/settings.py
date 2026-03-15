@@ -2,14 +2,21 @@
 Configuration settings for the application.
 """
 # import standard libraries
-import logging
-import sys
+from typing import Type, Tuple, ClassVar
 from enum import Enum
+from pathlib import Path
+import logging
 
-#import 3rd-party libraries
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from streamlit import logger as litlog
-import yfinance as yf
+# import 3rd-party libraries
+from pydantic import BaseModel
+from pydantic_settings import (
+                               BaseSettings,
+                               SettingsConfigDict,
+                               YamlConfigSettingsSource,
+                               PydanticBaseSettingsSource
+                              )
+
+# import local libraries
 
 class LogLevelEnum(str, Enum):
     """
@@ -33,46 +40,59 @@ class LogLevelEnum(str, Enum):
         }
         return map_loglevel[self.value]
 
+class AppDefaults(BaseModel):
+    """
+    Model for application default settings
+    """
+    # The default Period for the Performance Summary page
+    performance_summary_period: str
+    # The default comparison symbol for the Performance Summary page
+    performance_summary_symbols: list[str]
+
 class Settings(BaseSettings):
     """
     Use Pydantic BaseSettings to define application settings
     """
-    model_config = SettingsConfigDict(env_file='.settings/.env', env_file_encoding='utf-8')
     loglevel_application: LogLevelEnum = LogLevelEnum.INFO
     loglevel_streamlit: LogLevelEnum = LogLevelEnum.WARN
     loglevel_sqlalchemy: LogLevelEnum = LogLevelEnum.WARN
+    sqlalchemy_echo: bool = False
+    sqlalchemy_echo_pool: bool = False
     yfinance_debug: bool = False
+    debug: list[str] = []
     database_uri: str = "sqlite://///path/to/your/database.db"
-    duck_database: str = "path/to/your/duckdb"
-SETTINGS = Settings()
+    duck_puddle: str = "path/to/your/duckdb/files"
 
-# Initialize logging
-logging.basicConfig(
-    #level=LOGLEVEL_APPLICATION,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    stream=sys.stdout)
-logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
-logger.info(
-    "Application logger initialized at level: %s",
-    SETTINGS.loglevel_application.value
-    )
+    defaults: AppDefaults
 
-# set the sqlalchemy logging level
-sqlalchemy_logger = logging.getLogger("sqlalchemy.engine")
-sqlalchemy_logger.setLevel(SETTINGS.loglevel_sqlalchemy.to_logging_level())
-logger.info(
-    "SQLAlchemy logger initialized at level: %s",
-    SETTINGS.loglevel_sqlalchemy.value
-    )
+    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
+                                      yaml_file=Path(".settings/app_config.yml"),
+                                      yaml_file_encoding="utf-8",
+                                      env_file='.settings/.env',
+                                      env_file_encoding='utf-8',
+                                      extra="ignore",
+                                      )
 
-# set the Streamlit logging level
-litlog.set_log_level(SETTINGS.loglevel_streamlit.to_logging_level())
-logger.info(
-    "Streamlit logger initialized at level: %s",
-    SETTINGS.loglevel_streamlit.value
-    )
+    @classmethod
+    def settings_customise_sources(
+        cls: Type[BaseSettings],
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        yaml_source = YamlConfigSettingsSource(settings_cls)
+        return (
+            init_settings, # Values passed to the constructor
+            yaml_source,   # Values from config.yaml
+            dotenv_settings, # Values from .env
+            env_settings,  # Values from environment variables
+            file_secret_settings, # Values from secret files
+        )
 
-# YFinance logging configuration
-logger.info("YFinance debug mode is %s", SETTINGS.yfinance_debug)
-yf.config.debug.logging = SETTINGS.yfinance_debug
+SETTINGS = Settings() # pyright: ignore[reportCallIssue]
+
+if __name__  == "__main__":
+    print(SETTINGS.model_dump())
+    print(SETTINGS.debug)

@@ -2,19 +2,33 @@
 This page allows users to manage their daily balances.
 It displays a dataframe of balance history for a specific account.
 """
+# import standard libraries
 from datetime import date
+from pathlib import Path
+
+# import 3rd party libraries
 import streamlit as st
 import sqlalchemy.exc
 
-from core import (
-    get_account,
-    get_period_dates,
-    get_balance_history,
-    update_daily_balance,
-    delete_daily_balance
+# local imports
+from core import (Periods,
+                  get_account,
+                  get_period_dates,
+                  get_balance_history,
+                  update_daily_balance,
+                  delete_daily_balance,
 )
-from core import Periods
-from utility import get_status_message_component
+from utility import (get_status_message_component,
+                     get_logger,
+                     StatusType as stat,
+                     )
+
+# initialize the logger
+file_stem = Path(__file__).stem
+logger_name = f"pages.{file_stem}"
+logger = get_logger(logger_name)
+# mark entry into the module
+logger.debug("In module %s", logger_name)
 
 # local constants
 _STATUS_MESSAGE_COMPONENT_KEY = "manage-balances-status-message"
@@ -23,11 +37,11 @@ _UPDATE_BALANCE_SESSION_KEY = "update_balance_session_key"
 _UPDATE_DATE_SESSION_KEY = "update_date_session_key"
 
 
-# initialize data variables
+# initialize balance history
 from_date, to_date = get_period_dates(Periods.ALL)
 history = get_balance_history(account_id=1,
-                              from_date=from_date,
-                              to_date=to_date,
+                              begin_date=from_date,
+                              end_date=to_date,
                               ascending=False)
 
 # if a row is selected, retrieve the date and balance
@@ -37,21 +51,15 @@ if selected_row is not None and selected_row != [] and selected_row["selection"]
     # set the values for the update date and balance widgets
     st.session_state[_UPDATE_DATE_SESSION_KEY] = history.iloc[selected_row]["date"]
     st.session_state[_UPDATE_BALANCE_SESSION_KEY] = float(history.iloc[selected_row]["balance"])
-# if the update fate is not set, initialize it to today's date
+# if the update date is not set, initialize it to today's date
 elif _UPDATE_DATE_SESSION_KEY not in st.session_state:
     st.session_state[_UPDATE_DATE_SESSION_KEY] = date.today()
-
-# configure the page layout
-st.set_page_config(layout="centered")
 
 # header elements for the page
 st.title(f"Manage Daily Balances for Account {get_account(1).name}")
 
 # create the status message component
-status_message = get_status_message_component(
-                                            _STATUS_MESSAGE_COMPONENT_KEY,
-                                            "Status messages will appear here"
-                                            )
+status_message = get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY)
 
 # add user input widgets for maintaining balances to the sidebar
 with st.sidebar:
@@ -81,8 +89,65 @@ with st.sidebar:
         delete_record = st.button("Delete",
                         help="Click to delete the balance for the selected date",
                 )
-    # render the status message component
-    status_message.render()
+
+
+# handle the update button click
+if update_record:
+    if update_balance is not None and update_date is not None:
+        try:
+            update_daily_balance(1, update_balance, update_date)
+        except ValueError as e:
+            status_message.set_status_message(
+                                            stat.WARNING,
+                                            str(e),
+                                            )
+        except sqlalchemy.exc.IntegrityError as e:
+            status_message.set_status_message(
+                                            stat.WARNING,
+                                            "The balance for this date already exists",
+                                            )
+        except sqlalchemy.exc.SQLAlchemyError as e:
+            status_message.set_status_message(
+                                            stat.ERROR,
+                                            f"Unexpected SQL error: {str(e)}",
+                                            )
+        else:
+            # if the update is successful, display a success message and refresh the dataframe
+            status_message.set_status_message(
+                                        stat.SUCCESS,
+                                        f"Balance for {update_date} updated to"
+                                        f" {update_balance:.2f} successfully!",
+                                        )
+
+# handle the delete button click
+if delete_record:
+    if update_date is not None:
+        try:
+            delete_daily_balance(1, update_date)
+        except ValueError as e:
+            status_message.set_status_message(
+                                        stat.WARNING,
+                                        str(e),
+                                        )
+        except sqlalchemy.exc.SQLAlchemyError as e:
+            status_message.set_status_message(
+                                        stat.ERROR,
+                                        f"Unexpected SQL error: {str(e)}",
+                                        )
+
+        else:
+            # if the update is successful, display a success message
+            status_message.set_status_message(
+                                        stat.SUCCESS,
+                                        f"Balance for {update_date} deleted successfully!",
+                                        )
+
+# fetch the updated balance history
+from_date, to_date = get_period_dates(Periods.ALL)
+history = get_balance_history(account_id=1,
+                              begin_date=from_date,
+                              end_date=to_date,
+                              ascending=False)
 
 # display the balance history for a specific account
 daily_balance_table = st.dataframe(
@@ -98,67 +163,5 @@ daily_balance_table = st.dataframe(
                 },
             )
 
-# handle the update button click
-if update_record:
-    if update_balance is not None and update_date is not None:
-        try:
-            update_daily_balance(1, update_balance, update_date)
-        except ValueError as e:
-            status_message.set_status_message(
-                                            st.warning,
-                                            str(e),
-                                            "⚠️"
-                                            )
-        except sqlalchemy.exc.IntegrityError as e:
-            status_message.set_status_message(
-                                            st.warning,
-                                            "The balance for this date already exists",
-                                            "⚠️"
-                                            )
-        except sqlalchemy.exc.SQLAlchemyError as e:
-            status_message.set_status_message(
-                                            st.error,
-                                            f"Unexpected SQL error: {str(e)}",
-                                            "❗"
-                                            )
-        else:
-            # if the update is successful, display a success message and refresh the dataframe
-            status_message.set_status_message(
-                                        st.success,
-                                        f"Balance for {update_date} updated to"
-                                        f" {update_balance:.2f} successfully!",
-                                        "✅"
-                                        )
-            # rerun now to display the results of the operatio
-            st.rerun()
-
-    # handle the delete button click
-if delete_record:
-    if update_date is not None:
-        try:
-            delete_daily_balance(1, update_date)
-        except ValueError as e:
-            status_message.set_status_message(
-                                        st.warning,
-                                        str(e),
-                                        "⚠️"
-                                        )
-        except sqlalchemy.exc.SQLAlchemyError as e:
-            status_message.set_status_message(
-                                        st.error,
-                                        f"Unexpected SQL error: {str(e)}",
-                                        "❗"
-                                        )
-
-        else:
-            # if the update is successful, display a success message
-            status_message.set_status_message(
-                                        st.success,
-                                        f"Balance for {update_date} deleted successfully!",
-                                        "✅"
-                                        )
-            # rerun now to display the results of the operatio
-            st.rerun()
-
-# clear the status message
-status_message.clear_status_message()
+# display any status messages
+status_message.show_status_messages()

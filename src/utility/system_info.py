@@ -2,22 +2,19 @@
 Functions related to system information and management
 """
 # standard imports
-import logging
 import sys
 
 # 3rd party imports
-from streamlit import context
+import streamlit as st
+# from streamlit import context
 
 #local imports
-from config import SETTINGS
-
-
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+import __version__ as ver
+from utility import get_logger
 
 # mark entry into the module
-logger.debug("Entering module %s", __name__)
+logger = get_logger(__name__)
+logger.debug("In module %s", __name__)
 
 
 def get_client_ip() -> str:
@@ -30,7 +27,7 @@ def get_client_ip() -> str:
     """
     logger.debug("Entering function get_client_ip")
 
-    client_ip = context.ip_address
+    client_ip = st.context.ip_address
     if client_ip is None:
         # default to localhost
         logger.debug("context.ip_address is not set")
@@ -47,5 +44,17 @@ def get_memory_size() -> int:
     Returns:
         number of memory blocks currently allocated
     """
-    
+
     return sys.getallocatedblocks()
+
+def show_system_info():
+    """
+    Generate a portfolio performance block at the bottom of the current page
+    """
+    st.title(f"Environment: {ver.__environment__}")
+    st.write(f"Version: {ver.__version__}")
+    st.write(f"Your client IP is: {get_client_ip()}")
+    st.write(f"Current Memory Size: {get_memory_size()} blocks")
+    st.write("Session State Contents:")
+    for key, item in st.session_state.items():
+        st.write(f"{key} - {item}")

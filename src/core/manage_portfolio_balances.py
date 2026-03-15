@@ -4,18 +4,15 @@ Routines for accessing and manipulating the portfolio database.
 # Import necessary libraries
 from datetime import date
 from typing import Optional
-import streamlit as st
-import streamlit.logger
 from sqlalchemy.orm import Session
 
 # Import local modules
+from utility import get_logger, DATABASE_ENGINE
 from models.portfolio import DailyBalance, Account
-from config import DATABASE_ENGINE
 
-# Initialize the logger
-logger = streamlit.logger.get_logger(st.__name__)
 # mark entry into the module
-logger.debug("Entering manage_daily_balances module")
+logger = get_logger(__name__)
+logger.debug("In module: %s\n\tfile: %s", __name__, __file__)
 
 
 # function to update the portfolio balance for a specified account and day
@@ -62,7 +59,12 @@ def update_daily_balance(
         session.add(daily_balance)
         session.commit()
 
-    logger.info("Daily balance updated successfully")
+    logger.info("Daily balance for account %s updated successfully - "
+                "balance_date: %s balance_amount %s",
+                account_id,
+                balance_date,
+                balance_amount
+                )
 
 
 # function to delete the daily balance for a specified account and day
@@ -110,5 +112,3 @@ def delete_daily_balance(
             account_id,
             balance_date
             )
-
-#update_daily_balance(balance_amount=1000.0, account_id=1, balance_date=date.today())

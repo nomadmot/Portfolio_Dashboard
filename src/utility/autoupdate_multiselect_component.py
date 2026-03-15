@@ -3,18 +3,17 @@ Utility component to update selection when new options are added to a
 Streamlit multiselect component.
 """
 # Import standard libraries
-import logging
 from uuid import uuid4 as uuid
 
 # Import 3rd party libraries
 import streamlit as st
 
 # Import local modules
-from config import SETTINGS
+from utility import get_logger
 
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(SETTINGS.loglevel_application.to_logging_level())
+# mark entry into the module
+logger = get_logger(__name__)
+logger.debug("In module %s", __name__)
 
 # Dictionary to hold component instances
 _COMPONENT_INSTANCES = {}
