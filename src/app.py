@@ -25,8 +25,7 @@ sysinfo_nav = st.navigation(pages=[sysinfo_page], position="hidden")
 st.set_page_config(
         layout="wide",
         page_icon="images/Stock-Bull.png",
-        initial_sidebar_state="expanded",
-)
+        initial_sidebar_state="expanded",)
 
 # Build the navigation menu
 pages = [
@@ -35,8 +34,7 @@ pages = [
          st.Page("pages/detail_performance.py", title="Detail Performance"),
         ]
 pg = st.navigation(pages,
-                   position="top"
-                   )
+                   position="top")
 
 # display a development header
 if ver.__environment__ == "DEV":
@@ -47,7 +45,10 @@ pg.run()
 
 # Instantiate a Borg button at the bottom of the sidebar to display system information
 with st.sidebar:
-    sysinfo_button = st.button(label="", type="tertiary", icon=":material/borg:")
+    sysinfo_button = st.button(label="",
+                               type="tertiary",
+                               icon=":material/borg:",
+                               help="Geek out")
 if sysinfo_button:
     #display the sysinfo page
     sysinfo_nav.run()
