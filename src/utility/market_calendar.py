@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 logger.debug("In module %s", __name__)
 
 # resolve duckdb filename
-_MARKET_HOLIDAYS = f"{SETTINGS.duck_puddle}market_holidays.parquet"
+_MARKET_HOLIDAYS = f"{SETTINGS.duck_puddle}/market_holidays.parquet"
 logger.info("Using duckdb file at %s", _MARKET_HOLIDAYS)
 
 def get_closed_count(start_date: date, end_date: date) -> int|None:

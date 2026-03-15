@@ -11,7 +11,7 @@ from utility.market_calendar import (
 from utility.status_message_component import get_status_message_component, StatusType
 from utility.autoupdate_multiselect_component import get_aumc_instance
 from utility.time_machine_component import get_time_machine_component
-from utility.system_info import get_client_ip, get_memory_size
+from utility.system_info import get_client_ip, get_memory_size, show_system_info
 
 __all__ = [
     "get_logger",
@@ -22,6 +22,7 @@ __all__ = [
     "StatusType",
     "get_aumc_instance",
     "get_time_machine_component",
+    "show_system_info",
     "get_client_ip",
     "get_memory_size",
     ]
