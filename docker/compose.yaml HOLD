@@ -2,8 +2,8 @@ services:
   PortfolioDashboard:
     image: tdamon/nomadmot:portfolio-dashboard
     environment:
-      - DATABASE_URI=sqlite://///home/devuser/investorlab/DATA/portfolio-test.db
-      - DUCK_PUDDLE=/home/devuser/investorlab/DUCK_PUDDLE
+      - DATABASE_URI=sqlite://///home/devuser/investorlab/DATA/portfolio.db
+      - DUCK_DATABASE=/home/devuser/investorlab/DUCK_POND/pond.duckdb
       - LOGLEVEL_APPLICATION=INFO
       - LOGLEVEL_STREAMLIT=WARN
       - LOGLEVEL_SQLALCHEMY=WARN
@@ -24,7 +24,7 @@ x-casaos:
   author: nomadmot
   category: unknown
   description:
-    en_us: "portfolio dashboard PROD environment"
+    en_us: "portfolio dashboard environment"
   developer: unknown
   hostname: ""
   icon: https://github.com/nomadmot/Portfolio_Dashboard/blob/main/src/images/Stock-Bull_192px.png
