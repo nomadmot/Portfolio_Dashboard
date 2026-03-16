@@ -2,7 +2,7 @@ services:
   PortfolioDashboard:
     image: tdamon/nomadmot:portfolio-dashboard
     environment:
-      - DATABASE_URI=sqlite://///home/devuser/investorlab/DATA/portfolio-test.db
+      - DATABASE_URI=sqlite://///home/devuser/investorlab/DATA/portfolio.db
       - DUCK_PUDDLE=/home/devuser/investorlab/DUCK_PUDDLE
       - LOGLEVEL_APPLICATION=INFO
       - LOGLEVEL_STREAMLIT=WARN
