@@ -1,9 +1,9 @@
 services:
   PortfolioDashboard:
-    image: tdamon/nomadmot:portfolio-dashboard
+    image: docker.io/nomadmot/portfolio-dashboard:latest
     environment:
-      - DATABASE_URI=sqlite://///home/devuser/investorlab/DATA/portfolio.db
-      - DUCK_PUDDLE=/home/devuser/investorlab/DUCK_PUDDLE
+      - DATABASE_URI=sqlite://///home/appuser/investorlab/DATA/portfolio.db
+      - DUCK_PUDDLE=/home/appuser/investorlab/DUCK_PUDDLE
       - LOGLEVEL_APPLICATION=INFO
       - LOGLEVEL_STREAMLIT=WARN
       - LOGLEVEL_SQLALCHEMY=WARN
@@ -16,20 +16,5 @@ services:
         protocol: tcp
     volumes:
       - type: bind
-        source: /DATA/Dropbox/Apps/Investing
-        target: /home/devuser/investorlab
-x-casaos:
-  architectures:
-    - arm64
-  author: nomadmot
-  category: unknown
-  description:
-    en_us: "portfolio dashboard PROD environment"
-  developer: unknown
-  hostname: ""
-  icon: https://github.com/nomadmot/Portfolio_Dashboard/blob/main/src/images/Stock-Bull_192px.png
-  index: /
-  main: PortfolioDashboard
-  title:
-    custom: ""
-    en_us: PortfolioDashboard
+        source: /path/to/your/data
+        target: /home/appuser/investorlab
