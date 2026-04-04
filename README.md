@@ -1,6 +1,6 @@
 # Portfolio Dashboard
 
-A modern web-based dashboard for tracking, analyzing, and visualizing investment portfolios using Python and Streamlit.
+A modern web-based dashboard for tracking, analyzing, and visualizing investment portfolios using Python and Streamlit. Designed by a programmer for programmers. The idea is to provide a specialized, yet generalized platform for independent stock investors. Users with some technical chops can use the embedded tools to specialize and personalize their own system to their hearts content. Go forth and fork!
 
 ---
 
@@ -51,10 +51,52 @@ Portfolio-Dashboard/
 
 - Python 3.12+
 - Docker (optional, for containerized deployment)
+- UV (optional, for development)
 
-### Installation
+### Installation (Docker)
 
-1. Clone the repository:
+This is the easiest installation if you just want to give it a try, or use it as is. I'm still working on the filesystem, so details of this installation will change from time to time.
+
+1. Pull the Docker image from DockerHub:
+
+   ```bash
+   docker pull nomadmot/portfolio-dashboard:latest
+   ```
+
+2. Either download the compose.yaml file from the docker directory of the GitHub repository, or copy the following:
+
+   ```yaml
+   services:
+   PortfolioDashboard:
+      image: docker.io/nomadmot/portfolio-dashboard:latest
+      environment:
+         - DATABASE_URI=sqlite://///home/appuser/investorlab/DATA/portfolio.db
+         - DUCK_PUDDLE=/home/appuser/investorlab/DUCK_PUDDLE
+         - LOGLEVEL_APPLICATION=INFO
+         - LOGLEVEL_STREAMLIT=WARN
+         - LOGLEVEL_SQLALCHEMY=WARN
+         - YFINANCE_DEBUG=FALSE
+         - SQLALCHEMY_ECHO=FALSE
+         - SQLALCHEMY_ECHO_POOL=FALSE
+      ports:
+         - target: 8080
+         published: "8080"
+         protocol: tcp
+      volumes:
+         - type: bind
+         source: /path/to/your/data
+         target: /home/appuser/investorlab
+      ```
+
+3. Run Docker Compose:
+
+   ```bash
+   docker compose up
+   ```
+
+### Installation (Github)
+
+1. Clone or fork the repository:
 
    ```bash
    git clone https://github.com/your-username/Portfolio-Dashboard.git
