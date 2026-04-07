@@ -96,26 +96,23 @@ This is the easiest installation if you just want to give it a try, or use it as
 
 ### Installation (Github)
 
-1. Clone or fork the repository:
+1. Clone the repository:
 
    ```bash
    git clone https://github.com/your-username/Portfolio-Dashboard.git
    cd Portfolio-Dashboard
    ```
 
-2. Set up a virtual environment:
+2. **Set Up the Environment**
 
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
+   - Install dependencies using:
 
-3. Install dependencies:
+     ```bash
+     uv install
+     ```
 
-   ```bash
-   pip install -e .
-   ```
-
+### Next Steps
+# explain how to populate and use database
 ---
 
 ## 🚀 Roadmap
@@ -149,6 +146,7 @@ I'm continuously improving the Portfolio Dashboard based on community feedback a
 ### Other Planned Features
 
 - Better integration with database (SQLAlchemy? DuckDB? Something else?)
+- Automated upload of user transactions and other data
 - UI for reviewing custom time series on plots (Time Machine)
 - Backtesting
 - Constant refactoring (I love refactoring)
@@ -168,7 +166,7 @@ If you’re interested in contributing to any of these features or fixes, check 
 
 2. **Clone the Repository**
 
-   - Clone your forked repository to your local machine:
+   - Clone your forked repository to your local machine and install as detailed above
 
      ```bash
      git clone https://github.com/your-username/Portfolio-Dashboard.git
@@ -180,7 +178,7 @@ If you’re interested in contributing to any of these features or fixes, check 
    - Install dependencies using:
 
      ```bash
-     pip install -e .
+     uv install
      ```
 
 4. **Create a Feature Branch**
