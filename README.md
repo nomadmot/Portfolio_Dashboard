@@ -2,6 +2,8 @@
 
 A modern web-based dashboard for tracking, analyzing, and visualizing investment portfolios using Python and Streamlit. Designed by a programmer for programmers. The idea is to provide a specialized, yet generalized platform for independent stock investors. Users with some technical chops can use the embedded tools to specialize and personalize their own system to their hearts content. Go forth and fork!
 
+NOTE: This is very much a work in progress. I am working to improve data acquisition, but for right now it's every man/woman for themselves
+
 ---
 
 ## 📌 Features
@@ -112,7 +114,9 @@ This is the easiest installation if you just want to give it a try, or use it as
      ```
 
 ### Next Steps
-# explain how to populate and use database
+
+*** More To Come ***
+
 ---
 
 ## 🚀 Roadmap
