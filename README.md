@@ -101,19 +101,27 @@ This is the easiest installation if you just want to give it a try, or use it as
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/your-username/Portfolio-Dashboard.git
+   git clone https://github.com/nomadmot/Portfolio-Dashboard.git
    cd Portfolio-Dashboard
    ```
 
 2. **Set Up the Environment**
 
+   - Create a virtual environment
+
+   ```bash
+   uv venv
+   ```
+
    - Install dependencies using:
 
      ```bash
-     uv install
+     uv pip install .
      ```
 
 ### Next Steps
+
+
 
 *** More To Come ***
 
