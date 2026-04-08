@@ -236,4 +236,4 @@ Please adhere to our [Code of Conduct](CODE_OF_CONDUCT.md) to ensure a welcoming
 
 ## 📢 Questions?
 
-If you have any questions or need further assistance, feel free to open an issue or pull request
+If you have any questions or need further assistance, feel free to leave a note in the discussions.
