@@ -121,7 +121,11 @@ This is the easiest installation if you just want to give it a try, or use it as
 
 ### Next Steps
 
+1. *** Data Files ***
+   If using Docker, mount a directory or volume to the /investorlab/ mount point to contain your data files. Currently, the data is laid out into a SQLite (or other) database for portfolio data, and a "duck puddle" directory for ancillary information. This may change.
 
+2. *** Configuration ***
+   - The .settings folder in the application source directory contains example configuration files.
 
 *** More To Come ***
 
