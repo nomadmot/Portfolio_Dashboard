@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 # Import local modules
 from utility import get_logger, DATABASE_ENGINE
-from models.portfolio import DailyBalance, Account
+from schemas.portfolio import DailyBalance, Account
 
 # mark entry into the module
 logger = get_logger(__name__)

@@ -22,7 +22,7 @@ from core import (
                   get_basic_quote,
                   get_security_info,
                   )
-from models.portfolio import SecurityType
+from schemas.portfolio import SecurityType
 from utility import (get_aumc_instance,
                      get_time_machine_component,
                      get_status_message_component,
@@ -31,7 +31,7 @@ from utility import (get_aumc_instance,
 
 # initialize the logger
 file_stem = Path(__file__).stem
-logger_name = f"pages.{file_stem}"
+logger_name = f"pages.{file_stem}" # pylint: disable=invalid-name
 logger = get_logger(logger_name)
 # mark entry into the module
 logger.debug("In module %s", logger_name)
