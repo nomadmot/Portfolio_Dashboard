@@ -1,36 +1,36 @@
 """
 collect and expose data management and querying functions
-for the data module
+for the core module
 """
 
-from core.periods import (
-    Periods,
-    get_period_dates,
-    get_period,
-)
-
-from core.manage_portfolio_balances import (
+from .manage_portfolio_balances import (
     update_daily_balance,
     delete_daily_balance,
 )
 
-from core.query_portfolio import (
+from .query_portfolio import (
     get_account,
     get_balance_history,
     get_security_symbols,
     get_trades,
     get_last_trade_date,
-    lookup_associated_symbols
+    lookup_associated_symbols,
 )
 
-from core.stock_info import (
+from .stock_info import (
     get_security_info,
     get_basic_quote,
 )
 
-from core.stock_data import (
+from .stock_data import (
     YfPeriods,
     get_stock_history,
+)
+
+from .periods_enum import Periods
+from .periods import (
+    get_period_dates,
+    get_period,
 )
 
 __all__ = [
