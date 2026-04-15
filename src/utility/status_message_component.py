@@ -8,14 +8,13 @@ from enum import Enum
 
 # third party imports
 import streamlit as st
-from streamlit.delta_generator import DeltaGenerator
 
 # local application imports
-from utility import get_logger
+from . import get_logger
 
 # mark entry into the module
-logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+_logger = get_logger(__name__)
+_logger.debug("In module %s", __name__)
 
 class StatusTypeStyle(NamedTuple):
     """
@@ -57,7 +56,7 @@ class StatusMessageComponent:
             key (str) -- A string to use as the key for this instance
         """
         # mark entry into the function
-        logger.debug("initializing status message with key = %s", key)
+        _logger.debug("initializing status message with key = %s", key)
         # store the unique key assigned to this instance
         self._component_key: str = key
 
@@ -77,7 +76,7 @@ class StatusMessageComponent:
         :param msg_text: the text to display in the status message
         """
         status_message = StatusMessage(msg_status, msg_text)
-        logger.debug("Received status message: %s", status_message)
+        _logger.debug("Received status message: %s", status_message)
         self._status_messages.append(status_message)
 
 
@@ -85,7 +84,7 @@ class StatusMessageComponent:
         """
         Display the current list of status message and initialize to defaults
         """
-        logger.debug("Displaying %s status messages", len(self._status_messages))
+        _logger.debug("Displaying %s status messages", len(self._status_messages))
         for message in self._status_messages:
             status_style = message.msg_status.value[0]
             st.toast(
@@ -108,14 +107,14 @@ def get_status_message_component(key: str) -> StatusMessageComponent:
         A StatusMessageComponent instance
     """
     # log entry into the function
-    logger.debug("In get_status_message_component with key=%s", key)
+    _logger.debug("In get_status_message_component with key=%s", key)
 
     # check if the component already exists
     if key not in _COMPONENT_INSTANCES:
         # create a new component and store it in the dictionary
-        logger.debug("Creating new instance")
+        _logger.debug("Creating new instance")
         _COMPONENT_INSTANCES[key] = StatusMessageComponent(key)
 
     # log exit from the function
-    logger.debug("Exiting get_status_message_component with key=%s", key)
+    _logger.debug("Exiting get_status_message_component with key=%s", key)
     return _COMPONENT_INSTANCES[key]
