@@ -10,11 +10,11 @@ import streamlit as st
 
 #local imports
 import __version__ as ver
-from utility import get_logger
+from . import get_logger
 
 # mark entry into the module
-logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+_logger = get_logger(__name__)
+_logger.debug("In module %s", __name__)
 
 
 def get_client_ip() -> str:
@@ -25,15 +25,15 @@ def get_client_ip() -> str:
     Returns:
         The IP address of the client. (Default: localhost)
     """
-    logger.debug("Entering function get_client_ip")
+    _logger.debug("Entering function get_client_ip")
 
     client_ip = st.context.ip_address
     if client_ip is None:
         # default to localhost
-        logger.debug("context.ip_address is not set")
+        _logger.debug("context.ip_address is not set")
         client_ip = "127.0.0.1"
 
-    logger.debug("get_client_ip returns: %s", client_ip)
+    _logger.debug("get_client_ip returns: %s", client_ip)
     return client_ip
 
 def get_memory_size() -> int:
