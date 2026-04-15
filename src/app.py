@@ -8,11 +8,11 @@ import streamlit as st
 
 #local application imports
 import __version__ as ver
-from utility import get_logger, DATABASE_ENGINE, show_system_info
+from utility import get_logger, show_system_info
 
 # mark entry into the module
-logger = get_logger(__name__)
-logger.debug("Starting Portfolio Dashboard application in module %s", __name__)
+_logger = get_logger(__name__)
+_logger.debug("Starting Portfolio Dashboard application in module %s", __name__)
 
 # use the stock bull icon
 st.logo(image="images/Stock-Bull.png", size="large")
@@ -52,6 +52,3 @@ with st.sidebar:
 if sysinfo_button:
     #display the sysinfo page
     sysinfo_nav.run()
-
-# Force the disposal of the database engine
-DATABASE_ENGINE.dispose()
