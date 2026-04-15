@@ -10,7 +10,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
 # local imports
-from .enums import TradeType, SecurityType
+from . import TradeType, SecurityType
 
 # --- Security Schema ---
 class Security(BaseModel):
