@@ -106,6 +106,30 @@ def get_balance_history(account_id: int,
     return df_balances
 
 
+def get_last_trade_date():
+    """Get the last trade date from the Trades table."""
+    # mark entry into the method
+    _logger.debug("Entering method get_last_trade_date")
+
+    # 1. SQL Query: Select the required fields.
+    # We use the raw SQL string directly, leveraging DuckDB's power.
+    sql = """
+    SELECT 
+        MAX(T.trade_date) 
+    FROM trades T;
+    """
+
+    # 2. Execute the query using the connection object
+    # We use .fetchone() on the result set to extract the single value.
+    result = DATABASE_CONNECTION.execute(sql).fetchone()
+
+    # 3. Return the result
+    if result:
+        # The result is a tuple (date,)
+        return result[0]
+    else:
+        return None
+
 def get_security_symbols(include_options: bool = False) -> List[str]:
     """
     Get a list of security symbols from the database
