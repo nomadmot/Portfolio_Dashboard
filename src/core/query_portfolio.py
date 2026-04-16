@@ -30,9 +30,8 @@ def get_account(account_id: int) -> Account:
     # mark entry into the method
     _logger.debug("Entering get_account with account_id = %s", account_id)
 
-    # 1. Use the duckdb connection object for a read operation.
     try:
-        # 2. SQL Query: Select the account details directly.
+        # Select the account details directly.
         select_sql = """
         SELECT * FROM accounts WHERE account_id = ? LIMIT 1;
         """
@@ -42,7 +41,7 @@ def get_account(account_id: int) -> Account:
         if not result:
             raise ValueError(f"Account with ID {account_id} does not exist.")
 
-        # 3. Mapping: Manually map the raw tuple result back into the Account Pydantic model.
+        # Manually map the raw tuple result back into the Account Pydantic model.
         return Account(
             account_id=result[0],
             account_name=result[1]
@@ -79,18 +78,17 @@ def get_balance_history(account_id: int,
                  "ascending = %s"),
                  account_id, begin_date, end_date, ascending,
                  )
-
-    # 1. SQL Query: Select the required fields.
+    
+    # Select the required fields.
     select_sql = f"""
         SELECT date, balance FROM daily_balances 
         WHERE account_id = ? AND date BETWEEN ? AND ?
         ORDER BY date {'ASC' if ascending else 'DESC'};
         """
 
-    # 2. Execute the query
     result = DATABASE_CONNECTION.execute(select_sql, (account_id, begin_date, end_date)).fetchall()
 
-    # 3. Mapping and DataFrame Creation
+    # Mapping and DataFrame Creation
     if not result:
         # no results found
         return DataFrame(columns=['date', 'balance'])
@@ -98,10 +96,6 @@ def get_balance_history(account_id: int,
     # Convert the list of tuples into the required DataFrame format
     df_data = [{'date': row[0], 'balance': row[1]} for row in result]
     df_balances = DataFrame(df_data)
-
-    # # Sorting is handled by the SQL ORDER BY clause, but we keep this for safety.
-    # df_balances.sort_values('date', ascending=ascending, inplace=True)
-    # df_balances.reset_index(drop=True, inplace=True)
 
     return df_balances
 
@@ -111,19 +105,14 @@ def get_last_trade_date():
     # mark entry into the method
     _logger.debug("Entering method get_last_trade_date")
 
-    # 1. SQL Query: Select the required fields.
-    # We use the raw SQL string directly, leveraging DuckDB's power.
     sql = """
     SELECT 
         MAX(T.trade_date) 
     FROM trades T;
     """
 
-    # 2. Execute the query using the connection object
-    # We use .fetchone() on the result set to extract the single value.
     result = DATABASE_CONNECTION.execute(sql).fetchone()
 
-    # 3. Return the result
     if result:
         # The result is a tuple (date,)
         return result[0]
@@ -147,8 +136,7 @@ def get_security_symbols(include_options: bool = False) -> List[str]:
                  include_options,
                  )
 
-    # 1. Build the base query
-
+    # Build the base query
     if include_options:
         # If including options, the query logic changes slightly.
         base_sql = "SELECT DISTINCT symbol FROM securities WHERE security_type = ?"
@@ -157,18 +145,11 @@ def get_security_symbols(include_options: bool = False) -> List[str]:
         base_sql = "SELECT DISTINCT symbol FROM securities WHERE security_type != ?"
         params = (SecurityType.OPTION,)
 
-    # 2. Execute the query
+    # Execute the query
     result = DATABASE_CONNECTION.execute(base_sql, params).fetchall()
 
-    # 3. Extract symbols
+    # Extract symbols
     symbols = [row[0] for row in result]
-
-    # 4. Handle Option Association (If required)
-    # if include_options:
-    #     # This part requires a more complex query or a secondary pass,
-    #     # but for now, we stick to the simple symbol extraction logic.
-    #     # (A full rewrite would use a JOIN or a secondary query here)
-    #     pass
 
     symbols.sort()
     return symbols
@@ -190,26 +171,19 @@ def lookup_associated_symbols(symbols: List[str]) -> List[str]:
                  symbols,
                  )
 
-    # 1. Query for associated symbols
-    # We use the IN clause, which is highly efficient in DuckDB.
-    # sql = """
-    # SELECT DISTINCT associated_symbol
-    # FROM securities
-    # WHERE symbol IN (?, ?, ...) AND associated_symbol IS NOT NULL;
-    # """
-
     # Dynamically build the parameter list for the IN clause
     placeholders = ', '.join(['?'] * len(symbols))
     final_sql = f"""
-        "SELECT DISTINCT associated_symbol FROM securities ",
-        "WHERE symbol IN ({placeholders}) ",
-        "AND associated_symbol IS NOT NULL;"
+        SELECT DISTINCT symbol FROM securities
+        WHERE associated_symbol IN ({placeholders});
     """
+    _logger.debug("Generated SQL statement: %s", final_sql)
 
-    # 2. Execute the query
+    # Execute the query
     result = DATABASE_CONNECTION.execute(final_sql, tuple(symbols)).fetchall()
+    _logger.debug("SQL result is: %s", result)
 
-    # 3. Compile and return the list
+    # Compile and return the list
     associated_symbols = [row[0] for row in result]
 
     # Use a set to ensure uniqueness before converting back to a sorted list
@@ -243,24 +217,6 @@ def get_trades(symbols: List[str],
                  symbols, begin_date, end_date, ascending,
                  )
 
-    # Use parameterized queries for safety.
-    # sql = """
-    # SELECT
-    #     T.symbol,
-    #     S.name,
-    #     T.symbol,
-    #     T.trade_date,
-    #     T.trade_type,
-    #     T.quantity,
-    #     T.price,
-    #     T.fees
-    # FROM trades T
-    # JOIN securities S ON T.symbol = S.symbol
-    # WHERE T.symbol IN (?, ?, ...)
-    # AND T.trade_date BETWEEN ? AND ?;
-    # """
-
-    # 1. Build the SQL Query
     # Dynamically build the parameters list for the IN clause
     placeholders = ', '.join(['?'] * len(symbols))
     final_sql = f"""
@@ -279,12 +235,11 @@ def get_trades(symbols: List[str],
     AND T.trade_date BETWEEN ? AND ?;
     """
 
+    # Execute the query
     params = tuple(symbols) + (begin_date, end_date)
-
-    # 2. Execute the query
     result = DATABASE_CONNECTION.execute(final_sql, params).fetchall()
 
-    # 3. Process Results and Build DataFrame
+    # Process Results and Build DataFrame
     trades = []
     for row in result:
         # row structure: (symbol, name, symbol, trade_date, trade_type, quantity, price, fees)
@@ -307,7 +262,7 @@ def get_trades(symbols: List[str],
             'Amount': final_amount,
         })
 
-    # 4. Return DataFrame
+    # Return DataFrame
     if trades:
         df = DataFrame(trades)
         # Sort values according to input parameter
