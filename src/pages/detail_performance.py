@@ -13,28 +13,29 @@ from numpy import nan
 
 # Import local modules
 from core import (
-                  Periods,
                   get_account,
                   get_security_symbols,
                   get_trades,
                   get_last_trade_date,
                   lookup_associated_symbols,
-                  get_basic_quote,
-                  get_security_info,
                   )
-from models.portfolio import SecurityType
-from utility import (get_aumc_instance,
-                     get_time_machine_component,
-                     get_status_message_component,
-                     StatusType as stat,
-                     get_logger)
+from schemas.portfolio import SecurityType
+from utility import (
+                get_logger,
+                get_aumc_instance,
+                get_time_machine_component,
+                get_status_message_component,
+                StatusType as stat,
+                Periods,
+                get_basic_quote,
+                get_security_info,
+                )
 
 # initialize the logger
-file_stem = Path(__file__).stem
-logger_name = f"pages.{file_stem}"
-logger = get_logger(logger_name)
+_logger_name = f"pages.{Path(__file__).stem}" # pylint: disable=invalid-name
+_logger = get_logger(_logger_name)
 # mark entry into the module
-logger.debug("In module %s", logger_name)
+_logger.debug("In module %s", _logger_name)
 
 # create a named tuple for summary data
 class Summary(NamedTuple):
@@ -77,7 +78,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         DataFrame with additional columns for analysis
     """
     # mark entry in log
-    logger.debug("in _analyze_trades: %s rows to analyze", trades_df.shape)
+    _logger.debug("in _analyze_trades: %s rows to analyze", trades_df.shape)
 
     # initialize variables
     current_shares: float = 0.0
@@ -99,7 +100,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
 
     # loop through each row to compute analysis metrics
     for row in trades_df.itertuples():
-        logger.debug("analyzing row %s", row)
+        _logger.debug("analyzing row %s", row)
 
         # save previous values for transaction analysis
         prev_shares = current_shares
@@ -271,7 +272,7 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         DataFrame with additional columns for analysis
     """
     # mark entry in log
-    logger.debug("in analyze_trades: %s rows to analyze", trades_df.shape[0])
+    _logger.debug("in analyze_trades: %s rows to analyze", trades_df.shape[0])
 
     # add columns for analysis
     trades_df.insert(6, "Holding", 0.0)
@@ -316,7 +317,7 @@ stat_message = get_status_message_component(key=_STATUS_MESSAGE_COMPONENT_KEY)
 st.set_page_config(layout="wide")
 
 # page header
-st.title(f"Detail Performance Analysis for {get_account(1).name}")
+st.title(f"Detail Performance Analysis for {get_account(1).account_name}")
 st.markdown(f"*Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}*",)
 
 # add widgets for user inputs to sidebar
