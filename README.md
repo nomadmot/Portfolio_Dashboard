@@ -16,6 +16,16 @@ NOTE: This is very much a work in progress. I am working to improve data acquisi
 
 ---
 
+## Screen Shots
+
+![Daily Performance Summary](assets/perf_summ.png)
+
+![Manage Daily Balances](assets/manage_bal.png)
+
+![Detail Performance Analysis](assets/manage_bal.png)
+
+---
+
 ## 🛠️ Tech Stack
 
 - **Frontend**: Streamlit
@@ -121,14 +131,14 @@ This is the easiest installation if you just want to give it a try, or use it as
 
 ### Next Steps
 
-1. *** Data Files ***
+1. ***Data Files***
 
    - If using Docker, mount a directory or volume to the /investorlab/ mount point to contain your data files. Currently, the data is laid out into a SQLite (or other) database for portfolio data, and a "duck puddle" directory for ancillary information. This may change.
 
-2. *** Configuration ***
+2. ***Configuration***
    - The .settings folder in the application source directory contains example configuration files.
 
-*** More To Come ***
+***More To Come***
 
 ---
 
