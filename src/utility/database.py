@@ -35,13 +35,15 @@ def _database_engine():
     #     raise RuntimeError(f"Failed to initialize the DuckLake Catalog: {e}") from e
 
     # attach the Data Lake
+    _logger.info("Attaching ducklake %s with data %s", catalog_uri, duck_puddle_path)
     try:
         # This command tells DuckDB where the raw data resides.
         # We attach the data lake path as a virtual table source.
         sql_attach = f"""
                     LOAD ducklake;
-                    ATTACH '{catalog_uri}' AS ducklake (DATA_PATH '{duck_puddle_path}');
-                    USE ducklake;
+                    ATTACH '{catalog_uri}'
+                    AS duck_puddle (DATA_PATH '{duck_puddle_path}');
+                    USE duck_puddle;
                     """
         con = duckdb.execute(sql_attach)
         _logger.info("Successfully attached the Data Lake at path: %s", duck_puddle_path)
