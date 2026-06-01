@@ -9,11 +9,11 @@ from uuid import uuid4 as uuid
 import streamlit as st
 
 # Import local modules
-from utility import get_logger
+from . import get_logger
 
 # mark entry into the module
-logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+_logger = get_logger(__name__)
+_logger.debug("In module %s", __name__)
 
 # Dictionary to hold component instances
 _COMPONENT_INSTANCES = {}
@@ -24,7 +24,7 @@ def option_multiselect_callback(selected_input, instance):
     on_change callback to update the selected options in the
     AutoUpdateMultiselectComponent instance.
     """
-    logger.debug("in option_multiselect_callback, input=%s", selected_input)
+    _logger.debug("in option_multiselect_callback, input=%s", selected_input)
     # convert all strings to upper case and store in instance
     instance.selected = [s.upper() for s in st.session_state[selected_input].copy()]
 
@@ -69,7 +69,7 @@ class AutoUpdateMultiselectComponent:
                 new options (default False)
             placeholder (str): Default text to display in the selectbox when not selected
         """
-        logger.debug(
+        _logger.debug(
             "Configuring AutoUpdateMultiselectComponent instance: key=%s\n" +
             "label=%s\noptions=%s\ndefault=%s\naccept_new_options=%s\nplaceholder=%s",
             key,
@@ -108,7 +108,7 @@ class AutoUpdateMultiselectComponent:
             st.multiselect: A Streamlit Multiselect component with auto-updating selection.
         """
         # mark debug entry into the method
-        logger.debug("Entering AutoUpdateMultiselectComponent.render")
+        _logger.debug("Entering AutoUpdateMultiselectComponent.render")
 
         # create an empty widget to eventually hold the selectbox
         self.widget_placeholder = st.empty()
@@ -144,7 +144,7 @@ class AutoUpdateMultiselectComponent:
             new_options -- A list of strings to update the options
         """
         # mark debug entry into the method
-        logger.debug("Entering AutoUpdateMultiselectComponent.update_options with new options: %s",
+        _logger.debug("Entering AutoUpdateMultiselectComponent.update_options with new options: %s",
                      new_options,
                      )
         # Update default selections
@@ -199,7 +199,7 @@ def get_aumc_instance(key: str,
         placeholder (str): Default text to display in the selectbox when not selected
     """
     # log entry into the function
-    logger.debug(
+    _logger.debug(
         "In aumc_get_instance with parameters: key=%s\n" +
         "label=%s\noptions=%s\ndefault=%s\naccept_new_options=%s\nplaceholder=%s",
         key,
@@ -213,7 +213,7 @@ def get_aumc_instance(key: str,
     # check if the component already exists
     if key not in _COMPONENT_INSTANCES:
         # create a new component and store it in the dictionary
-        logger.debug("Creating new component")
+        _logger.debug("Creating new component")
         _COMPONENT_INSTANCES[key] = AutoUpdateMultiselectComponent(key,
             label,
             options,
@@ -223,5 +223,5 @@ def get_aumc_instance(key: str,
             )
 
     # log exit from the function
-    logger.debug("Exiting aumc_get_instance with key=%s", key)
+    _logger.debug("Exiting aumc_get_instance with key=%s", key)
     return _COMPONENT_INSTANCES[key]

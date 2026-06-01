@@ -11,24 +11,25 @@ import streamlit as st
 import sqlalchemy.exc
 
 # local imports
-from core import (Periods,
-                  get_account,
-                  get_period_dates,
-                  get_balance_history,
-                  update_daily_balance,
-                  delete_daily_balance,
-)
-from utility import (get_status_message_component,
-                     get_logger,
-                     StatusType as stat,
-                     )
+from core import (
+                get_account,
+                get_balance_history,
+                update_daily_balance,
+                delete_daily_balance,
+                )
+from utility import (
+                get_status_message_component,
+                get_logger,
+                Periods,
+                get_period_dates,
+                StatusType as stat,
+                )
 
 # initialize the logger
-file_stem = Path(__file__).stem
-logger_name = f"pages.{file_stem}"
-logger = get_logger(logger_name)
+_logger_name = f"pages.{Path(__file__).stem}"
+_logger = get_logger(_logger_name)
 # mark entry into the module
-logger.debug("In module %s", logger_name)
+_logger.debug("In module %s", _logger_name)
 
 # local constants
 _STATUS_MESSAGE_COMPONENT_KEY = "manage-balances-status-message"
@@ -56,7 +57,7 @@ elif _UPDATE_DATE_SESSION_KEY not in st.session_state:
     st.session_state[_UPDATE_DATE_SESSION_KEY] = date.today()
 
 # header elements for the page
-st.title(f"Manage Daily Balances for Account {get_account(1).name}")
+st.title(f"Manage Daily Balances for Account {get_account(1).account_name}")
 
 # create the status message component
 status_message = get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY)
@@ -69,7 +70,7 @@ with st.sidebar:
                     )
     update_balance = st.number_input("Daily Balance",
                     key=_UPDATE_BALANCE_SESSION_KEY,
-                    placeholder="Balance Amount",
+                    value=None,
                     step=0.01,
                     format="%.2f",
                     help="Enter the daily balance amount",
@@ -118,6 +119,10 @@ if update_record:
                                         f"Balance for {update_date} updated to"
                                         f" {update_balance:.2f} successfully!",
                                         )
+    else:
+        status_message.set_status_message(stat.INFO,
+                                          "Please enter balance date and amount"
+                                          )
 
 # handle the delete button click
 if delete_record:
@@ -134,13 +139,16 @@ if delete_record:
                                         stat.ERROR,
                                         f"Unexpected SQL error: {str(e)}",
                                         )
-
         else:
             # if the update is successful, display a success message
             status_message.set_status_message(
                                         stat.SUCCESS,
                                         f"Balance for {update_date} deleted successfully!",
                                         )
+    else:
+        status_message.set_status_message(stat.INFO,
+                                          "Please enter the date to be deleted"
+                                          )
 
 # fetch the updated balance history
 from_date, to_date = get_period_dates(Periods.ALL)

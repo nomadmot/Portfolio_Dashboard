@@ -10,7 +10,7 @@ NOTE: This is very much a work in progress. I am working to improve data acquisi
 
 - Portfolio tracking and performance analytics for individual investors
 - Interactive visualizations with Plotly (planned)
-- SQL database integration using SQLAlchemy and DuckDB
+- SQL database integration using DuckDB
 - Modular architecture with clear separation of concerns
 - Docker support for easy deployment
 
@@ -22,14 +22,14 @@ NOTE: This is very much a work in progress. I am working to improve data acquisi
 
 ![Manage Daily Balances](assets/manage_bal.png)
 
-![Detail Performance Analysis](assets/manage_bal.png)
+![Detail Performance Analysis](assets/det_perf_anly.png)
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: Streamlit
-- **Backend**: Python (SQLAlchemy, DuckDB)
+- **Backend**: Python, DuckDB
 - **Data Fetching**: yfinance
 - **Visualization**: Plotly
 - **Dependency Management**: uv (via `pyproject.toml` and `uv.lock`)
@@ -133,7 +133,7 @@ This is the easiest installation if you just want to give it a try, or use it as
 
 1. ***Data Files***
 
-   - If using Docker, mount a directory or volume to the /investorlab/ mount point to contain your data files. Currently, the data is laid out into a SQLite (or other) database for portfolio data, and a "duck puddle" directory for ancillary information. This may change.
+   - If using Docker, mount a directory or volume to the /investorlab/ mount point to contain your data files. Currently, the data is laid out into a DuckDB database for portfolio data and  ancillary information. This may change.
 
 2. ***Configuration***
    - The .settings folder in the application source directory contains example configuration files.
@@ -148,31 +148,29 @@ I'm continuously improving the Portfolio Dashboard based on community feedback a
 
 ### Performance & Data Accuracy
 
-- [#154] Fix performance summary not updating date range when daily balances are updated
-- [#145] Correct the wrong day count for PERIODS.D30
-- [#2] Adjust the performance algorithm to account for deposits
+- [#2](https://github.com/nomadmot/Portfolio_Dashboard/issues/2) Adjust the performance algorithm to account for deposits
 
 ### User Experience & Interface
 
-- [#148] Create an alerts page to view and filter application notifications
+- [#161](https://github.com/nomadmot/Portfolio_Dashboard/issues/161) add buttons to slide dates forward and backward in Time Machine Component
+- [#145](https://github.com/nomadmot/Portfolio_Dashboard/issues/145) Create an alerts page to view and filter application notifications
 
 ### New Features
 
-- [#148] Integrate AI chat as a first step to full AI integration
-- [#101] Create a Security Details page to provide information on selected stocks
-- [#39] Develop a Watchlist page for tracking specific stocks or assets
-- [#90] Introduce a Portfolio Journal for tracking transactions and notes
-- [#43] Enable Obsidian integration for seamless note-taking and portfolio synchronization
+- [#148](https://github.com/nomadmot/Portfolio_Dashboard/issues/148) Integrate AI chat as a first step to full AI integration
+- [#164](https://github.com/nomadmot/Portfolio_Dashboard/issues/164) Add a FastAPI server for AI agent tooling
+- [#101](https://github.com/nomadmot/Portfolio_Dashboard/issues/101) Create a Security Details page to provide information on selected stocks
+- [#39](https://github.com/nomadmot/Portfolio_Dashboard/issues/39) Develop a Watchlist page for tracking specific stocks or assets
+- [#90](https://github.com/nomadmot/Portfolio_Dashboard/issues/90) Introduce a Portfolio Journal for tracking transactions and notes
+- [#43](https://github.com/nomadmot/Portfolio_Dashboard/issues/43) Enable Obsidian integration for seamless note-taking and portfolio synchronization
 
 ### Core Functionality
 
-- [#133] Refine the PERIODS logic for accurate time-based portfolio analysis
-- [#57] Implement support for stock splits in portfolio calculations
-- [#116] Implement a multiple account feature for easier portfolio management
+- [#57](https://github.com/nomadmot/Portfolio_Dashboard/issues/57) Implement support for stock splits in portfolio calculations
+- [#116](https://github.com/nomadmot/Portfolio_Dashboard/issues/116) Implement a multiple account feature for easier portfolio management
 
 ### Other Planned Features
 
-- Better integration with database (SQLAlchemy? DuckDB? Something else?)
 - Automated upload of user transactions and other data
 - UI for reviewing custom time series on plots (Time Machine)
 - Backtesting

@@ -6,21 +6,20 @@ from typing import List
 from datetime import date
 
 # Import 3rd party libraries
-from sqlalchemy import select, distinct
-from sqlalchemy.orm import Session
 from pandas import DataFrame
+import duckdb
 
 # Import local modules
-from models.portfolio import DailyBalance, Account, Security, Trade, SecurityType
-from utility import get_logger, DATABASE_ENGINE
+from schemas import Account, SecurityType
+from utility import DATABASE_CONNECTION, get_logger
 
-# mark entry into the module
-logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+# Initialize logger for this module
+_logger = get_logger(__name__)
+_logger.debug("In module %s", __name__)
 
 def get_account(account_id: int) -> Account:
     """
-    look up the specified Acount for the given account_id.
+    Look up the specified Account for the given account_id. 
 
     Arguments:
         account_id -- The ID of the account to retrieve.
@@ -29,20 +28,31 @@ def get_account(account_id: int) -> Account:
         The Account object corresponding to the given account_id.
     """
     # mark entry into the method
-    logger.debug("Entering get_account with account_id = %s", account_id)
-    #if DATABASE_ENGINE.ping
-    # generate a sqlalchemy select statement to retrieve the account
-    with Session(DATABASE_ENGINE) as session:
-        result = session.execute(
-            select(Account).where(Account.id == account_id)
-            ).first()
+    _logger.debug("Entering get_account with account_id = %s", account_id)
 
-    # check if the result is None, which means the account does not exist
-    if not result:
-        raise ValueError(f"Account with ID {account_id} does not exist.")
+    try:
+        # Select the account details directly.
+        select_sql = """
+        SELECT * FROM accounts WHERE account_id = ? LIMIT 1;
+        """
+        # Execute the query using the connection object
+        result = DATABASE_CONNECTION.execute(select_sql, (account_id,)).fetchone()
 
-    # return the Account object
-    return result[0]
+        if not result:
+            raise ValueError(f"Account with ID {account_id} does not exist.")
+
+        # Manually map the raw tuple result back into the Account Pydantic model.
+        return Account(
+            account_id=result[0],
+            account_name=result[1]
+        )
+    except duckdb.Error as e:
+        _logger.error("DuckDB Error retrieving account:", exc_info=True)
+        raise RuntimeError(f"Database error during account retrieval: {e}") from e
+    except ValueError as e:
+        # Re-raise specific business logic errors
+        raise e
+
 
 def get_balance_history(account_id: int,
                         begin_date: date,
@@ -56,12 +66,12 @@ def get_balance_history(account_id: int,
         begin_date -- The begin date for which to retrieve balances.
         end_date -- The end date for which to retrieve balances.
         ascending -- Whether to sort the results in ascending order by date (default is False).
-        
+
     Returns:
         A pandas DataFrame containing the balance history, indexed by date.
     """
     # mark entry into the method
-    logger.debug(("Entering method get_balance_history with: ",
+    _logger.debug(("Entering method get_balance_history with: ",
                  "account_id = %s ",
                  "from_date = %s ",
                  "to_date = %s ",
@@ -69,130 +79,146 @@ def get_balance_history(account_id: int,
                  account_id, begin_date, end_date, ascending,
                  )
 
-    # generate a sqlalchemy select statement to retrieve the balances
-    stmt = select(DailyBalance).where(
-        DailyBalance.account_id == account_id
-        ).where(
-            DailyBalance.date >= begin_date
-        ).where(
-            DailyBalance.date <= end_date
-        )
+    # Select the required fields.
+    select_sql = f"""
+        SELECT date, balance FROM daily_balances 
+        WHERE account_id = ? AND date BETWEEN ? AND ?
+        ORDER BY date {'ASC' if ascending else 'DESC'};
+        """
 
-    # execute the query and fetch results
-    with DATABASE_ENGINE.connect() as conn:
-        result = conn.execute(stmt)
+    result = DATABASE_CONNECTION.execute(select_sql, (account_id, begin_date, end_date)).fetchall()
 
-    # convert the result to a DataFrame
-    df_balances = DataFrame([{
-        'date': balance.date,
-        'balance': balance.balance
-    } for balance in result])
+    # Mapping and DataFrame Creation
+    if not result:
+        # no results found
+        return DataFrame(columns=['date', 'balance'])
 
-    # ensure the DataFrame is sorted by date as requested in
-    # the ascending parameter and reset the index for proper ordering
-    if not df_balances.empty:
-        df_balances.sort_values('date', ascending=ascending, inplace=True)
-        df_balances.reset_index(drop=True, inplace=True)
+    # Convert the list of tuples into the required DataFrame format
+    df_data = [{'date': row[0], 'balance': row[1]} for row in result]
+    df_balances = DataFrame(df_data)
 
     return df_balances
 
 
-# function to get a list of security symbols from the database
-def get_security_symbols(include_options=False) -> List[str]:
-    """
-    Get a list of security symbols from the database
-
-    Keyword Arguments:
-        include_options -- Select whether or not options are included
-         in the results (default: {False})
-
-    Returns:
-        A list of all security symbols in the database, optionally including options.
-    """
+def get_last_balance_date():
+    """Get the most recent balance date from the daily_balances table."""
     # mark entry into the method
-    logger.debug(("Entering method get_security_symbols with: ",
-                 "include_options = %s "),
-                 include_options,
-                 )
+    _logger.debug("Entering method get_last_trade_date")
 
-    stmt = select(distinct(Security.symbol)).where(
-        Security.security_type != SecurityType.OPTION
-    )
-    with Session(DATABASE_ENGINE) as session:
-        result = session.execute(stmt)
-    symbols = [symbol[0] for symbol in result]
-
-    # add the associated symbols for options if include_options is True
-    if include_options:
-        stmt = select(distinct(Security.symbol)).where(
-            Security.security_type == SecurityType.OPTION
-        )
-        with Session(DATABASE_ENGINE) as session:
-            result = session.execute(stmt)
-        for row in result:
-            symbol = row[0]
-            if symbol not in symbols:
-                symbols.append(symbol)
-
-    # return the sorted list
-    symbols.sort()
-    return symbols
-
-
-# function to add associated options symbols to a list of security symbols
-def lookup_associated_symbols(symbols: List[str]) -> List[str]:
+    sql = """
+    SELECT 
+        MAX(B.date) 
+    FROM daily_balances B;
     """
-    Append associated options symbols from the database to the input list of stock symbols
 
-    Keyword Arguments:
-        symbols: -- A list of stock symbols to add associated options for
+    result = DATABASE_CONNECTION.execute(sql).fetchone()
 
-    Returns:
-        The input list of security symbols, including associated options.
-    """
-    # mark entry into the method
-    logger.debug(("Entering method lookup_associated_symbols with: ",
-                 "symbols = %s "),
-                 symbols,
-                 )
-
-    # add the associated symbols for options if include_options is True
-    stmt = select(distinct(Security.symbol)).where(
-        (Security.associated_symbol.in_(symbols))
-    )
-    with Session(DATABASE_ENGINE) as session:
-        result = session.execute(stmt)
-    for row in result:
-        symbol = row[0]
-        if symbol not in symbols:
-            symbols.append(symbol)
-
-    # return the sorted list
-    symbols.sort()
-    return symbols
+    if result:
+        # The result is a tuple (date,)
+        return result[0]
+    else:
+        return None
 
 
 def get_last_trade_date():
     """Get the last trade date from the Trades table."""
     # mark entry into the method
-    logger.debug("Entering method get_last_trade_date")
-    stmt = select(
-                Trade.trade_date
-        ).order_by(
-            Trade.trade_date.desc()
-        ).limit(1)
+    _logger.debug("Entering method get_last_trade_date")
 
-    with Session(DATABASE_ENGINE) as session:
-        return list(session.execute(stmt))[0][0]
+    sql = """
+    SELECT 
+        MAX(T.trade_date) 
+    FROM trades T;
+    """
+
+    result = DATABASE_CONNECTION.execute(sql).fetchone()
+
+    if result:
+        # The result is a tuple (date,)
+        return result[0]
+    else:
+        return None
 
 
-# function to query the database for trades of the selected security
+def get_security_symbols(include_options: bool = False) -> List[str]:
+    """
+    Get a list of security symbols from the database
+
+    Keyword Arguments:
+        include_options -- Select whether or not options are included in the results
+        (default: False).  
+
+    Returns:
+        A list of all security symbols in the database, optionally including options.
+    """
+    # mark entry into the method
+    _logger.debug(("Entering method get_security_symbols with: ",
+                 "include_options = %s "),
+                 include_options,
+                 )
+
+    # Build the base query
+    if include_options:
+        # If including options, the query logic changes slightly.
+        base_sql = "SELECT DISTINCT symbol FROM securities WHERE security_type = ?"
+        params = (SecurityType.OPTION,)
+    else:
+        base_sql = "SELECT DISTINCT symbol FROM securities WHERE security_type != ?"
+        params = (SecurityType.OPTION,)
+
+    # Execute the query
+    result = DATABASE_CONNECTION.execute(base_sql, params).fetchall()
+
+    # Extract symbols
+    symbols = [row[0] for row in result]
+
+    symbols.sort()
+    return symbols
+
+
+def lookup_associated_symbols(symbols: List[str]) -> List[str]:
+    """
+    Append associated options symbols from the database to the input list of stock symbols. 
+
+    Keyword Arguments:
+        symbols: -- A list of stock symbols to add associated options for.
+
+    Returns:
+        The input list of security symbols, including associated options.
+    """
+    # mark entry into the method
+    _logger.debug(("Entering method lookup_associated_symbols with: ",
+                 "symbols = %s "),
+                 symbols,
+                 )
+
+    # Dynamically build the parameter list for the IN clause
+    placeholders = ', '.join(['?'] * len(symbols))
+    final_sql = f"""
+        SELECT DISTINCT symbol FROM securities
+        WHERE associated_symbol IN ({placeholders});
+    """
+    _logger.debug("Generated SQL statement: %s", final_sql)
+
+    # Execute the query
+    result = DATABASE_CONNECTION.execute(final_sql, tuple(symbols)).fetchall()
+    _logger.debug("SQL result is: %s", result)
+
+    # Compile and return the list
+    associated_symbols = [row[0] for row in result]
+
+    # Use a set to ensure uniqueness before converting back to a sorted list
+    unique_symbols = list(set(symbols) | set(associated_symbols))
+    unique_symbols.sort()
+    return unique_symbols
+
+
 def get_trades(symbols: List[str],
                begin_date: date,
                end_date: date,
                ascending: bool = False) -> DataFrame:
     """
-    Query the Trades table for the selected security symbols.
+    Query the Trades table for the selected security symbols.  
 
     Arguments:
         symbols -- a list of security symbols to query trades for.
@@ -204,7 +230,7 @@ def get_trades(symbols: List[str],
         A pandas DataFrame containing the trades for the specified symbols.
     """
     # mark entry into the method
-    logger.debug(("Entering method get_trades with: ",
+    _logger.debug(("Entering method get_trades with: ",
                  "symbols = %s ",
                  "begin_date = %s ",
                  "end_date = %s ",
@@ -212,54 +238,62 @@ def get_trades(symbols: List[str],
                  symbols, begin_date, end_date, ascending,
                  )
 
-    stmt = select(
-                Security.security_type,
-                Security.name,
-                Trade.symbol,
-                Trade.trade_date,
-                Trade.trade_type,
-                Trade.quantity,
-                Trade.price,
-                Trade.fees
-        ).join(
-            Trade, Security.symbol == Trade.symbol
-        ).where(
-            Security.symbol.in_(symbols)
-        ).where(
-            Trade.trade_date >= begin_date
-        ).where(
-            Trade.trade_date <= end_date
-            )
+    # Dynamically build the parameters list for the IN clause
+    placeholders = ', '.join(['?'] * len(symbols))
+    final_sql = f"""
+    SELECT 
+        T.symbol,
+        S.name,
+        T.symbol,
+        T.trade_date,
+        T.trade_type,
+        T.quantity,
+        T.price,
+        T.fees
+    FROM trades T
+    JOIN securities S ON T.symbol = S.symbol
+    WHERE T.symbol IN ({placeholders})
+    AND T.trade_date BETWEEN ? AND ?;
+    """
 
-    # execute the query and fetch results
-    with Session(DATABASE_ENGINE) as session:
-        db_result = session.execute(stmt)
+    # Execute the query
+    params = tuple(symbols) + (begin_date, end_date)
+    result = DATABASE_CONNECTION.execute(final_sql, params).fetchall()
 
-    # convert the trades to a list of Dict objects
+    # Process Results and Build DataFrame
     trades = []
-    for row in db_result:
-        if row.security_type == SecurityType.OPTION:
-            # for options, multiply quantity by 100
-            trade_amount = row.quantity * row.price * 100
-        else:
-            trade_amount = row.quantity * row.price
-        # need to switch the sign for the trade amount
-        trade_amount = -trade_amount
+    for row in result:
+        # row structure: (symbol, name, symbol, trade_date, trade_type, quantity, price, fees)
+        symbol = row[0]
+        trade_amount = row[6] * row[5] # price * quantity
+
+        # Option contracts are 100 shares per contract
+        if row[3] == SecurityType.OPTION:
+            trade_amount *= 100
+
+        # Negate the amount for the final 'Amount' column
+        final_amount = -trade_amount
 
         trades.append({
-                    'Symbol': row.symbol,
-                    'Date': row.trade_date,
-                    'Type': row.trade_type,
-                    'Quantity': row.quantity,
-                    'Price': row.price,
-                    'Amount': trade_amount,
-                    })
+            'Symbol': symbol,
+            'Date': row[3],
+            'Type': row[4],
+            'Quantity': row[5],
+            'Price': row[6],
+            'Amount': final_amount,
+        })
 
-    # sort the results and return a pandas Dataframe
-    # buys are sorted in front of sells if they occur on the same day
+    # Return DataFrame
     if trades:
-        return DataFrame(trades).sort_values(
+        df = DataFrame(trades)
+        # Sort values according to input parameter
+        df.sort_values(
             by=['Date', 'Type'],
-            ascending=ascending).reset_index(drop=True)
+            ascending=ascending,
+            inplace=True
+        )
+        df.reset_index(drop=True, inplace=True)
+        return df
     else:
+        # No trades found
         return DataFrame(columns=['Symbol', 'Date', 'Type', 'Quantity', 'Price', 'Amount'])
