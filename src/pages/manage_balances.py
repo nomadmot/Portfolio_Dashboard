@@ -70,7 +70,7 @@ with st.sidebar:
                     )
     update_balance = st.number_input("Daily Balance",
                     key=_UPDATE_BALANCE_SESSION_KEY,
-                    placeholder="Balance Amount",
+                    value=None,
                     step=0.01,
                     format="%.2f",
                     help="Enter the daily balance amount",
@@ -119,6 +119,10 @@ if update_record:
                                         f"Balance for {update_date} updated to"
                                         f" {update_balance:.2f} successfully!",
                                         )
+    else:
+        status_message.set_status_message(stat.INFO,
+                                          "Please enter balance date and amount"
+                                          )
 
 # handle the delete button click
 if delete_record:
@@ -135,13 +139,16 @@ if delete_record:
                                         stat.ERROR,
                                         f"Unexpected SQL error: {str(e)}",
                                         )
-
         else:
             # if the update is successful, display a success message
             status_message.set_status_message(
                                         stat.SUCCESS,
                                         f"Balance for {update_date} deleted successfully!",
                                         )
+    else:
+        status_message.set_status_message(stat.INFO,
+                                          "Please enter the date to be deleted"
+                                          )
 
 # fetch the updated balance history
 from_date, to_date = get_period_dates(Periods.ALL)
