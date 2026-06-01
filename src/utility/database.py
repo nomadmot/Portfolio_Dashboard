@@ -1,42 +1,58 @@
 """Database configuration module."""
-# import standard libraries
-from os import path
-
 # import 3rd-party libraries
-from sqlalchemy import create_engine
+import duckdb
 
 # import local libraries
 from config import SETTINGS
-from utility import get_logger
+from . import get_logger
 
-# mark entry into the module
-logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+# initialize loggr
+_logger = get_logger(__name__)
+_logger.debug("In module %s", __name__)
 
 def _database_engine():
     """
-    Returns the SQLAlchemy database engine for the application.
+    Initializes the DuckLake connection. This function handles:
+    1. Connecting to the Catalog Database (metadata).
+    2. Attaching the Data Lake path (Parquet files).
     """
-    database_uri = SETTINGS.database_uri
 
-    # test to be sure the DATABASE_URI is valid
-    if  not database_uri:
-        raise ValueError("DATABASE_URI not found in settings")
-    database_filename = database_uri.split("////")[1]
-    logger.info("Using database file: %s", database_filename)
-    assert path.isfile(database_filename), f"Database file {database_filename} does not exist."
+    # build the paths
+    catalog_uri = SETTINGS.database_uri
+    duck_puddle_path = SETTINGS.duck_puddle
 
-    # log configuration
-    if SETTINGS.sqlalchemy_echo:
-        logger.info("SQLAlchemy SQL echo is true")
-    if SETTINGS.sqlalchemy_echo_pool:
-        logger.info("SQLAlchemy SQL echo pool is true")
+    if not catalog_uri or not duck_puddle_path:
+        raise ValueError("Both DATABASE_URI (Catalog) and ",
+                         "DUCK_PUDDLE (Data Lake Path) must be configured.")
 
-    # create the SQLAlchemy engine
-    return create_engine(database_uri,
-                         echo=SETTINGS.sqlalchemy_echo,
-                         echo_pool=SETTINGS.sqlalchemy_echo_pool
-                         )
+    # connect to the Catalog Database
+    # try:
+        # Connect to the catalog database first. This DB holds the metadata.
+    #     con = duckdb.connect(catalog_uri)
+    #     _logger.info("Successfully connected to the DuckLake Catalog Database.")
+    # except Exception as e:
+    #     _logger.error("Failed to connect to the DuckLake Catalog:", exc_info=True)
+    #     raise RuntimeError(f"Failed to initialize the DuckLake Catalog: {e}") from e
 
-# create the database engine instance
-DATABASE_ENGINE = _database_engine()
+    # attach the Data Lake
+    _logger.info("Attaching ducklake %s with data %s", catalog_uri, duck_puddle_path)
+    try:
+        # This command tells DuckDB where the raw data resides.
+        # We attach the data lake path as a virtual table source.
+        sql_attach = f"""
+                    LOAD ducklake;
+                    ATTACH '{catalog_uri}'
+                    AS duck_puddle (DATA_PATH '{duck_puddle_path}');
+                    USE duck_puddle;
+                    """
+        con = duckdb.execute(sql_attach)
+        _logger.info("Successfully attached the Data Lake at path: %s", duck_puddle_path)
+
+        return con
+    except duckdb.Error as e:
+        _logger.error("Failed to attach the Data Lake:", exc_info=True)
+        # If attaching the data lake fails, we must raise an error.
+        raise RuntimeError(f"Failed to initialize the Data Lake connection: {e}") from e
+
+# create the database connection instance
+DATABASE_CONNECTION = _database_engine()

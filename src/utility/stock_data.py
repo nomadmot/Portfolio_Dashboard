@@ -1,18 +1,20 @@
 """
 routines to fetch securities data
 """
-# standard library imports
+# Standard imports
 from enum import Enum
 from datetime import timedelta
 
 # 3rd party imports
 import pandas as pd
 import yfinance as yf
-from utility import get_logger
+
+# Local imports
+from . import get_logger
 
 # mark entry into the module
-logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+_logger = get_logger(__name__)
+_logger.debug("In module %s", __name__)
 
 class YfPeriods(Enum):
     """

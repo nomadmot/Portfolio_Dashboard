@@ -9,7 +9,7 @@ from duckdb import sql
 
 # local application imports
 from config import SETTINGS
-from utility import get_logger
+from . import get_logger
 
 # mark entry into the module
 logger = get_logger(__name__)

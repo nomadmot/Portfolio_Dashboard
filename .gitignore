@@ -12,3 +12,5 @@ docker/compose-osx.yaml
 docker/compose-osx-test.yaml
 docker/build_test.sh
 docker/compose-test.yaml
+**/*HOLD*
+cliff.toml

@@ -16,22 +16,22 @@ from utility import (
     get_time_machine_component,
     get_status_message_component,
     get_logger,
-    StatusType as stat
-)
-from core import (
     Periods,
     get_period,
+    StatusType as stat,
+    get_stock_history,
+)
+from core import (
     get_account,
     get_balance_history,
-    get_stock_history,
+    get_last_balance_date,
 )
 
 # initialize the logger
-file_stem = Path(__file__).stem
-logger_name = f"pages.{file_stem}"
-logger = get_logger(logger_name)
+_logger_name = f"pages.{Path(__file__).stem}"
+_logger = get_logger(_logger_name)
 # mark entry into the module
-logger.debug("In module %s", logger_name)
+_logger.debug("In module %s", _logger_name)
 
 # set local constants
 _TIME_MACHINE_COMPONENT_KEY = "summary-performance-time-machine"
@@ -45,7 +45,7 @@ def calculate_cumulative_performance(data: pd.Series):
     :param series: The series over which performance will be calculated.
     """
     # mark entry into the function
-    logger.debug("Entering function calculate_cumulative_performance with %d entries", len(data))
+    _logger.debug("Entering function calculate_cumulative_performance with %d entries", len(data))
 
     # store the initial balance value for efficient calculation
     initial_balance = data.iloc[0]
@@ -57,7 +57,7 @@ def calculate_cumulative_performance(data: pd.Series):
     ret_val.iloc[0] = 0
 
     #return the dataframe for further processing
-    logger.debug("Exiting function calculate_cumulative_performance, ret_val length is %d",
+    _logger.debug("Exiting function calculate_cumulative_performance, ret_val length is %d",
                  len(ret_val))
     return ret_val
 
@@ -70,7 +70,7 @@ def calculate_daily_performance(data: pd.Series):
     :param series: The series over which performance will be calculated.
     """
     # mark entry into the function
-    logger.debug("entering function calculate_daily_performance with %d entries", len(data))
+    _logger.debug("entering function calculate_daily_performance with %d entries", len(data))
 
     # calculate the cumulative percent change
     ret_val = data.rolling(window=2).apply(
@@ -80,7 +80,9 @@ def calculate_daily_performance(data: pd.Series):
     ret_val.iloc[0] = 0
 
     #return the dataframe for further processing
-    logger.debug("Exiting function calculate_daily_performance, ret_val length is %d", len(ret_val))
+    _logger.debug(
+        "Exiting function calculate_daily_performance, "
+        "ret_val length is %d", len(ret_val))
     return ret_val
 
 
@@ -94,10 +96,10 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
     :param account_id: The account ID to plot (default is 1).
     """
     # mark entry into the function
-    logger.debug("Entering function plot_daily_balance with %d entries", len(df))
+    _logger.debug("Entering function plot_daily_balance with %d entries", len(df))
 
     # get the account name for the specified account ID
-    account_name = get_account(account_id).name
+    account_name = get_account(account_id).account_name
 
     # prepare data for plotting
     dates: List[pd.Timestamp] = list(df['Date'])
@@ -159,6 +161,7 @@ default_period = get_period(SETTINGS.defaults.performance_summary_period)
 time_machine = get_time_machine_component(
                                           _TIME_MACHINE_COMPONENT_KEY,
                                           period=default_period,
+                                          end_date=get_last_balance_date()
                                          )
 # get the status message component
 status_message = get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY)
@@ -167,7 +170,7 @@ status_message = get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY)
 st.set_page_config(layout="wide")
 
 # page title
-st.title(f"Performance Summary for {get_account(1).name}")
+st.title(f"Performance Summary for {get_account(1).account_name}")
 
 # add input widgets to the sidebar
 with st.sidebar:
@@ -183,6 +186,10 @@ with st.sidebar:
 
 # if the time machine isn't set, don't continue
 if time_machine.period_selected == Periods.NONE:
+    status_message.set_status_message(stat.WARNING,
+                                      "Select a time period"
+                                      )
+    status_message.show_status_messages()
     st.stop()
 
 # get the balance history for the specified account
@@ -197,6 +204,7 @@ if df_balances.empty:
                                      stat.WARNING,
                                      "No balance data found for the specified period",
                                      )
+    status_message.show_status_messages()
     st.stop()
 
 # check the returned dates against the date pickers in the time machine
@@ -247,7 +255,10 @@ st.subheader(f"Comparison ({selected_comparison}) Cumulative Performance: "
          )
 
 # display statistics for the current day
-st.subheader(f"Current Day Performance for {get_account(1).name} ({merged['Date'].iloc[-1]}):")
+st.subheader(
+    f"Current Day Performance for "
+    f"{get_account(1).account_name} ({merged['Date'].iloc[-1]}):"
+    )
 st.write(f"- Balance: ${merged['balance'].iloc[-1]:,.2f}")
 st.write(f"- Daily Change: {merged['dly_pct_change'].iloc[-1]:.1%}")
 st.write(f"- Comparison ({selected_comparison})"

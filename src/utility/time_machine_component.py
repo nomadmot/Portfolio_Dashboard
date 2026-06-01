@@ -11,12 +11,12 @@ import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
 # Import local modules
-from core import Periods, get_period_dates
-from utility import get_logger
+from . import Periods, get_period_dates
+from . import get_logger
 
 # mark entry into the module
-logger = get_logger(__name__)
-logger.debug("In module %s", __name__)
+_loggerlogger = get_logger(__name__)
+_loggerlogger.debug("In module %s", __name__)
 
 # Dictionary to hold component instances
 _COMPONENT_INSTANCES = {}
@@ -42,12 +42,12 @@ def period_select_callback(key: str, instance):
         void
     """
     # log entry into the function
-    logger.debug(
+    _loggerlogger.debug(
         "In function period_select_callback with key=%s", key)
 
     # update the period_selected property
     instance.period_selected = st.session_state[key]
-    logger.debug("period selected is: %s", instance.period_selected)
+    _loggerlogger.debug("period selected is: %s", instance.period_selected)
 
 
 def begin_date_picker_callback(key: str, instance):
@@ -61,11 +61,11 @@ def begin_date_picker_callback(key: str, instance):
         instance -- the TimeMachineComponent instance
     """
     # log entry into the function
-    logger.debug("In function begin_date_picker_callback with key=%s", key)
+    _loggerlogger.debug("In function begin_date_picker_callback with key=%s", key)
 
     # update the begin_date property
     instance.begin_date = st.session_state[key]
-    logger.debug("begin date updated to %s", instance.begin_date)
+    _loggerlogger.debug("begin date updated to %s", instance.begin_date)
     # update the period_selected widget to "Custom"
     instance.period_selected = Periods.CUS
 
@@ -81,11 +81,11 @@ def end_date_picker_callback(key: str, instance):
         instance -- the TimeMachineComponent instance
     """
     # log entry into the function
-    logger.debug("In function end_date_picker_callback with key=%s", key)
+    _loggerlogger.debug("In function end_date_picker_callback with key=%s", key)
 
     # update the end_date property
     instance.end_date = st.session_state[key]
-    logger.debug("end date updated to %s", instance.end_date)
+    _loggerlogger.debug("end date updated to %s", instance.end_date)
     # update the period_selected widget to "Custom"
     instance.period_selected = Periods.CUS
 
@@ -100,7 +100,7 @@ class TimeMachineComponent:
         """
         Returns the value of the currently selected period
         """
-        logger.debug("In period_selected getter for key=%s, returning period_selected=%s",
+        _loggerlogger.debug("In period_selected getter for key=%s, returning period_selected=%s",
                         self._component_key, self._period_selected)
         return self._period_selected
     @period_selected.setter
@@ -108,7 +108,7 @@ class TimeMachineComponent:
         """
         Sets the value of the currently selected period
         """
-        logger.debug("In period_selected setter for key=%s, setting period_selected to %s",
+        _loggerlogger.debug("In period_selected setter for key=%s, setting period_selected to %s",
                         self._component_key, value)
         self._period_selected = value
         # update the period_selected widget
@@ -117,15 +117,14 @@ class TimeMachineComponent:
         # do we need to calculate the period?
         if value != Periods.CUS:
             # calculate the dates for the selected option and update the instance properties
-            self.begin_date, self.end_date = get_period_dates(value)
-
+            self.begin_date, self.end_date = get_period_dates(value, self.end_date)
 
     @property
     def begin_date(self) -> date:
         """
         Returns the value of the begin date
         """
-        logger.debug("In begin_date getter for key=%s, returning begin_date=%s",
+        _loggerlogger.debug("In begin_date getter for key=%s, returning begin_date=%s",
                         self._component_key, self._begin_date)
         return self._begin_date
     @begin_date.setter
@@ -134,7 +133,7 @@ class TimeMachineComponent:
         Sets the value of the begin date
         """
         self._begin_date = value
-        logger.debug("In begin_date setter for key=%s, setting begin_date to %s",
+        _loggerlogger.debug("In begin_date setter for key=%s, setting begin_date to %s",
                         self._component_key, value)
         # update the begin date picker to reflect the new date
         st.session_state[self._begin_date_picker_key] = value
@@ -144,7 +143,7 @@ class TimeMachineComponent:
         """
         Returns the value of the end date
         """
-        logger.debug("In end_date getter for key=%s, returning end_date=%s",
+        _loggerlogger.debug("In end_date getter for key=%s, returning end_date=%s",
                         self._component_key, self._end_date)
         return self._end_date
     @end_date.setter
@@ -152,7 +151,7 @@ class TimeMachineComponent:
         """
         Sets the value of the end date
         """
-        logger.debug("In end_date setter for key=%s, setting end_date to %s",
+        _loggerlogger.debug("In end_date setter for key=%s, setting end_date to %s",
                         self._component_key, value)
         self._end_date = value
         # update the end date picker to reflect the new date
@@ -175,12 +174,12 @@ class TimeMachineComponent:
                 self.begin_date_picker = st.empty()
                 self.end_date_picker = st.empty()
 
-    def __init__(self, component_key: str, period: Periods):
+    def __init__(self, component_key: str, period: Periods, end_date: date|None):
         """
         Initializes the TimeMachineComponent instance
         """
         # log entry into the function
-        logger.debug("In TimeMachineComponent constructor with component_key=%s, period=%s",
+        _loggerlogger.debug("In TimeMachineComponent constructor with component_key=%s, period=%s",
                      component_key,
                      period)
 
@@ -192,8 +191,10 @@ class TimeMachineComponent:
         self._begin_date_picker_key = component_key + _BEGIN_DATE_PICKER_KEY
         self._end_date_picker_key = component_key + _END_DATE_PICKER_KEY
 
-        # initialize the period_selected to the provided value
-        # NOTE: this will also calculate the begin and end dates for the selected period
+        # initialize the period_selected and end_date to the provided value
+        # NOTE: this will also calculate the begin date for the selected period
+        if end_date is not None:
+            self.end_date = end_date
         self.period_selected = period
 
         # define the time machine component layout
@@ -214,7 +215,9 @@ class TimeMachineComponent:
             end_date -- the date for the end_date_picker
         """
         # mark entry into the function
-        logger.debug("entering function update_date_pickers with begin_date %s and end_date %s",
+        _loggerlogger.debug(
+                    "entering function update_date_pickers "
+                    "with begin_date %s and end_date %s",
                      begin_date, end_date)
 
         # delete the old picker widgets, if neccesary
@@ -261,7 +264,7 @@ class TimeMachineComponent:
         Renders the TimeMachineComponent instance
         """
         # log entry into the function
-        logger.debug("In TimeMachineComponent render method")
+        _loggerlogger.debug("In TimeMachineComponent render method")
 
         # create the layout box to hold the component
         self._component_layout = TimeMachineComponent._TimeMachineComponentLayout(
@@ -285,9 +288,12 @@ class TimeMachineComponent:
         self.update_date_pickers(self._begin_date, self._end_date)
 
         # log exit from the function
-        logger.debug("Exiting TimeMachineComponent render method")
+        _loggerlogger.debug("Exiting TimeMachineComponent render method")
 
-def get_time_machine_component(key: str, period: Periods = Periods.NONE) -> TimeMachineComponent:
+def get_time_machine_component(
+        key: str,
+        period: Periods = Periods.NONE,
+        end_date: date|None = date.today()) -> TimeMachineComponent:
     """
     Returns a TimeMachineComponent for the given key. If a component doesn't exist,
     a new one is created.
@@ -299,13 +305,14 @@ def get_time_machine_component(key: str, period: Periods = Periods.NONE) -> Time
         A TimeMachineComponent instance
     """
     # log entry into the function
-    logger.debug("In get_time_machine_component with key=%s, period=%s", key, period)
+    _loggerlogger.debug("In get_time_machine_component with key=%s, period=%s, end_date=%s",
+                        key, period, end_date)
 
     # check if the component already exists
     if key not in _COMPONENT_INSTANCES:
         # create a new component and store it in the dictionary
-        _COMPONENT_INSTANCES[key] = TimeMachineComponent(key, period)
+        _COMPONENT_INSTANCES[key] = TimeMachineComponent(key, period, end_date)
 
     # log exit from the function
-    logger.debug("Exiting get_time_machine_component with key=%s", key)
+    _loggerlogger.debug("Exiting get_time_machine_component with key=%s", key)
     return _COMPONENT_INSTANCES[key]
