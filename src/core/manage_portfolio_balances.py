@@ -3,36 +3,19 @@ Routines for accessing and manipulating the portfolio database.
 """
 # Import standard libraries
 from datetime import date
-# from typing import Optional
-# from sqlalchemy.orm import Session
 
 # Import 3rd party libraries
 import duckdb
 
 # Import local modules
 from utility import get_logger, DATABASE_CONNECTION
-# from schemas.portfolio import DailyBalance, Account
 from schemas import DailyBalance
-
-# # create the logger for the module
-# _logger = get_logger(__name__)
-# _logger.debug("In module: %s\n\tfile: %s", __name__, __file__)
-
-# core/manage_portfolio_balances.py
-
-# --- Imports ---
-# from datetime import date
-# from typing import List
-# import duckdb # Direct import for the connection object
-# from utility.database import DATABASE_CONNECTION # Import the centralized connection
-# from utility.logger import get_logger # Assuming logger utility exists
-# from schemas import DailyBalanceBase, AccountBase # Import Pydantic schemas
 
 # Initialize logger for this module
 _logger = get_logger(__name__)
 _logger.debug("In module: %s", __name__)
 
-# --- Function to Update Daily Balance (STRICT MODE) ---
+# --- Function to Update Daily Balance ---
 def update_daily_balance(
     account_id: int,
     balance_amount: float,
@@ -60,14 +43,14 @@ def update_daily_balance(
 
     # 2. Transaction Management (Manual BEGIN/COMMIT/ROLLBACK)
     try:
-        # BEGIN TRANSACTION
+        # Start a transaction manually to ensure atomicity
         DATABASE_CONNECTION.execute("BEGIN;")
 
         # --- A. Check Account Existence ---
         account_check_sql = "SELECT count(*) FROM accounts WHERE account_id = ?"
-        account_count = DATABASE_CONNECTION.execute(account_check_sql, (account_id,)).fetchone()[0]
+        account_count = DATABASE_CONNECTION.execute(account_check_sql, (account_id,)).fetchone()
 
-        if account_count == 0:
+        if account_count is None:
             # Raise a specific ValueError for business logic failure
             raise ValueError(f"Account with ID {account_id} does not exist.")
 
@@ -78,13 +61,12 @@ def update_daily_balance(
         """
         existing_count = DATABASE_CONNECTION.execute(
             check_existence_sql,
-            (account_id, balance_date)).fetchone()[0]
+            (account_id, balance_date)).fetchone()
 
-        if existing_count > 0:
+        if existing_count is not None and existing_count[0] > 0:
             # Raise a specific ValueError for business logic failure
             raise ValueError(
                 f"Balance record already exists for Account {account_id} on {balance_date}. "
-                "Update is disallowed in strict mode."
             )
 
         # --- C. Write New Record ---
@@ -135,9 +117,9 @@ def delete_daily_balance(
 
         # --- A. Check Account Existence (Validation) ---
         account_check_sql = "SELECT count(*) FROM accounts WHERE account_id = ?"
-        account_count = DATABASE_CONNECTION.execute(account_check_sql, (account_id,)).fetchone()[0]
+        account_count = DATABASE_CONNECTION.execute(account_check_sql, (account_id,)).fetchone()
 
-        if account_count == 0:
+        if account_count is None:
             # Raise a specific ValueError for business logic failure
             raise ValueError(f"Account with ID {account_id} does not exist.")
 
