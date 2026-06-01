@@ -100,6 +100,26 @@ def get_balance_history(account_id: int,
     return df_balances
 
 
+def get_last_balance_date():
+    """Get the most recent balance date from the daily_balances table."""
+    # mark entry into the method
+    _logger.debug("Entering method get_last_trade_date")
+
+    sql = """
+    SELECT 
+        MAX(B.date) 
+    FROM daily_balances B;
+    """
+
+    result = DATABASE_CONNECTION.execute(sql).fetchone()
+
+    if result:
+        # The result is a tuple (date,)
+        return result[0]
+    else:
+        return None
+
+
 def get_last_trade_date():
     """Get the last trade date from the Trades table."""
     # mark entry into the method
@@ -118,6 +138,7 @@ def get_last_trade_date():
         return result[0]
     else:
         return None
+
 
 def get_security_symbols(include_options: bool = False) -> List[str]:
     """

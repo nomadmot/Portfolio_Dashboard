@@ -117,8 +117,7 @@ class TimeMachineComponent:
         # do we need to calculate the period?
         if value != Periods.CUS:
             # calculate the dates for the selected option and update the instance properties
-            self.begin_date, self.end_date = get_period_dates(value)
-
+            self.begin_date, self.end_date = get_period_dates(value, self.end_date)
 
     @property
     def begin_date(self) -> date:
@@ -175,7 +174,7 @@ class TimeMachineComponent:
                 self.begin_date_picker = st.empty()
                 self.end_date_picker = st.empty()
 
-    def __init__(self, component_key: str, period: Periods):
+    def __init__(self, component_key: str, period: Periods, end_date: date|None):
         """
         Initializes the TimeMachineComponent instance
         """
@@ -192,8 +191,10 @@ class TimeMachineComponent:
         self._begin_date_picker_key = component_key + _BEGIN_DATE_PICKER_KEY
         self._end_date_picker_key = component_key + _END_DATE_PICKER_KEY
 
-        # initialize the period_selected to the provided value
-        # NOTE: this will also calculate the begin and end dates for the selected period
+        # initialize the period_selected and end_date to the provided value
+        # NOTE: this will also calculate the begin date for the selected period
+        if end_date is not None:
+            self.end_date = end_date
         self.period_selected = period
 
         # define the time machine component layout
@@ -289,7 +290,10 @@ class TimeMachineComponent:
         # log exit from the function
         _loggerlogger.debug("Exiting TimeMachineComponent render method")
 
-def get_time_machine_component(key: str, period: Periods = Periods.NONE) -> TimeMachineComponent:
+def get_time_machine_component(
+        key: str,
+        period: Periods = Periods.NONE,
+        end_date: date|None = date.today()) -> TimeMachineComponent:
     """
     Returns a TimeMachineComponent for the given key. If a component doesn't exist,
     a new one is created.
@@ -301,12 +305,13 @@ def get_time_machine_component(key: str, period: Periods = Periods.NONE) -> Time
         A TimeMachineComponent instance
     """
     # log entry into the function
-    _loggerlogger.debug("In get_time_machine_component with key=%s, period=%s", key, period)
+    _loggerlogger.debug("In get_time_machine_component with key=%s, period=%s, end_date=%s",
+                        key, period, end_date)
 
     # check if the component already exists
     if key not in _COMPONENT_INSTANCES:
         # create a new component and store it in the dictionary
-        _COMPONENT_INSTANCES[key] = TimeMachineComponent(key, period)
+        _COMPONENT_INSTANCES[key] = TimeMachineComponent(key, period, end_date)
 
     # log exit from the function
     _loggerlogger.debug("Exiting get_time_machine_component with key=%s", key)

@@ -4,45 +4,13 @@ Provide start and end period selections
 
 # standard library imports
 from datetime import date, timedelta
-#from enum import Enum
 
 # local application imports
-from . import get_logger, market_is_open
-from .periods_enum import Periods
+from . import get_logger, market_is_open, Periods
 
 # initialize logging
 _logger = get_logger(__name__)
 _logger.debug("In module %s", __name__)
-
-# class Periods(Enum):
-#     """
-#     Enumeration class for time period selections.
-#     """
-#     NONE = "-Select Period-"
-#     D30 = "30 Days"
-#     D50 = "50 Days"
-#     D90 = "90 Days"
-#     YTD = "YTD"
-#     YR1 = "1 Year"
-#     ALL = "All"
-#     CUS = "Custom"
-
-#     @classmethod
-#     def get_periods(cls)-> list:
-#         """
-#         Provide a list of Period enum members
-#         """
-#         return [item[1] for item in cls.__members__.items()]
-
-#     @classmethod
-#     def get_label(cls, item)-> str:
-#         """
-#         provide a label for the period selection dropdown
-
-#         Returns:
-#             label for the period selection dropdown
-#         """
-#         return item.value
 
 def _calculate_begin_date(end_date: date, market_days: int) -> date:
     """
@@ -95,6 +63,7 @@ def get_period_dates(
     if period is None:
         _logger.debug("nothing to do")
         return (None, None)
+
     # provide default dates
     if from_date is None:
         from_date = date.today()
@@ -103,32 +72,32 @@ def get_period_dates(
 
     match period:
         case Periods.NONE:
-            begin_date = date.today()
-            end_date = date.today()
+            begin_date = from_date
+            end_date = to_date
 
         case Periods.D30:
-            end_date = date.today()
+            end_date = from_date
             begin_date = _calculate_begin_date(end_date=end_date, market_days=30)
 
         case Periods.D50:
-            end_date = date.today()
+            end_date = from_date
             begin_date = _calculate_begin_date(end_date=end_date, market_days=50)
 
         case Periods.D90:
-            end_date = date.today()
+            end_date = from_date
             begin_date = _calculate_begin_date(end_date=end_date, market_days=90)
 
         case Periods.YTD:
-            begin_date = date.today().replace(month=1, day=1)
-            end_date = date.today()
+            begin_date = from_date.replace(month=1, day=1)
+            end_date = to_date
 
         case Periods.YR1:
-            begin_date = date.today().replace(year=date.today().year - 1)
-            end_date = date.today()
+            begin_date = from_date.replace(year=date.today().year - 1)
+            end_date = to_date
 
         case Periods.ALL:
             begin_date = date(year=1960, month=1, day=1)  # earliest possible date
-            end_date = date.today()
+            end_date = to_date
 
         case Periods.CUS:
             begin_date = from_date
