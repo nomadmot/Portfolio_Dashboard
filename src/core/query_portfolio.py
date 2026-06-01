@@ -78,7 +78,7 @@ def get_balance_history(account_id: int,
                  "ascending = %s"),
                  account_id, begin_date, end_date, ascending,
                  )
-    
+
     # Select the required fields.
     select_sql = f"""
         SELECT date, balance FROM daily_balances 
