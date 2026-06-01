@@ -22,7 +22,7 @@ NOTE: This is very much a work in progress. I am working to improve data acquisi
 
 ![Manage Daily Balances](assets/manage_bal.png)
 
-![Detail Performance Analysis](assets/manage_bal.png)
+![Detail Performance Analysis](assets/det_perf_anly.png)
 
 ---
 
