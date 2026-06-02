@@ -42,7 +42,7 @@ def _database_engine():
         sql_attach = f"""
                     LOAD ducklake;
                     ATTACH '{catalog_uri}'
-                    AS duck_puddle (DATA_PATH '{duck_puddle_path}');
+                    AS duck_puddle (DATA_PATH '{duck_puddle_path}', OVERRIDE_DATA_PATH true);
                     USE duck_puddle;
                     """
         con = duckdb.execute(sql_attach)
