@@ -2,14 +2,11 @@ services:
   PortfolioDashboard:
     image: docker.io/nomadmot/portfolio-dashboard:latest
     environment:
-      - DATABASE_URI=sqlite://///home/appuser/investorlab/DATA/portfolio.db
+      - DATABASE_URI=ducklake:/home/appuser/investorlab/DUCK_PUDDLE/portfolio.duckdb
       - DUCK_PUDDLE=/home/appuser/investorlab/DUCK_PUDDLE
       - LOGLEVEL_APPLICATION=INFO
       - LOGLEVEL_STREAMLIT=WARN
-      - LOGLEVEL_SQLALCHEMY=WARN
       - YFINANCE_DEBUG=FALSE
-      - SQLALCHEMY_ECHO=FALSE
-      - SQLALCHEMY_ECHO_POOL=FALSE
     ports:
       - target: 8080
         published: "8080"
