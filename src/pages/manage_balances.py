@@ -8,7 +8,7 @@ from pathlib import Path
 
 # import 3rd party libraries
 import streamlit as st
-import sqlalchemy.exc
+import duckdb
 
 # local imports
 from core import (
@@ -102,15 +102,15 @@ if update_record:
                                             stat.WARNING,
                                             str(e),
                                             )
-        except sqlalchemy.exc.IntegrityError as e:
+        except duckdb.ConstraintException as e:
             status_message.set_status_message(
                                             stat.WARNING,
                                             "The balance for this date already exists",
                                             )
-        except sqlalchemy.exc.SQLAlchemyError as e:
+        except duckdb.DatabaseError as e:
             status_message.set_status_message(
                                             stat.ERROR,
-                                            f"Unexpected SQL error: {str(e)}",
+                                            f"Unexpected DuckDB error: {str(e)}",
                                             )
         else:
             # if the update is successful, display a success message and refresh the dataframe
@@ -134,10 +134,10 @@ if delete_record:
                                         stat.WARNING,
                                         str(e),
                                         )
-        except sqlalchemy.exc.SQLAlchemyError as e:
+        except duckdb.DatabaseError as e:
             status_message.set_status_message(
                                         stat.ERROR,
-                                        f"Unexpected SQL error: {str(e)}",
+                                        f"Unexpected DuckDB error: {str(e)}",
                                         )
         else:
             # if the update is successful, display a success message
