@@ -14,3 +14,4 @@ docker/build_test.sh
 docker/compose-test.yaml
 **/*HOLD*
 cliff.toml
+opencode.json
