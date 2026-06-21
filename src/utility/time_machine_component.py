@@ -89,6 +89,68 @@ def end_date_picker_callback(key: str, instance):
     # update the period_selected widget to "Custom"
     instance.period_selected = Periods.CUS
 
+def decrement_date_callback(instance):
+    """
+    responds to the on_click event for the decrement button
+    decrements the end_date by the specified number of days
+    also updates the period_selected property to "Custom"
+
+    Arguments:
+        instance -- the TimeMachineComponent instance
+    """
+    # log entry into the function
+    _loggerlogger.debug("In function decrement_date_callback")
+    
+    # get the increment value from session state
+    increment_days = st.session_state.get(instance._increment_days_key, 1)
+    
+    # calculate the new end date
+    from datetime import timedelta
+    new_end_date = instance.end_date - timedelta(days=increment_days)
+    
+    # find the previous trading day if needed
+    from .market_calendar import market_is_open
+    while not market_is_open(new_end_date):
+        new_end_date -= timedelta(days=1)
+    
+    # update the end_date property
+    instance.end_date = new_end_date
+    _loggerlogger.debug("end date decremented to %s", instance.end_date)
+    
+    # update the period_selected widget to "Custom"
+    instance.period_selected = Periods.CUS
+
+def increment_date_callback(instance):
+    """
+    responds to the on_click event for the increment button
+    increments the end_date by the specified number of days
+    also updates the period_selected property to "Custom"
+
+    Arguments:
+        instance -- the TimeMachineComponent instance
+    """
+    # log entry into the function
+    _loggerlogger.debug("In function increment_date_callback")
+    
+    # get the increment value from session state
+    increment_days = st.session_state.get(instance._increment_days_key, 1)
+    
+    # calculate the new end date
+    from datetime import timedelta
+    new_end_date = instance.end_date + timedelta(days=increment_days)
+    
+    # find the next trading day if needed
+    from .market_calendar import market_is_open
+    while not market_is_open(new_end_date):
+        new_end_date += timedelta(days=1)
+    
+    # update the end_date property
+    instance.end_date = new_end_date
+    _loggerlogger.debug("end date incremented to %s", instance.end_date)
+    
+    # update the period_selected widget to "Custom"
+    instance.period_selected = Periods.CUS
+
 
 class TimeMachineComponent:
     """
@@ -118,6 +180,20 @@ class TimeMachineComponent:
         if value != Periods.CUS:
             # calculate the dates for the selected option and update the instance properties
             self.begin_date, self.end_date = get_period_dates(value, self.end_date)
+    
+    def _on_decrement(self):
+        """
+        Callback for the decrement button
+        """
+        _loggerlogger.debug("In _on_decrement callback")
+        decrement_date_callback(self)
+    
+    def _on_increment(self):
+        """
+        Callback for the increment button
+        """
+        _loggerlogger.debug("In _on_increment callback")
+        increment_date_callback(self)
 
     @property
     def begin_date(self) -> date:
@@ -157,22 +233,23 @@ class TimeMachineComponent:
         # update the end date picker to reflect the new date
         st.session_state[self._end_date_picker_key] = value
 
-    class _TimeMachineComponentLayout():
+class _TimeMachineComponentLayout():
+    """
+    Layout the widgets for the time machine component
+    """
+    def __init__(self, parent: DeltaGenerator):
         """
-        Layout the widgets for the time machine component
-        """
-        def __init__(self, parent: DeltaGenerator):
-            """
-            Initialize the time machine component layout
+        Initialize the time machine component layout
 
-            Arguments:
-                parent -- The parent container for the time machine component widgets
-            """
-            #self._parent_container = parent
-            with parent:
-                self.period_selector = st.empty()
-                self.begin_date_picker = st.empty()
-                self.end_date_picker = st.empty()
+        Arguments:
+            parent -- The parent container for the time machine component widgets
+        """
+        #self._parent_container = parent
+        with parent:
+            self.period_selector = st.empty()
+            self.begin_date_picker = st.empty()
+            self.end_date_picker = st.empty()
+            self.increment_controls = st.empty()
 
     def __init__(self, component_key: str, period: Periods, end_date: date|None):
         """
@@ -190,6 +267,11 @@ class TimeMachineComponent:
         self._select_period_key = component_key + _SELECT_PERIOD_KEY
         self._begin_date_picker_key = component_key + _BEGIN_DATE_PICKER_KEY
         self._end_date_picker_key = component_key + _END_DATE_PICKER_KEY
+        
+        # initialize increment controls keys
+        self._decrement_button_key = component_key + "_decrement_button"
+        self._increment_days_key = component_key + "_increment_days"
+        self._increment_button_key = component_key + "_increment_button"
 
         # initialize the period_selected and end_date to the provided value
         # NOTE: this will also calculate the begin date for the selected period
@@ -268,8 +350,8 @@ class TimeMachineComponent:
 
         # create the layout box to hold the component
         self._component_layout = TimeMachineComponent._TimeMachineComponentLayout(
-                                                                st.container(border=True)
-                                                                )
+                                                                 st.container(border=True)
+                                                                 )
 
         # render the period selector widget
         with self._component_layout.period_selector:
@@ -286,6 +368,17 @@ class TimeMachineComponent:
 
         # update the date picker widgets with current data
         self.update_date_pickers(self._begin_date, self._end_date)
+        
+        # render the increment/decrement controls
+        with self._component_layout.increment_controls:
+            cols = st.columns([1, 2, 1], gap="small")
+            with cols[0]:
+                st.button("←", icon="fa-solid fa-chevron-left", key=self._decrement_button_key, on_click=self._on_decrement)
+            with cols[1]:
+                increment_days = st.number_input("Days", min_value=1, value=1, key=self._increment_days_key)
+                st.session_state[self._increment_days_key] = increment_days
+            with cols[2]:
+                st.button("→", icon="fa-solid fa-chevron-right", key=self._increment_button_key, on_click=self._on_increment)
 
         # log exit from the function
         _loggerlogger.debug("Exiting TimeMachineComponent render method")
