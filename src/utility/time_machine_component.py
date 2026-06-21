@@ -370,7 +370,7 @@ class TimeMachineComponent:
         with self._component_layout.increment_controls:
             cols = st.columns([1, 2, 1], gap="small")
             with cols[0]:
-                st.button("", icon="fa-solid fa-chevron-left",
+                st.button("", icon="⬅",
                           key=self._decrement_button_key,
                           on_click=self._on_decrement
                           )
@@ -381,10 +381,10 @@ class TimeMachineComponent:
                                                  key=self._increment_days_key)
                 st.session_state[self._increment_days_key] = increment_days
             with cols[2]:
-                st.button("", icon="fa-solid fa-chevron-right",
+                st.button("", icon="⬅",
                           key=self._increment_button_key,
-                            on_click=self._on_increment
-                            )
+                          on_click=self._on_increment
+                          )
 
         # log exit from the function
         _loggerlogger.debug("Exiting TimeMachineComponent render method")
