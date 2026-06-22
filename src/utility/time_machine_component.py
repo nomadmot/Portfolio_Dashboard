@@ -94,7 +94,6 @@ def decrement_date_callback(instance):
     """
     responds to the on_click event for the decrement button
     decrements the end_date by the specified number of days
-    also updates the period_selected property to "Custom"
 
     Arguments:
         instance -- the TimeMachineComponent instance
@@ -116,14 +115,10 @@ def decrement_date_callback(instance):
     instance.end_date = new_end_date
     _loggerlogger.debug("end date decremented to %s", instance.end_date)
 
-    # update the period_selected widget to "Custom"
-    instance.period_selected = Periods.CUS
-
 def increment_date_callback(instance):
     """
     responds to the on_click event for the increment button
     increments the end_date by the specified number of days
-    also updates the period_selected property to "Custom"
 
     Arguments:
         instance -- the TimeMachineComponent instance
@@ -144,10 +139,6 @@ def increment_date_callback(instance):
     # update the end_date property
     instance.end_date = new_end_date
     _loggerlogger.debug("end date incremented to %s", instance.end_date)
-
-    # update the period_selected widget to "Custom"
-    instance.period_selected = Periods.CUS
-
 
 class TimeMachineComponent:
     """
@@ -370,18 +361,18 @@ class TimeMachineComponent:
         with self._component_layout.increment_controls:
             cols = st.columns([1, 2, 1], gap="small")
             with cols[0]:
-                st.button("", icon="⬅",
+                st.button("", icon="◀️",
                           key=self._decrement_button_key,
                           on_click=self._on_decrement
                           )
             with cols[1]:
-                increment_days = st.number_input("Days",
-                                                 min_value=1,
-                                                 value=1,
-                                                 key=self._increment_days_key)
-                st.session_state[self._increment_days_key] = increment_days
+                st.number_input("Days",
+                                min_value=1,
+                                value=1,
+                                key=self._increment_days_key
+                                )
             with cols[2]:
-                st.button("", icon="⬅",
+                st.button("", icon="▶️",
                           key=self._increment_button_key,
                           on_click=self._on_increment
                           )
