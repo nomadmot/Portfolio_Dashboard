@@ -29,7 +29,7 @@ _END_DATE_PICKER_KEY = "_time_machine_end_date_picker"
 
 
 # Callback functions for Streamlit widgets
-def period_select_callback(key: str, instance):
+def _period_select_callback(key: str, instance):
     """
     responds to the on_change event for the _select_period selectbox
     calculates the dates for th selected option and updates the
@@ -51,7 +51,7 @@ def period_select_callback(key: str, instance):
     _logger.debug("period selected is: %s", instance.period_selected)
 
 
-def begin_date_picker_callback(key: str, instance):
+def _begin_date_picker_callback(key: str, instance):
     """
     responds to the on_change event for the _begin_date_picker date_input
     updates the begin_date property
@@ -71,7 +71,7 @@ def begin_date_picker_callback(key: str, instance):
     instance.period_selected = Periods.CUS
 
 
-def end_date_picker_callback(key: str, instance):
+def _end_date_picker_callback(key: str, instance):
     """
     responds to the on_change event for the _begin_date_picker date_input
     updates the begin_date property
@@ -426,7 +426,7 @@ class TimeMachineComponent:
             st.date_input(
                         "Begin Date",
                         value=begin_date,
-                        on_change=begin_date_picker_callback,
+                        on_change=_begin_date_picker_callback,
                         args=(self._begin_date_picker_key, self),
                         key=self._begin_date_picker_key
                     )
@@ -434,7 +434,7 @@ class TimeMachineComponent:
             st.date_input(
                         "End Date",
                         value=end_date,
-                        on_change=end_date_picker_callback,
+                        on_change=_end_date_picker_callback,
                         args=(self._end_date_picker_key, self),
                         key=self._end_date_picker_key
                         )
@@ -460,7 +460,7 @@ class TimeMachineComponent:
                 format_func=Periods.get_label,
                 placeholder="Select Period",
                 index=Periods.get_periods().index(self.period_selected),
-                on_change=period_select_callback,
+                on_change=_period_select_callback,
                 args=(self._select_period_key, self),
                 key=self._select_period_key
             )
