@@ -141,6 +141,23 @@ def _decrement_date_callback(_, instance):
             begin_date, _ = get_period_dates(instance.period_selected, to_date=instance.end_date)
             instance.begin_date = begin_date
 
+def _increment_days_callback(key: str, instance):
+    """
+    responds to the on_change event for the increment_days number_input
+    updates the increment_days property
+    
+    Arguments:
+        key -- the key of the increment_days input field
+        instance -- the TimeMachineComponent instance
+    """
+    # log entry into the function
+    _logger.debug("In function increment_days_callback with key=%s", key)
+
+    # update the increment_days property
+    instance.increment_days = st.session_state[key]
+    _logger.debug("increment_days updated to %s", instance.increment_days)
+
+
 def _increment_date_callback(_, instance):
     """
     responds to the on_click event for the increment button
@@ -327,6 +344,25 @@ class TimeMachineComponent:
         # update the end date picker to reflect the new date
         st.session_state[self._end_date_picker_key] = value
 
+    @property
+    def increment_days(self) -> int:
+        """
+        Returns the value of the increment days input field
+        """
+        _logger.debug("In increment_days getter for key=%s, returning increment_days=%s",
+                        self._component_key, st.session_state.get(self._increment_days_key, 1))
+        return st.session_state.get(self._increment_days_key, 1)
+
+    @increment_days.setter
+    def increment_days(self, value: int):
+        """
+        Sets the value of the increment days input field
+        """
+        _logger.debug("In increment_days setter for key=%s, setting increment_days to %s",
+                        self._component_key, value)
+        # update the instance variable
+        st.session_state[self._increment_days_key] = value
+
     class _TimeMachineComponentLayout():
         """
         Layout the widgets for the time machine component
@@ -475,7 +511,9 @@ class TimeMachineComponent:
                 st.number_input("Days",
                                 min_value=1,
                                 value=1,
-                                key=self._increment_days_key
+                                key=self._increment_days_key,
+                                on_change=_increment_days_callback,
+                                args=(self._increment_days_key, self)
                                 )
             with cols[2]:
                 st.button("", icon="▶️",
