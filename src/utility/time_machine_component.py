@@ -289,20 +289,6 @@ class TimeMachineComponent:
             # calculate the dates for the selected option and update the instance properties
             self.begin_date, self.end_date = get_period_dates(value, self.end_date)
 
-    # def _on_decrement(self):
-    #     """
-    #     Callback for the decrement button
-    #     """
-    #     _logger.debug("In _on_decrement callback")
-    #     decrement_date_callback(self)
-
-    # def _on_increment(self):
-    #     """
-    #     Callback for the increment button
-    #     """
-    #     _logger.debug("In _on_increment callback")
-    #     increment_date_callback(self)
-
     @property
     def begin_date(self) -> date:
         """
@@ -352,7 +338,6 @@ class TimeMachineComponent:
             Arguments:
                 parent -- The parent container for the time machine component widgets
             """
-            #self._parent_container = parent
             with parent:
                 self.period_selector = st.empty()
                 self.begin_date_picker = st.empty()
