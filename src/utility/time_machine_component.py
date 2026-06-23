@@ -109,11 +109,8 @@ def _decrement_date_callback(_, instance):
     # log entry into the function
     _logger.debug("In function decrement_date_callback")
 
-    # get the increment value from session state
-    increment_days = st.session_state.get(_INCREMENT_DAYS_KEY, 1)
-
     # calculate the new end date
-    new_end_date = instance.end_date - timedelta(days=increment_days)
+    new_end_date = instance.end_date - timedelta(days=instance.increment_days)
 
     # find the previous trading day if needed
     while not market_is_open(new_end_date):
@@ -172,7 +169,7 @@ def _increment_date_callback(_, instance):
     _logger.debug("In function increment_date_callback")
 
     # get the increment value from session state
-    increment_days = st.session_state.get(_INCREMENT_DAYS_KEY, 1)
+    #increment_days = st.session_state.get(_INCREMENT_DAYS_KEY, 1)
 
     # check if period is Custom (CUS) - maintain trading day count
     if instance.period_selected == Periods.CUS:
@@ -180,7 +177,7 @@ def _increment_date_callback(_, instance):
         trading_days = _count_trading_days(instance.begin_date, instance.end_date)
 
         # calculate the new end date
-        new_end_date = instance.end_date + timedelta(days=increment_days)
+        new_end_date = instance.end_date + timedelta(days=instance.increment_days)
 
         # find the next trading day if needed
         while not market_is_open(new_end_date):
@@ -194,7 +191,7 @@ def _increment_date_callback(_, instance):
         instance.begin_date = _calculate_begin_date(instance.end_date, trading_days)
     else:
         # calculate the new end date
-        new_end_date = instance.end_date + timedelta(days=increment_days)
+        new_end_date = instance.end_date + timedelta(days=instance.increment_days)
 
         # find the next trading day if needed
         while not market_is_open(new_end_date):
