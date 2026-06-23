@@ -26,7 +26,9 @@ _COMPONENT_INSTANCES = {}
 _SELECT_PERIOD_KEY = "_time_machine_select_period"
 _BEGIN_DATE_PICKER_KEY = "_time_machine_begin_date_picker"
 _END_DATE_PICKER_KEY = "_time_machine_end_date_picker"
-
+_DECREMENT_BUTTON_KEY = "_time_machine_decrement_button"
+_INCREMENT_DAYS_KEY = "_time_machine_increment_days"
+_INCREMENT_BUTTON_KEY = "_time_machine_increment_button"
 
 # Callback functions for Streamlit widgets
 def _period_select_callback(key: str, instance):
@@ -90,6 +92,111 @@ def _end_date_picker_callback(key: str, instance):
     # update the period_selected widget to "Custom"
     instance.period_selected = Periods.CUS
 
+
+def _decrement_date_callback(_, instance):
+    """
+    responds to the on_click event for the decrement button
+    decrements the end_date by the specified number of days
+    also updates begin_date based on period_selected
+
+    Arguments:
+        key -- the key of the decrement button (not used)
+        instance -- the TimeMachineComponent instance
+
+    Returns:
+        void
+    """
+    # log entry into the function
+    _logger.debug("In function decrement_date_callback")
+
+    # get the increment value from session state
+    increment_days = st.session_state.get(_INCREMENT_DAYS_KEY, 1)
+
+    # calculate the new end date
+    new_end_date = instance.end_date - timedelta(days=increment_days)
+
+    # find the previous trading day if needed
+    while not market_is_open(new_end_date):
+        new_end_date -= timedelta(days=1)
+
+    # update the end_date property
+    instance.end_date = new_end_date
+    _logger.debug("end date decremented to %s", instance.end_date)
+
+    # check if period is Custom (CUS) - maintain trading day count
+    if instance.period_selected == Periods.CUS:
+        # calculate the number of trading days in current period
+        trading_days = _count_trading_days(instance.begin_date, instance.end_date)
+
+        # recalculate begin_date based on the same number of trading days
+        instance.begin_date = _calculate_begin_date(instance.end_date, trading_days)
+    else:
+        # recalculate begin_date to maintain period length
+        market_days = _get_market_days_for_period(instance.period_selected)
+        if market_days is not None:
+            # recalculate begin_date based on the new end_date and period
+            instance.begin_date = _calculate_begin_date(instance.end_date, market_days)
+        else:
+            # for periods like YTD, YR1, ALL - use get_period_dates
+            begin_date, _ = get_period_dates(instance.period_selected, to_date=instance.end_date)
+            instance.begin_date = begin_date
+
+def _increment_date_callback(_, instance):
+    """
+    responds to the on_click event for the increment button
+    increments the end_date by the specified number of days
+    also updates begin_date based on period_selected
+
+    Arguments:
+        key -- the key of the increment button (not used)
+        instance -- the TimeMachineComponent instance
+    """
+    # log entry into the function
+    _logger.debug("In function increment_date_callback")
+
+    # get the increment value from session state
+    increment_days = st.session_state.get(_INCREMENT_DAYS_KEY, 1)
+
+    # check if period is Custom (CUS) - maintain trading day count
+    if instance.period_selected == Periods.CUS:
+        # calculate the number of trading days in current period
+        trading_days = _count_trading_days(instance.begin_date, instance.end_date)
+
+        # calculate the new end date
+        new_end_date = instance.end_date + timedelta(days=increment_days)
+
+        # find the next trading day if needed
+        while not market_is_open(new_end_date):
+            new_end_date += timedelta(days=1)
+
+        # update the end_date property
+        instance.end_date = new_end_date
+        _logger.debug("end date incremented to %s", instance.end_date)
+
+        # recalculate begin_date based on the same number of trading days
+        instance.begin_date = _calculate_begin_date(instance.end_date, trading_days)
+    else:
+        # calculate the new end date
+        new_end_date = instance.end_date + timedelta(days=increment_days)
+
+        # find the next trading day if needed
+        while not market_is_open(new_end_date):
+            new_end_date += timedelta(days=1)
+
+        # update the end_date property
+        instance.end_date = new_end_date
+        _logger.debug("end date incremented to %s", instance.end_date)
+
+        # recalculate begin_date to maintain period length
+        market_days = _get_market_days_for_period(instance.period_selected)
+        if market_days is not None:
+            # recalculate begin_date based on the new end_date and period
+            instance.begin_date = _calculate_begin_date(instance.end_date, market_days)
+        else:
+            # for periods like YTD, YR1, ALL - use get_period_dates
+            begin_date, _ = get_period_dates(instance.period_selected, to_date=instance.end_date)
+            instance.begin_date = begin_date
+
 def _get_market_days_for_period(period: Periods) -> int | None:
     """
     Get the number of market days for a given period.
@@ -152,104 +259,6 @@ def _count_trading_days(start_date: date, end_date: date) -> int:
         current_date += timedelta(days=1)
     return count
 
-def decrement_date_callback(instance):
-    """
-    responds to the on_click event for the decrement button
-    decrements the end_date by the specified number of days
-    also updates begin_date based on period_selected
-
-    Arguments:
-        instance -- the TimeMachineComponent instance
-    """
-    # log entry into the function
-    _logger.debug("In function decrement_date_callback")
-
-    # get the increment value from session state
-    increment_days = st.session_state.get(instance._increment_days_key, 1)
-
-    # calculate the new end date
-    new_end_date = instance.end_date - timedelta(days=increment_days)
-
-    # find the previous trading day if needed
-    while not market_is_open(new_end_date):
-        new_end_date -= timedelta(days=1)
-
-    # update the end_date property
-    instance.end_date = new_end_date
-    _logger.debug("end date decremented to %s", instance.end_date)
-
-    # check if period is Custom (CUS) - maintain trading day count
-    if instance.period_selected == Periods.CUS:
-        # calculate the number of trading days in current period
-        trading_days = _count_trading_days(instance.begin_date, instance.end_date)
-
-        # recalculate begin_date based on the same number of trading days
-        instance.begin_date = _calculate_begin_date(instance.end_date, trading_days)
-    else:
-        # recalculate begin_date to maintain period length
-        market_days = _get_market_days_for_period(instance.period_selected)
-        if market_days is not None:
-            # recalculate begin_date based on the new end_date and period
-            instance.begin_date = _calculate_begin_date(instance.end_date, market_days)
-        else:
-            # for periods like YTD, YR1, ALL - use get_period_dates
-            begin_date, _ = get_period_dates(instance.period_selected, to_date=instance.end_date)
-            instance.begin_date = begin_date
-
-def increment_date_callback(instance):
-    """
-    responds to the on_click event for the increment button
-    increments the end_date by the specified number of days
-    also updates begin_date based on period_selected
-
-    Arguments:
-        instance -- the TimeMachineComponent instance
-    """
-    # log entry into the function
-    _logger.debug("In function increment_date_callback")
-
-    # get the increment value from session state
-    increment_days = st.session_state.get(instance._increment_days_key, 1)
-
-    # check if period is Custom (CUS) - maintain trading day count
-    if instance.period_selected == Periods.CUS:
-        # calculate the number of trading days in current period
-        trading_days = _count_trading_days(instance.begin_date, instance.end_date)
-
-        # calculate the new end date
-        new_end_date = instance.end_date + timedelta(days=increment_days)
-
-        # find the next trading day if needed
-        while not market_is_open(new_end_date):
-            new_end_date += timedelta(days=1)
-
-        # update the end_date property
-        instance.end_date = new_end_date
-        _logger.debug("end date incremented to %s", instance.end_date)
-
-        # recalculate begin_date based on the same number of trading days
-        instance.begin_date = _calculate_begin_date(instance.end_date, trading_days)
-    else:
-        # calculate the new end date
-        new_end_date = instance.end_date + timedelta(days=increment_days)
-
-        # find the next trading day if needed
-        while not market_is_open(new_end_date):
-            new_end_date += timedelta(days=1)
-
-        # update the end_date property
-        instance.end_date = new_end_date
-        _logger.debug("end date incremented to %s", instance.end_date)
-
-        # recalculate begin_date to maintain period length
-        market_days = _get_market_days_for_period(instance.period_selected)
-        if market_days is not None:
-            # recalculate begin_date based on the new end_date and period
-            instance.begin_date = _calculate_begin_date(instance.end_date, market_days)
-        else:
-            # for periods like YTD, YR1, ALL - use get_period_dates
-            begin_date, _ = get_period_dates(instance.period_selected, to_date=instance.end_date)
-            instance.begin_date = begin_date
 
 class TimeMachineComponent:
     """
@@ -280,19 +289,19 @@ class TimeMachineComponent:
             # calculate the dates for the selected option and update the instance properties
             self.begin_date, self.end_date = get_period_dates(value, self.end_date)
 
-    def _on_decrement(self):
-        """
-        Callback for the decrement button
-        """
-        _logger.debug("In _on_decrement callback")
-        decrement_date_callback(self)
+    # def _on_decrement(self):
+    #     """
+    #     Callback for the decrement button
+    #     """
+    #     _logger.debug("In _on_decrement callback")
+    #     decrement_date_callback(self)
 
-    def _on_increment(self):
-        """
-        Callback for the increment button
-        """
-        _logger.debug("In _on_increment callback")
-        increment_date_callback(self)
+    # def _on_increment(self):
+    #     """
+    #     Callback for the increment button
+    #     """
+    #     _logger.debug("In _on_increment callback")
+    #     increment_date_callback(self)
 
     @property
     def begin_date(self) -> date:
@@ -368,9 +377,9 @@ class TimeMachineComponent:
         self._end_date_picker_key = component_key + _END_DATE_PICKER_KEY
 
         # initialize increment controls keys
-        self._decrement_button_key = component_key + "_decrement_button"
-        self._increment_days_key = component_key + "_increment_days"
-        self._increment_button_key = component_key + "_increment_button"
+        self._decrement_button_key = component_key + _DECREMENT_BUTTON_KEY
+        self._increment_days_key = component_key + _INCREMENT_DAYS_KEY
+        self._increment_button_key = component_key + _INCREMENT_BUTTON_KEY
 
         # initialize the period_selected and end_date to the provided value
         # NOTE: this will also calculate the begin date for the selected period
@@ -474,7 +483,8 @@ class TimeMachineComponent:
             with cols[0]:
                 st.button("", icon="◀️",
                           key=self._decrement_button_key,
-                          on_click=self._on_decrement
+                          on_click=_decrement_date_callback,
+                          args=(self._decrement_button_key, self)
                           )
             with cols[1]:
                 st.number_input("Days",
@@ -485,7 +495,8 @@ class TimeMachineComponent:
             with cols[2]:
                 st.button("", icon="▶️",
                           key=self._increment_button_key,
-                          on_click=self._on_increment
+                          on_click=_increment_date_callback,
+                          args=(self._increment_button_key, self)
                           )
 
         # log exit from the function
