@@ -312,7 +312,7 @@ class TimeMachineComponent:
                 self.period_selector = st.empty()
                 self.begin_date_picker = st.empty()
                 self.end_date_picker = st.empty()
-                self.increment_controls = st.empty()
+                self.increment_controls = st.container(border=True)
 
     def __init__(self, component_key: str, period: Periods, end_date: date|None):
         """
@@ -436,25 +436,34 @@ class TimeMachineComponent:
         with self._component_layout.increment_controls:
             cols = st.columns([1, 2, 1], gap="small")
             with cols[0]:
-                st.button("", icon="◀️",
-                          key=self._decrement_button_key,
-                          on_click=_decrement_date_callback,
-                          args=(self._decrement_button_key, self)
-                          )
+                st.button("", icon=":material/arrow_back_ios:",
+                        key=self._decrement_button_key,
+                        on_click=_decrement_date_callback,
+                        args=(self._decrement_button_key, self)
+                        )
             with cols[1]:
-                st.number_input("Days",
-                                min_value=1,
-                                value=1,
-                                key=self._increment_days_key,
-                                on_change=_increment_days_callback,
-                                args=(self._increment_days_key, self)
-                                )
+                # with st.container(horizontal=True,
+                #                   horizontal_alignment="center"):
+                with st.container():
+                    # with st.container(height=20,vertical_alignment="bottom"):
+                    st.slider("",
+                            label_visibility="collapsed",
+                            min_value=1,
+                            max_value=180,
+                            value=1,
+                            key=self._increment_days_key,
+                            on_change=_increment_days_callback,
+                            args=(self._increment_days_key, self)
+                            )
+                    st.html(
+                        "<p style='text-align: center; padding: 0px;margin: 0px;'>Days +/-</p>"
+                        )
             with cols[2]:
-                st.button("", icon="▶️",
-                          key=self._increment_button_key,
-                          on_click=_increment_date_callback,
-                          args=(self._increment_button_key, self)
-                          )
+                st.button("", icon=":material/arrow_forward_ios:",
+                        key=self._increment_button_key,
+                        on_click=_increment_date_callback,
+                        args=(self._increment_button_key, self)
+                        )
 
         # log exit from the function
         _logger.debug("Exiting TimeMachineComponent render method")
