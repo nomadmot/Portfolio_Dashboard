@@ -11,8 +11,8 @@ import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
 # Import local modules
-from . import Periods, get_period_dates
-from . import market_is_open, get_market_days_for_period, calculate_begin_date, count_trading_days
+from . import Periods, get_period_dates, get_market_days_for_period
+from . import market_is_open, calculate_begin_date, count_trading_days
 from . import get_logger
 
 # mark entry into the module
