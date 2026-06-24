@@ -7,7 +7,6 @@ from .database import DATABASE_CONNECTION
 from .market_calendar import (
     get_closed_count,
     market_is_open,
-    get_market_days_for_period,
     calculate_begin_date,
     count_trading_days,
 )
@@ -15,6 +14,7 @@ from .periods_enum import Periods
 from .periods import (
     get_period_dates,
     get_period,
+    get_market_days_for_period,
 )
 from .stock_info import (
     get_security_info,
@@ -38,6 +38,7 @@ __all__ = [
     "Periods",
     "get_period_dates",
     "get_period",
+    "get_market_days_for_period",
     "YfPeriods",
     "get_security_info",
     "get_basic_quote",
@@ -49,7 +50,6 @@ __all__ = [
     "show_system_info",
     "get_client_ip",
     "get_memory_size",
-    "get_market_days_for_period",
     "calculate_begin_date",
     "count_trading_days",
 ]

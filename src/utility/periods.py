@@ -131,3 +131,24 @@ def get_period(period: str) -> Periods:
         ret = Periods.D30
 
     return ret
+
+def get_market_days_for_period(period: Periods) -> int | None:
+    """
+    Get the number of market days for a given period.
+    
+    Arguments:
+        period -- the Periods enum value
+        
+    Returns:
+        int | None: number of market days, or None for periods that don't use fixed market days
+    """
+    match period:
+        case Periods.D30:
+            return 30
+        case Periods.D50:
+            return 50
+        case Periods.D90:
+            return 90
+        case _:
+            # For YTD, YR1, ALL, NONE, CUS - return None
+            return None

@@ -9,7 +9,6 @@ from duckdb import sql
 
 # local application imports
 from config import SETTINGS
-from .periods_enum import Periods
 from . import get_logger
 
 # mark entry into the module
@@ -86,26 +85,6 @@ def market_is_open(check_date: date) -> bool:
     logger.debug("Exiting function market_is_open with is_open=%s", return_status)
     return return_status
 
-def get_market_days_for_period(period: Periods) -> int | None:
-    """
-    Get the number of market days for a given period.
-    
-    Arguments:
-        period -- the Periods enum value
-        
-    Returns:
-        int | None: number of market days, or None for periods that don't use fixed market days
-    """
-    match period:
-        case Periods.D30:
-            return 30
-        case Periods.D50:
-            return 50
-        case Periods.D90:
-            return 90
-        case _:
-            # For YTD, YR1, ALL, NONE, CUS - return None
-            return None
 
 def calculate_begin_date(end_date: date, market_days: int) -> date:
     """
