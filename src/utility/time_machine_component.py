@@ -168,9 +168,6 @@ def _increment_date_callback(_, instance):
     # log entry into the function
     _logger.debug("In function increment_date_callback")
 
-    # get the increment value from session state
-    #increment_days = st.session_state.get(_INCREMENT_DAYS_KEY, 1)
-
     # check if period is Custom (CUS) - maintain trading day count
     if instance.period_selected == Periods.CUS:
         # calculate the number of trading days in current period
@@ -442,8 +439,6 @@ class TimeMachineComponent:
                         args=(self._decrement_button_key, self)
                         )
             with cols[1]:
-                # with st.container(horizontal=True,
-                #                   horizontal_alignment="center"):
                 with st.container():
                     # with st.container(height=20,vertical_alignment="bottom"):
                     st.slider("",
