@@ -11,6 +11,7 @@ import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
 # Import local modules
+from config.settings import SETTINGS
 from . import Periods, get_period_dates, get_market_days_for_period
 from . import market_is_open, calculate_begin_date, count_trading_days
 from . import get_logger
@@ -444,7 +445,7 @@ class TimeMachineComponent:
                     st.slider("",
                             label_visibility="collapsed",
                             min_value=1,
-                            max_value=180,
+                            max_value=SETTINGS.defaults.max_time_machine_days,
                             value=1,
                             key=self._increment_days_key,
                             on_change=_increment_days_callback,

@@ -48,6 +48,9 @@ class AppDefaults(BaseModel):
     performance_summary_period: str
     # The default comparison symbol for the Performance Summary page
     performance_summary_symbols: list[str]
+    # Maximum days for the time machine component increment slider
+    # (default 180)
+    max_time_machine_days: int = 180
 
 class Settings(BaseSettings):
     """
