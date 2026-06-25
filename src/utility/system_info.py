@@ -10,6 +10,7 @@ import streamlit as st
 
 #local imports
 import __version__ as ver
+from config.settings import SETTINGS
 from . import get_logger
 
 # mark entry into the module
@@ -55,6 +56,9 @@ def show_system_info():
     st.write(f"Version: {ver.__version__}")
     st.write(f"Your client IP is: {get_client_ip()}")
     st.write(f"Current Memory Size: {get_memory_size()} blocks")
-    st.write("Session State Contents:")
+    st.subheader("Database")
+    st.write(f"Duck Puddle directory: {SETTINGS.duck_puddle}")
+    st.write(f"Duck Puddle URI: {SETTINGS.database_uri}")
+    st.subheader("Session State Contents:")
     for key, item in st.session_state.items():
         st.write(f"{key} - {item}")
