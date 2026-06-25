@@ -5,6 +5,9 @@ defaults:
   # default comparison symbols for the performance summary page
   # (first listed is default)
   performance_summary_symbols: [SPY, QQQ, FFTY, ARKK]
+  # maximum days for the time machine component increment slider
+  # (default 180)
+  max_time_machine_days: 180
 
 # set the log mode for the specified modules to debug
   debug: [
