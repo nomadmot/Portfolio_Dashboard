@@ -20,11 +20,10 @@ WORKDIR /home/appuser
 # Install the application code
 ADD --exclude=**/.settings --exclude=**/.streamlit --chown=appuser:appuser ../src .
 
-# Create the Python virtual environment
+# Create the Python virtual environment without dev tools
 ADD --chown=appuser:appuser ../uv.lock ../pyproject.toml ../run_app.sh ./
 RUN uv venv .venv
-RUN uv export > requirements.txt
-RUN uv pip install --requirements requirements.txt
+RUN uv sync --no-dev
 
 # Copy production configurations and scripts
 COPY --chown=appuser:appuser docker/files .
