@@ -16,9 +16,8 @@
 
 ## Environment Setup
 
-1. Create virtual environment: `uv venv`
-2. Install dependencies: `uv pip install .`
-3. Load environment variables from `src/.settings/.env` using `load-env.sh`
+- USE THE PYTHON ENVIRONMENT LOCATED AT ~/Github/Portfolio-Dashboard/.venv FOR ALL ACTIVITIES
+- DO NOT MODIFY THE EXISTING PYTHON ENVIRONMENT
 
 ## Testing
 
