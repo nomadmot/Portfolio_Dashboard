@@ -4,7 +4,6 @@
 
 - **Run the app**: `./run_app.sh` (activates venv and runs Streamlit)
 - **Build Docker image**: `./docker/build.sh`
-- **Load environment variables**: `source ./load-env.sh` (must be in src/.settings/)
 
 ## Architecture
 
@@ -16,8 +15,8 @@
 
 ## Environment Setup
 
-- USE THE PYTHON ENVIRONMENT LOCATED AT ~/Github/Portfolio-Dashboard/.venv FOR ALL ACTIVITIES
-- DO NOT MODIFY THE EXISTING PYTHON ENVIRONMENT
+- USE THE PYTHON ENVIRONMENT LOCATED AT /home/dev/Github/Portfolio-Dashboard/.venv FOR ALL ACTIVITIES
+- DO NOT MODIFY EXISTING PYTHON ENVIRONMENTS OR ADD ANY LIBRARIES
 
 ## Testing
 
