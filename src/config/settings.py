@@ -2,7 +2,6 @@
 Configuration settings for the application.
 """
 # import standard libraries
-import os
 from typing import Type, Tuple, ClassVar
 from enum import Enum
 from pathlib import Path
@@ -67,6 +66,7 @@ class Settings(BaseSettings):
     debug: list[str] = []
     database_uri: str = "sqlite://///path/to/your/database.db"
     duck_puddle: str = "path/to/your/duckdb/files"
+    yaml_config_path: str = ".settings/app_config.yml"
 
     defaults: AppDefaults = AppDefaults()
 
@@ -81,11 +81,11 @@ class Settings(BaseSettings):
         return value
 
     model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
-                                      yaml_file=Path(os.environ.get('YAML_CONFIG_PATH',".settings/app_config.yml")),
+                                      yaml_file=Path(yaml_config_path),
                                       yaml_file_encoding="utf-8",
                                       env_file='.settings/.env',
                                       env_file_encoding='utf-8',
-                                      extra="ignore",
+                                      extra='ignore',
                                       )
 
     @classmethod
@@ -108,6 +108,6 @@ class Settings(BaseSettings):
 
 SETTINGS = Settings()
 
-if __name__  == "__main__":
+if __name__ == "__main__":
     print(SETTINGS.model_dump())
     print(SETTINGS.debug)
