@@ -1,43 +1,29 @@
-'''
-exercise functions from core.periods module
-'''
-# import standard libraries
-import sys
-import logging
+import pytest
+import datetime
 
-# adjust path for app imports from src directory
-sys.path.append("src")
-
-# import application modules
-#pylint: disable=wrong-import-position
-from core import Periods, get_period_dates, get_period
-
-
-# Initialize logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-period_string = "D90"
-period_test = get_period(period_string)
-logger.info("get_period(%s) returns %s", period_string, period_test)
-
-# invalid period
-logger.info("Invalid test period returns %s", get_period("XXX"))
-
-begin_date, end_date = get_period_dates(Periods.D30)
-logger.info("D30 Period: begin_date=%s, end_date=%s", begin_date, end_date)
-
-begin_date, end_date = get_period_dates(Periods.D50)
-logger.info("D50 Period: begin_date=%s, end_date=%s", begin_date, end_date)
-
-begin_date, end_date = get_period_dates(Periods.D90)
-logger.info("D90 Period: begin_date=%s, end_date=%s", begin_date, end_date)
-
-begin_date, end_date = get_period_dates(Periods.YTD)
-logger.info("YTD Period: begin_date=%s, end_date=%s", begin_date, end_date)
-
-begin_date, end_date = get_period_dates(Periods.YR1)
-logger.info("YR1 Period: begin_date=%s, end_date=%s", begin_date, end_date)
-
-begin_date, end_date = get_period_dates(Periods.ALL)
-logger.info("ALL Period: begin_date=%s, end_date=%s", begin_date, end_date)
+from utility import Periods, get_period_dates, get_period
+def test_get_period():
+    assert get_period('D90') == Periods.D90
+    assert get_period('D50') == Periods.D50
+    assert get_period('YTD') == Periods.YTD
+    # invalid period defaults to D30
+    assert get_period('XXX') == Periods.D30
+def test_get_period_dates():
+    begin_date, end_date = get_period_dates(Periods.D30)
+    assert begin_date is not None
+    assert end_date == pytest.approx(datetime.date.today())
+    begin_date, end_date = get_period_dates(Periods.D50)
+    assert begin_date is not None
+    assert end_date == pytest.approx(datetime.date.today())
+    begin_date, end_date = get_period_dates(Periods.D90)
+    assert begin_date is not None
+    assert end_date == pytest.approx(datetime.date.today())
+    begin_date, end_date = get_period_dates(Periods.YTD)
+    assert begin_date is not None
+    assert end_date == pytest.approx(datetime.date.today())
+    begin_date, end_date = get_period_dates(Periods.YR1)
+    assert begin_date is not None
+    assert end_date == pytest.approx(datetime.date.today())
+    begin_date, end_date = get_period_dates(Periods.ALL)
+    assert begin_date is not None
+    assert end_date == pytest.approx(datetime.date.today())
