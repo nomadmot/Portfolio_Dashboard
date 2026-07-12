@@ -2,7 +2,7 @@
 Tests for the stock_info module
 """
 
-from core import (
+from utility import (
     get_security_info,
     get_basic_quote,
 )
