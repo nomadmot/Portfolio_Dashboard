@@ -20,7 +20,7 @@
 
 ## Testing
 
-- Test files are in `src/tests/` (not at root)
+- Test files are in `tests`
 - No CI/CD workflows configured
 
 ## Docker Notes
