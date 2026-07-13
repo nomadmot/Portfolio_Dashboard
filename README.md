@@ -203,7 +203,7 @@ If you’re interested in contributing to any of these features or fixes, check 
    - Install dependencies using:
 
      ```bash
-     uv install
+     uv sync --all-extras
      ```
 
 4. **Create a Feature Branch**

@@ -16,15 +16,13 @@ from .periods import (
     get_period,
     get_market_days_for_period,
 )
-from .stock_info import (
+from .stock_data import (
+    YfPeriods,
+    get_stock_history,
     get_security_info,
     get_basic_quote,
 )
 
-from .stock_data import (
-    YfPeriods,
-    get_stock_history,
-)
 from .status_message_component import get_status_message_component, StatusType
 from .autoupdate_multiselect_component import get_aumc_instance
 from .time_machine_component import get_time_machine_component
