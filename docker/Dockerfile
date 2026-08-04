@@ -2,7 +2,7 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 # install system dependencies
-RUN apt-get update && apt-get install -y nodejs sqlite3
+RUN apt-get update && apt-get install -y nodejs
 
 # Expose ports
 EXPOSE 8080
