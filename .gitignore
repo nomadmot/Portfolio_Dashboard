@@ -2,6 +2,7 @@
 __pycache__/
 .vscode/launch.json
 .DS_Store
+.venv
 images/Stock-Bull.png
 Portfolio-Dashboard/logs/portfolio_dashboard.log
 image_id
