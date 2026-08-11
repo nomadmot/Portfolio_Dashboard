@@ -108,6 +108,30 @@ def calculate_begin_date(end_date: date, market_days: int) -> date:
 
     return begin_date
 
+
+def calculate_end_date(begin_date: date, market_days: int) -> date:
+    """
+    calculate the end date given a begin date and number of market days
+    
+    Args:
+        begin_date (date): begin date
+        market_days (int): number of market days
+        
+    Returns:
+        date: calculated end date
+    """
+    count = 0
+    one_day = timedelta(days=1)
+    end_date = begin_date
+    # loop forwards from begin_date to find the end date
+    while count < market_days:
+        end_date = end_date + one_day
+        if market_is_open(end_date):
+            count += 1
+
+    return end_date
+
+
 def count_trading_days(start_date: date, end_date: date) -> int:
     """
     Count the number of trading days between two dates (inclusive)
@@ -142,3 +166,9 @@ if __name__ == "__main__":
     test_date=date(2025,7,24)
     is_open = market_is_open(test_date)
     print(f"Market is open on {test_date}: {is_open}")
+
+    # test calculate_end_date
+    begin_date = date(2024, 1, 1)
+    market_days = 5
+    end_date = calculate_end_date(begin_date, market_days)
+    print(f"End date for {begin_date} with {market_days} market days: {end_date}")

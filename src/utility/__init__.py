@@ -8,6 +8,7 @@ from .market_calendar import (
     get_closed_count,
     market_is_open,
     calculate_begin_date,
+    calculate_end_date,
     count_trading_days,
 )
 from .periods_enum import Periods
@@ -51,5 +52,6 @@ __all__ = [
     "get_client_ip",
     "get_memory_size",
     "calculate_begin_date",
+    "calculate_end_date",
     "count_trading_days",
 ]
