@@ -13,9 +13,11 @@ from .query_portfolio import (
     get_account,
     get_balance_history,
     get_last_balance_date,
+    get_first_balance_date,
     get_security_symbols,
     get_trades,
     get_last_trade_date,
+    get_first_trade_date,
     lookup_associated_symbols,
 )
 
@@ -25,8 +27,10 @@ __all__ = [
     "get_account",
     "get_balance_history",
     "get_last_balance_date",
+    "get_first_balance_date",
     "get_security_symbols",
     "get_trades",
     "get_last_trade_date",
+    "get_first_trade_date",
     "lookup_associated_symbols",
 ]
