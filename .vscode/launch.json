@@ -2,6 +2,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Debugger: Pytest",
+            "type": "debugpy",
+            "console": "integratedTerminal",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/src",
+            "module": "pytest",
+            "args": [ "${file}" ]
+        },
+        {
             "name": "Python Debugger: Current File",
             "type": "debugpy",
             "request": "launch",
@@ -16,12 +25,6 @@
             "cwd": "${workspaceFolder}/src",
             "module": "streamlit",
             "envFile": "${workspaceFolder}/.env",
-            // "env": {
-            //         "DATABASE_URL": "sqlite://///home/devuser/investorlab/DATA/portfolio.db",
-            //         "LOGLEVEL_STREAMLIT": "INFO",
-            //         "LOGLEVEL_SQLALCHEMY": "WARN",
-            //         "YFINANCE_DEBUG": "FALSE"
-            //     },
             "args": [
                 "run",
                 "app.py",

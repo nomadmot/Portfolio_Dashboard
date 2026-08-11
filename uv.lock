@@ -723,11 +723,15 @@ dependencies = [
     { name = "pandas" },
     { name = "plotly" },
     { name = "pydantic-settings" },
-    { name = "pytest" },
     { name = "pyyaml" },
     { name = "streamlit" },
-    { name = "watchdog" },
     { name = "yfinance" },
+]
+
+[package.optional-dependencies]
+test = [
+    { name = "pytest" },
+    { name = "watchdog" },
 ]
 
 [package.metadata]
@@ -737,12 +741,13 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.3.1" },
     { name = "plotly", specifier = ">=6.2.0" },
     { name = "pydantic-settings", specifier = ">=2.12.0" },
-    { name = "pytest", specifier = ">=9.0.3" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=9.0.3" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "streamlit", specifier = ">=1.48.1" },
-    { name = "watchdog", specifier = ">=6.0.0" },
+    { name = "watchdog", marker = "extra == 'test'", specifier = ">=6.0.0" },
     { name = "yfinance", specifier = ">=0.2.65" },
 ]
+provides-extras = ["test"]
 
 [[package]]
 name = "protobuf"

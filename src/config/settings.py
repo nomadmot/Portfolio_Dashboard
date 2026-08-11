@@ -8,7 +8,7 @@ from pathlib import Path
 import logging
 
 # import 3rd-party libraries
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from pydantic_settings import (
                                BaseSettings,
                                SettingsConfigDict,
@@ -45,9 +45,9 @@ class AppDefaults(BaseModel):
     Model for application default settings
     """
     # The default Period for the Performance Summary page
-    performance_summary_period: str
+    performance_summary_period: str = "D50"
     # The default comparison symbol for the Performance Summary page
-    performance_summary_symbols: list[str]
+    performance_summary_symbols: list[str] = ["SPY"]
     # Maximum days for the time machine component increment slider
     # (default 180)
     max_time_machine_days: int = 180
@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     """
     Use Pydantic BaseSettings to define application settings
     """
+
     loglevel_application: LogLevelEnum = LogLevelEnum.INFO
     loglevel_streamlit: LogLevelEnum = LogLevelEnum.WARN
     loglevel_sqlalchemy: LogLevelEnum = LogLevelEnum.WARN
@@ -65,15 +66,26 @@ class Settings(BaseSettings):
     debug: list[str] = []
     database_uri: str = "sqlite://///path/to/your/database.db"
     duck_puddle: str = "path/to/your/duckdb/files"
+    yaml_config_path: str = ".settings/app_config.yml"
 
-    defaults: AppDefaults
+    defaults: AppDefaults = AppDefaults()
+
+    @field_validator('loglevel_application', 'loglevel_streamlit')
+    @classmethod
+    def validate_log_level(cls, value):
+        '''
+            Validate log levels against LogLevelEnum for allowable values
+        '''
+        if value not in LogLevelEnum.__members__:
+            raise ValueError(f"Invalid log level: {value}")
+        return value
 
     model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
-                                      yaml_file=Path(".settings/app_config.yml"),
+                                      yaml_file=Path(yaml_config_path),
                                       yaml_file_encoding="utf-8",
                                       env_file='.settings/.env',
                                       env_file_encoding='utf-8',
-                                      extra="ignore",
+                                      extra='ignore',
                                       )
 
     @classmethod
@@ -94,8 +106,8 @@ class Settings(BaseSettings):
             file_secret_settings, # Values from secret files
         )
 
-SETTINGS = Settings() # pyright: ignore[reportCallIssue]
+SETTINGS = Settings()
 
-if __name__  == "__main__":
+if __name__ == "__main__":
     print(SETTINGS.model_dump())
     print(SETTINGS.debug)

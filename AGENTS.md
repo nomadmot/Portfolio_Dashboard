@@ -4,7 +4,6 @@
 
 - **Run the app**: `./run_app.sh` (activates venv and runs Streamlit)
 - **Build Docker image**: `./docker/build.sh`
-- **Load environment variables**: `source ./load-env.sh` (must be in src/.settings/)
 
 ## Architecture
 
@@ -16,13 +15,12 @@
 
 ## Environment Setup
 
-1. Create virtual environment: `uv venv`
-2. Install dependencies: `uv pip install .`
-3. Load environment variables from `src/.settings/.env` using `load-env.sh`
+- USE THE PYTHON ENVIRONMENT LOCATED AT /home/dev/Github/Portfolio-Dashboard/.venv FOR ALL ACTIVITIES
+- DO NOT MODIFY EXISTING PYTHON ENVIRONMENTS OR ADD ANY LIBRARIES
 
 ## Testing
 
-- Test files are in `src/tests/` (not at root)
+- Test files are in `tests`
 - No CI/CD workflows configured
 
 ## Docker Notes
