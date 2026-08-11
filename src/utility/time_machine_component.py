@@ -155,6 +155,7 @@ def _decrement_date_callback(_, instance):
             instance.begin_date = calculate_begin_date(instance.end_date, market_days)
         else:
             # for periods like YTD, YR1, ALL - use get_period_dates
+            # Pass to_date=instance.end_date to ensure begin_date is relative to the current end_date
             begin_date, _ = get_period_dates(instance.period_selected, to_date=instance.end_date)
             instance.begin_date = begin_date
 
@@ -242,6 +243,7 @@ def _increment_date_callback(_, instance):
             instance.begin_date = calculate_begin_date(instance.end_date, market_days)
         else:
             # for periods like YTD, YR1, ALL - use get_period_dates
+            # Pass to_date=instance.end_date to ensure begin_date is relative to the current end_date
             begin_date, _ = get_period_dates(instance.period_selected, to_date=instance.end_date)
             instance.begin_date = begin_date
 
@@ -431,24 +433,46 @@ class TimeMachineComponent:
                      begin_date, end_date)
 
         # calculate current trading day interval to maintain it during clamping
-        trading_days = count_trading_days(begin_date, end_date)
+        if self.period_selected == Periods.CUS:
+            trading_days = count_trading_days(begin_date, end_date)
+        else:
+            trading_days = get_market_days_for_period(self.period_selected)
+            if trading_days is None:
+                # for periods like YTD, YR1, ALL - calculate based on current dates
+                trading_days = count_trading_days(begin_date, end_date)
 
         # clamp dates to boundaries and notify user
         if self._min_date and begin_date < self._min_date:
             self.begin_date = self._min_date
             begin_date = self._min_date
             # maintain interval by shifting end_date forward
-            self.end_date = calculate_end_date(begin_date, trading_days)
+            market_days = get_market_days_for_period(self.period_selected)
+            if self.period_selected == Periods.CUS:
+                self.end_date = calculate_end_date(begin_date, trading_days)
+            elif market_days is not None:
+                self.end_date = calculate_end_date(begin_date, market_days)
+            else:
+                # For YTD, YR1, ALL - end_date remains as is since begin_date is anchored to it
+                pass
             end_date = self.end_date
             get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY).set_status_message(
                 StatusType.WARNING, _MIN_DATE_MESSAGE
             )
-
+ 
         if self._max_date and end_date > self._max_date:
             self.end_date = self._max_date
             end_date = self._max_date
             # maintain interval by shifting begin_date backward
-            self.begin_date = calculate_begin_date(end_date, trading_days)
+            market_days = get_market_days_for_period(self.period_selected)
+            if self.period_selected == Periods.CUS:
+                self.begin_date = calculate_begin_date(end_date, trading_days)
+            elif market_days is not None:
+                self.begin_date = calculate_begin_date(end_date, market_days)
+            else:
+                # Handle YTD, YR1, ALL using the period rules relative to clamped end_date
+                begin_date_calc, _ = get_period_dates(self.period_selected, to_date=end_date)
+                self.begin_date = begin_date_calc
+            
             begin_date = self.begin_date
             get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY).set_status_message(
                 StatusType.WARNING, _MAX_DATE_MESSAGE
