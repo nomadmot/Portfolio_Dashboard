@@ -88,11 +88,15 @@ def get_period_dates(
             begin_date = _calculate_begin_date(end_date=end_date, market_days=90)
 
         case Periods.YTD:
-            begin_date = from_date.replace(month=1, day=1)
+            begin_date = to_date.replace(month=1, day=1)
             end_date = to_date
-
+ 
         case Periods.YR1:
-            begin_date = from_date.replace(year=date.today().year - 1)
+            try:
+                begin_date = to_date.replace(year=to_date.year - 1)
+            except ValueError:
+                # Handle leap year Feb 29th case
+                begin_date = to_date - timedelta(days=365)
             end_date = to_date
 
         case Periods.ALL:
