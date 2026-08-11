@@ -24,6 +24,7 @@ from utility import (
 from core import (
     get_account,
     get_balance_history,
+    get_first_balance_date,
     get_last_balance_date,
 )
 
@@ -161,7 +162,9 @@ default_period = get_period(SETTINGS.defaults.performance_summary_period)
 time_machine = get_time_machine_component(
                                           _TIME_MACHINE_COMPONENT_KEY,
                                           period=default_period,
-                                          end_date=get_last_balance_date()
+                                          end_date=get_last_balance_date(),
+                                          max_date=get_last_balance_date(),
+                                          min_date=get_first_balance_date(),
                                          )
 # get the status message component
 status_message = get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY)
