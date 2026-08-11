@@ -10,9 +10,12 @@ from uuid import uuid4 as uuid
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
+
 # Import local modules
 from config.settings import SETTINGS
+from .status_message_component import get_status_message_component, StatusType
 from . import Periods, get_period_dates, get_market_days_for_period
+
 from . import market_is_open, calculate_begin_date, count_trading_days
 from . import get_logger
 
@@ -31,7 +34,15 @@ _DECREMENT_BUTTON_KEY = "_time_machine_decrement_button"
 _INCREMENT_DAYS_KEY = "_time_machine_increment_days"
 _INCREMENT_BUTTON_KEY = "_time_machine_increment_button"
 
+# Key for the status message component
+_STATUS_MESSAGE_COMPONENT_KEY = "_time_machine_status"
+
+# Status messages
+_MIN_DATE_MESSAGE = "Begin date clamped to minimum allowable date"
+_MAX_DATE_MESSAGE = "End date clamped to maximum allowable date"
+
 # Callback functions for Streamlit widgets
+
 def _period_select_callback(key: str, instance):
     """
     responds to the on_change event for the _select_period selectbox
@@ -117,8 +128,16 @@ def _decrement_date_callback(_, instance):
     while not market_is_open(new_end_date):
         new_end_date -= timedelta(days=1)
 
+    # ensure we don't exceed min_date
+    if instance.min_date and new_end_date < instance.min_date:
+        new_end_date = instance.min_date
+        get_status_message_component(
+            _STATUS_MESSAGE_COMPONENT_KEY).set_status_message(
+            StatusType.WARNING, _MIN_DATE_MESSAGE
+        )
     # update the end_date property
     instance.end_date = new_end_date
+
     _logger.debug("end date decremented to %s", instance.end_date)
 
     # check if period is Custom (CUS) - maintain trading day count
@@ -181,8 +200,16 @@ def _increment_date_callback(_, instance):
         while not market_is_open(new_end_date):
             new_end_date += timedelta(days=1)
 
+        # ensure we don't exceed max_date
+        if instance.max_date and new_end_date > instance.max_date:
+            new_end_date = instance.max_date
+            get_status_message_component(
+                _STATUS_MESSAGE_COMPONENT_KEY).set_status_message(
+                StatusType.WARNING, _MAX_DATE_MESSAGE
+            )
         # update the end_date property
         instance.end_date = new_end_date
+
         _logger.debug("end date incremented to %s", instance.end_date)
 
         # recalculate begin_date based on the same number of trading days
@@ -195,8 +222,17 @@ def _increment_date_callback(_, instance):
         while not market_is_open(new_end_date):
             new_end_date += timedelta(days=1)
 
+        # ensure we don't exceed max_date
+        if instance.max_date and new_end_date > instance.max_date:
+            new_end_date = instance.max_date 
+            get_status_message_component(
+                _STATUS_MESSAGE_COMPONENT_KEY).set_status_message(
+                StatusType.WARNING, _MAX_DATE_MESSAGE
+            )
+
         # update the end_date property
         instance.end_date = new_end_date
+
         _logger.debug("end date incremented to %s", instance.end_date)
 
         # recalculate begin_date to maintain period length
@@ -277,7 +313,36 @@ class TimeMachineComponent:
         st.session_state[self._end_date_picker_key] = value
 
     @property
+    def min_date(self) -> date|None:
+        """
+        Returns the value of the minimum allowable date
+        """
+        return self._min_date
+
+    @min_date.setter
+    def min_date(self, value: date|None):
+        """
+        Sets the value of the minimum allowable date
+        """
+        self._min_date = value
+
+    @property
+    def max_date(self) -> date|None:
+        """
+        Returns the value of the maximum allowable date
+        """
+        return self._max_date
+
+    @max_date.setter
+    def max_date(self, value: date|None):
+        """
+        Sets the value of the maximum allowable date
+        """
+        self._max_date = value
+
+    @property
     def increment_days(self) -> int:
+
         """
         Returns the value of the increment days input field
         """
@@ -312,7 +377,7 @@ class TimeMachineComponent:
                 self.end_date_picker = st.empty()
                 self.increment_controls = st.container(border=True)
 
-    def __init__(self, component_key: str, period: Periods, end_date: date|None):
+    def __init__(self, component_key: str, period: Periods, end_date: date|None, min_date: date|None = None, max_date: date|None = None):
         """
         Initializes the TimeMachineComponent instance
         """
@@ -323,6 +388,8 @@ class TimeMachineComponent:
 
         # store the component key
         self._component_key = component_key
+        self._min_date = min_date
+        self._max_date = max_date
 
         # initialize date picker keys
         self._select_period_key = component_key + _SELECT_PERIOD_KEY
@@ -352,7 +419,7 @@ class TimeMachineComponent:
     def update_date_pickers(self, begin_date: date, end_date: date):
         """
         Update the date picker widgets to the specified dates
-
+        
         Arguments:
             begin_date -- the date for the begin_date_picker
             end_date -- the date for the end_date_picker
@@ -363,7 +430,45 @@ class TimeMachineComponent:
                     "with begin_date %s and end_date %s",
                      begin_date, end_date)
 
+        # calculate current trading day interval to maintain it during clamping
+        trading_days = count_trading_days(begin_date, end_date)
+
+        # clamp dates to boundaries and notify user
+        if self._min_date and begin_date < self._min_date:
+            self.begin_date = self._min_date
+            begin_date = self._min_date
+            # maintain interval by shifting end_date forward
+            self.end_date = calculate_end_date(begin_date, trading_days)
+            end_date = self.end_date
+            get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY).set_status_message(
+                StatusType.WARNING, _MIN_DATE_MESSAGE
+            )
+
+        if self._max_date and end_date > self._max_date:
+            self.end_date = self._max_date
+            end_date = self._max_date
+            # maintain interval by shifting begin_date backward
+            self.begin_date = calculate_begin_date(end_date, trading_days)
+            begin_date = self.begin_date
+            get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY).set_status_message(
+                StatusType.WARNING, _MAX_DATE_MESSAGE
+            )
+
+        # final boundary check: if interval is larger than total range, clamp both ends
+        if self._min_date and begin_date < self._min_date:
+            self.begin_date = self._min_date
+            begin_date = self._min_date
+        if self._max_date and end_date > self._max_date:
+            self.end_date = self._max_date
+            end_date = self._max_date
+
+        # ensure begin_date <= end_date after clamping
+        if begin_date > end_date:
+            self.begin_date = end_date
+            begin_date = end_date
+
         # delete the old picker widgets, if neccesary
+
         if self._begin_date_picker_key is not None:
             try:
                 del st.session_state[self._begin_date_picker_key]
@@ -388,6 +493,8 @@ class TimeMachineComponent:
             st.date_input(
                         "Begin Date",
                         value=begin_date,
+                        min_value=self._min_date,
+                        max_value=end_date,
                         on_change=_begin_date_picker_callback,
                         args=(self._begin_date_picker_key, self),
                         key=self._begin_date_picker_key
@@ -396,6 +503,8 @@ class TimeMachineComponent:
             st.date_input(
                         "End Date",
                         value=end_date,
+                        min_value=begin_date,
+                        max_value=self._max_date,
                         on_change=_end_date_picker_callback,
                         args=(self._end_date_picker_key, self),
                         key=self._end_date_picker_key
@@ -467,25 +576,29 @@ class TimeMachineComponent:
 def get_time_machine_component(
         key: str,
         period: Periods = Periods.NONE,
-        end_date: date|None = date.today()) -> TimeMachineComponent:
+        end_date: date|None = date.today(),
+        min_date: date|None = None,
+        max_date: date|None = None) -> TimeMachineComponent:
     """
     Returns a TimeMachineComponent for the given key. If a component doesn't exist,
     a new one is created.
 
     Arguments:
         key -- the key for the requested TimeMachineComponent
-
-    Returns:
-        A TimeMachineComponent instance
+        period -- initial period selection
+        end_date -- initial end date
+        min_date -- minimum allowable date for pickers
+        max_date -- maximum allowable date for pickers
     """
     # log entry into the function
     _logger.debug("In get_time_machine_component with key=%s, period=%s, end_date=%s",
-                        key, period, end_date)
+                    key, period, end_date)
 
     # check if the component already exists
     if key not in _COMPONENT_INSTANCES:
         # create a new component and store it in the dictionary
-        _COMPONENT_INSTANCES[key] = TimeMachineComponent(key, period, end_date)
+        _COMPONENT_INSTANCES[key] = TimeMachineComponent(key, period, end_date, min_date, max_date)
+
 
     # log exit from the function
     _logger.debug("Exiting get_time_machine_component with key=%s", key)
