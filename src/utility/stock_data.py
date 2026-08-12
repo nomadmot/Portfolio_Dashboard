@@ -95,10 +95,11 @@ def get_stock_history(ticker: str,
                                          auto_adjust=True
                                          )
     elif period is not None:
+        period_val = period.value if hasattr(period, 'value') else period
         ticker_data: pd.DataFrame = yf_ticker.history(
-                                                 period=period.value,
-                                                 auto_adjust=True
-                                                 )
+                                              period=period_val,
+                                              auto_adjust=True
+                                              )
     ticker_data.reset_index(inplace=True)
 
     return ticker_data
