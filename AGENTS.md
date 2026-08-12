@@ -24,4 +24,4 @@
 - DO NOT MODIFY EXISTING PYTHON ENVIRONMENTS OR ADD ANY LIBRARIES
 
 ## Testing
-- Tests are located in `src/tests/`.
+- Tests are located in `tests/`.
