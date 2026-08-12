@@ -4,6 +4,11 @@ import pandas as pd
 
 # Mock duckdb before importing utility to prevent database connection errors
 mock_duckdb = MagicMock()
+# Create a dummy exception class that inherits from Exception to avoid TypeError when catching duckdb.Error
+class MockDuckDBError(Exception):
+    pass
+
+mock_duckdb.Error = MockDuckDBError
 sys.modules["duckdb"] = mock_duckdb
 
 # Mock the database module entirely before any other imports
@@ -37,15 +42,16 @@ def test_get_stock_history(mock_ticker):
     assert result is not None
     mock_instance.history.assert_called()
 
-@patch('src.utility.DATABASE_CONNECTION')
+@patch('src.utility.stock_data.DATABASE_CONNECTION')
 def test_get_security_info(mock_db):
     # Mock database result: (symbol, name, security_type, associated_symbol)
-    mock_db.execute.return_value.fetchone.return_value = ("AAPL", "Apple Inc.", "Stock", "AAPL")
+    mock_result = ("AAPL", "Apple Inc.", "S", "AAPL")
+    mock_db.execute.return_value.fetchone.return_value = mock_result
     
     result = get_security_info("AAPL")
     assert result.symbol == "AAPL"
     assert result.name == "Apple Inc."
-    assert result.security_type == "Stock"
+    assert result.security_type == "S"
     assert result.associated_symbol == "AAPL"
 
 @patch('yfinance.Ticker')
@@ -53,7 +59,7 @@ def test_get_basic_quote(mock_ticker):
     # Mock yfinance info dictionary
     mock_instance = mock_ticker.return_value
     # Use a real dict for info to ensure .get() returns actual values
-    mock_instance.info.return_value = {
+    mock_instance.info = {
         "shortName": "Apple Inc.",
         "currentPrice": 150.0,
         "previousClose": 148.0,
@@ -73,7 +79,7 @@ def test_get_basic_quote(mock_ticker):
 def test_get_basic_quote_adjustment(mock_ticker):
     # Test adjustment when currentPrice is 0.0
     mock_instance = mock_ticker.return_value
-    mock_instance.info.return_value = {
+    mock_instance.info = {
         "shortName": "Apple Inc.",
         "currentPrice": 0.0,
         "previousClose": 148.0,

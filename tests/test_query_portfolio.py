@@ -16,6 +16,12 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 os.chdir(root_dir)
 
 # 2. Mock DATABASE_CONNECTION before importing any core/utility modules
+mock_duckdb = MagicMock()
+class MockDuckDBError(Exception):
+    pass
+mock_duckdb.Error = MockDuckDBError
+sys.modules["duckdb"] = mock_duckdb
+
 mock_db = MagicMock()
 mock_db_module = MagicMock()
 mock_db_module.DATABASE_CONNECTION = mock_db
