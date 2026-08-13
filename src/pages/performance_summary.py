@@ -36,7 +36,6 @@ _logger.debug("In module %s", _logger_name)
 
 # set local constants
 _TIME_MACHINE_COMPONENT_KEY = "summary-performance-time-machine"
-_STATUS_MESSAGE_COMPONENT_KEY = "summary-performance-status-message"
 
 # function to calculate the cumulative performance for a given series
 def calculate_cumulative_performance(data: pd.Series):
@@ -167,7 +166,7 @@ time_machine = get_time_machine_component(
                                           min_date=get_first_balance_date(),
                                          )
 # get the status message component
-status_message = get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY)
+status_message = get_status_message_component(f"status_{st.context.ip_address}")
 
 # configure the page layout
 st.set_page_config(layout="wide")

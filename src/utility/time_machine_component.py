@@ -34,9 +34,6 @@ _DECREMENT_BUTTON_KEY = "_time_machine_decrement_button"
 _INCREMENT_DAYS_KEY = "_time_machine_increment_days"
 _INCREMENT_BUTTON_KEY = "_time_machine_increment_button"
 
-# Key for the status message component
-_STATUS_MESSAGE_COMPONENT_KEY = "_time_machine_status"
-
 # Status messages
 _MIN_DATE_MESSAGE = "Begin date clamped to minimum allowable date"
 _MAX_DATE_MESSAGE = "End date clamped to maximum allowable date"
@@ -131,8 +128,7 @@ def _decrement_date_callback(_, instance):
     # ensure we don't exceed min_date
     if instance.min_date and new_end_date < instance.min_date:
         new_end_date = instance.min_date
-        get_status_message_component(
-            _STATUS_MESSAGE_COMPONENT_KEY).set_status_message(
+        get_status_message_component(f"status_{st.context.ip_address}").set_status_message(
             StatusType.WARNING, _MIN_DATE_MESSAGE
         )
     # update the end_date property
@@ -204,8 +200,7 @@ def _increment_date_callback(_, instance):
         # ensure we don't exceed max_date
         if instance.max_date and new_end_date > instance.max_date:
             new_end_date = instance.max_date
-            get_status_message_component(
-                _STATUS_MESSAGE_COMPONENT_KEY).set_status_message(
+            get_status_message_component(f"status_{st.context.ip_address}").set_status_message(
                 StatusType.WARNING, _MAX_DATE_MESSAGE
             )
         # update the end_date property
@@ -226,8 +221,7 @@ def _increment_date_callback(_, instance):
         # ensure we don't exceed max_date
         if instance.max_date and new_end_date > instance.max_date:
             new_end_date = instance.max_date 
-            get_status_message_component(
-                _STATUS_MESSAGE_COMPONENT_KEY).set_status_message(
+            get_status_message_component(f"status_{st.context.ip_address}").set_status_message(
                 StatusType.WARNING, _MAX_DATE_MESSAGE
             )
 
@@ -455,7 +449,7 @@ class TimeMachineComponent:
                 # For YTD, YR1, ALL - end_date remains as is since begin_date is anchored to it
                 pass
             end_date = self.end_date
-            get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY).set_status_message(
+            get_status_message_component(f"status_{st.context.ip_address}").set_status_message(
                 StatusType.WARNING, _MIN_DATE_MESSAGE
             )
  
@@ -474,7 +468,7 @@ class TimeMachineComponent:
                 self.begin_date = begin_date_calc
             
             begin_date = self.begin_date
-            get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY).set_status_message(
+            get_status_message_component(f"status_{st.context.ip_address}").set_status_message(
                 StatusType.WARNING, _MAX_DATE_MESSAGE
             )
 
