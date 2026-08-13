@@ -60,8 +60,10 @@ class StatusMessageComponent:
         # store the unique key assigned to this instance
         self._component_key: str = key
 
-        # initialize the list of messages
-        self._status_messages: list[StatusMessage] = []
+        # ensure the session state key starts with a standard prefix
+        self._session_state_key = f"status_message_{key}"
+        if self._session_state_key not in st.session_state:
+            st.session_state[self._session_state_key] = []
 
     def set_status_message(
         self,
@@ -77,23 +79,25 @@ class StatusMessageComponent:
         """
         status_message = StatusMessage(msg_status, msg_text)
         _logger.debug("Received status message: %s", status_message)
-        self._status_messages.append(status_message)
+        st.session_state[self._session_state_key].append(status_message)
 
 
     def show_status_messages(self):
         """
         Display the current list of status message and initialize to defaults
         """
-        _logger.debug("Displaying %s status messages", len(self._status_messages))
-        for message in self._status_messages:
+        messages = st.session_state.get(self._session_state_key, [])
+        _logger.debug("Displaying %s status messages", len(messages))
+        for message in messages:
             status_style = message.msg_status.value[0]
             st.toast(
-                    f":{status_style.color}[{message.msg_text}]",
-                    icon=status_style.material,
-                    )
+                        f":{status_style.color}[{message.msg_text}]",
+                        icon=status_style.material,
+                        )
 
-        # reset the list of messages
-        self._status_messages = []
+        # reset the list of messages in session state
+        st.session_state[self._session_state_key] = []
+
 
 def get_status_message_component(key: str) -> StatusMessageComponent:
     """
