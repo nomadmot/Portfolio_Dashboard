@@ -6,7 +6,6 @@ __pycache__/
 images/Stock-Bull.png
 Portfolio-Dashboard/logs/portfolio_dashboard.log
 image_id
-.env
 src/.settings/app_config.yml
 .vscode/settings.json
 docker/compose-osx.yaml
