@@ -1,8 +1,6 @@
 
- # Below are all the sections and options you can have in
- ~/.streamlit/config.toml.
+ # Below are all the sections and options you can have in ~/.streamlit/config.toml.
  
-
 [global]
 
 # By default, Streamlit displays a warning when a user sets both a widget
