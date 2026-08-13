@@ -88,11 +88,15 @@ def get_period_dates(
             begin_date = _calculate_begin_date(end_date=end_date, market_days=90)
 
         case Periods.YTD:
-            begin_date = from_date.replace(month=1, day=1)
+            begin_date = to_date.replace(month=1, day=1)
             end_date = to_date
-
+ 
         case Periods.YR1:
-            begin_date = from_date.replace(year=date.today().year - 1)
+            try:
+                begin_date = to_date.replace(year=to_date.year - 1)
+            except ValueError:
+                # Handle leap year Feb 29th case
+                begin_date = to_date - timedelta(days=365)
             end_date = to_date
 
         case Periods.ALL:
@@ -131,3 +135,24 @@ def get_period(period: str) -> Periods:
         ret = Periods.D30
 
     return ret
+
+def get_market_days_for_period(period: Periods) -> int | None:
+    """
+    Get the number of market days for a given period.
+    
+    Arguments:
+        period -- the Periods enum value
+        
+    Returns:
+        int | None: number of market days, or None for periods that don't use fixed market days
+    """
+    match period:
+        case Periods.D30:
+            return 30
+        case Periods.D50:
+            return 50
+        case Periods.D90:
+            return 90
+        case _:
+            # For YTD, YR1, ALL, NONE, CUS - return None
+            return None

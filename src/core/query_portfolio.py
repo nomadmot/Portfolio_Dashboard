@@ -100,8 +100,47 @@ def get_balance_history(account_id: int,
     return df_balances
 
 
+def get_first_balance_date():
+    """Get the earliest balance date from the daily_balances table."""
+    # mark entry into the method
+    _logger.debug("Entering method get_first_balance_date")
+
+    sql = """
+    SELECT 
+        MIN(B.date) 
+    FROM daily_balances B;
+    """
+
+    result = DATABASE_CONNECTION.execute(sql).fetchone()
+
+    if result:
+        # The result is a tuple (date,)
+        return result[0]
+    else:
+        return None
+
+
+def get_first_trade_date():
+    """Get the earliest trade date from the Trades table."""
+    # mark entry into the method
+    _logger.debug("Entering method get_first_trade_date")
+
+    sql = """
+    SELECT 
+        MIN(T.trade_date) 
+    FROM trades T;
+    """
+
+    result = DATABASE_CONNECTION.execute(sql).fetchone()
+
+    if result:
+        # The result is a tuple (date,)
+        return result[0]
+    else:
+        return None
+
+
 def get_last_balance_date():
-    """Get the most recent balance date from the daily_balances table."""
     # mark entry into the method
     _logger.debug("Entering method get_last_trade_date")
 

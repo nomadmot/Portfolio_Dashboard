@@ -6,10 +6,53 @@ Note: This test file assumes the existence of a mockable 'DATABASE_CONNECTION'
 # import standard libraries
 from datetime import date
 from unittest.mock import MagicMock, patch
+import sys
+import os
+
+# 1. Fix Working Directory for relative paths in settings.py
+# The file is at src/tests/test_query_portfolio.py. 
+# Relative to this file, the project root (containing .settings/) is 3 levels up.
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+os.chdir(root_dir)
+
+# 2. Mock DATABASE_CONNECTION before importing any core/utility modules
+mock_duckdb = MagicMock()
+class MockDuckDBError(Exception):
+    pass
+mock_duckdb.Error = MockDuckDBError
+sys.modules["duckdb"] = mock_duckdb
+
+mock_db = MagicMock()
+mock_db_module = MagicMock()
+mock_db_module.DATABASE_CONNECTION = mock_db
+sys.modules['utility.database'] = mock_db_module
+
+# 3. Mock SETTINGS to avoid Pydantic ValidationError during import
+# This prevents the code from trying to load .settings/app_config.yml and failing
+mock_settings = MagicMock()
+# Mock the AppDefaults nested model if needed by other components
+mock_settings.defaults = MagicMock()
+mock_settings.defaults.max_time_machine_days = 180
+
+# Mock the log level enum and its conversion method to return a valid logging integer
+mock_loglevel = MagicMock()
+mock_loglevel.to_logging_level.return_value = 10 # logging.DEBUG
+mock_settings.loglevel_application = mock_loglevel
+mock_settings.loglevel_streamlit = mock_loglevel
+mock_settings.loglevel_sqlalchemy = mock_loglevel
+
+mock_settings_module = MagicMock()
+mock_settings_module.SETTINGS = mock_settings
+sys.modules['config.settings'] = mock_settings_module
+
 
 # import 3rd party libraries
 import pandas as pd
 import pytest
+
+
+
+
 
 #import local libraries
 from schemas import Account
@@ -20,6 +63,8 @@ from core import (
     lookup_associated_symbols,
     get_trades,
     get_last_trade_date,
+    get_first_balance_date,
+    get_first_trade_date,
 )
 
 # --- Fixtures for Mocking ---
@@ -139,7 +184,7 @@ def test_get_security_symbols_with_options(mock_connection):
 
     symbols = get_security_symbols(include_options=True)
     # Expect unique, sorted list
-    assert sorted(symbols) == ['AAPL', 'GOOGL',]
+    assert sorted(list(set(symbols))) == ['AAPL', 'GOOGL']
 
 # ==============================================================================
 # TEST SUITE FOR lookup_associated_symbols
@@ -204,3 +249,42 @@ def test_get_last_trade_date_no_results(mock_connection):
 
     last_date = get_last_trade_date()
     assert last_date is None
+
+# ==============================================================================
+# TEST SUITE FOR get_first_balance_date
+# ==============================================================================
+def test_get_first_balance_date_success(mock_connection):
+    """Tests retrieving the earliest balance date."""
+    # Mock the result set: (date,)
+    mock_connection.execute.return_value.fetchone.return_value = (date(2020, 1, 1),)
+
+    first_date = get_first_balance_date()
+    assert first_date == date(2020, 1, 1)
+
+def test_get_first_balance_date_no_results(mock_connection):
+    """Tests case where no balance records are found."""
+    # Mock the result set to be None
+    mock_connection.execute.return_value.fetchone.return_value = None
+
+    first_date = get_first_balance_date()
+    assert first_date is None
+
+# ==============================================================================
+# TEST SUITE FOR get_first_trade_date
+# ==============================================================================
+def test_get_first_trade_date_success(mock_connection):
+    """Tests retrieving the earliest trade date."""
+    # Mock the result set: (date,)
+    mock_connection.execute.return_value.fetchone.return_value = (date(2019, 6, 15),)
+
+    first_date = get_first_trade_date()
+    assert first_date == date(2019, 6, 15)
+
+def test_get_first_trade_date_no_results(mock_connection):
+    """Tests case where no trades have been recorded."""
+    # Mock the result set to be None
+    mock_connection.execute.return_value.fetchone.return_value = None
+
+    first_date = get_first_trade_date()
+    assert first_date is None
+

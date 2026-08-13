@@ -7,21 +7,23 @@ from .database import DATABASE_CONNECTION
 from .market_calendar import (
     get_closed_count,
     market_is_open,
+    calculate_begin_date,
+    calculate_end_date,
+    count_trading_days,
 )
 from .periods_enum import Periods
 from .periods import (
     get_period_dates,
     get_period,
+    get_market_days_for_period,
 )
-from .stock_info import (
+from .stock_data import (
+    YfPeriods,
+    get_stock_history,
     get_security_info,
     get_basic_quote,
 )
 
-from .stock_data import (
-    YfPeriods,
-    get_stock_history,
-)
 from .status_message_component import get_status_message_component, StatusType
 from .autoupdate_multiselect_component import get_aumc_instance
 from .time_machine_component import get_time_machine_component
@@ -35,6 +37,7 @@ __all__ = [
     "Periods",
     "get_period_dates",
     "get_period",
+    "get_market_days_for_period",
     "YfPeriods",
     "get_security_info",
     "get_basic_quote",
@@ -46,4 +49,7 @@ __all__ = [
     "show_system_info",
     "get_client_ip",
     "get_memory_size",
-    ]
+    "calculate_begin_date",
+    "calculate_end_date",
+    "count_trading_days",
+]

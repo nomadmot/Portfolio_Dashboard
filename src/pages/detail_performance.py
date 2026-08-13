@@ -59,8 +59,7 @@ class Summary(NamedTuple):
 # global variables to hold the summary data
 _TRADE_SUMMARY = []
 
-# the key for the detail performance multiselect, status message, and timemachine components
-_STATUS_MESSAGE_COMPONENT_KEY = "manage-balances-status-message"
+# the key for the detail performance multiselect and timemachine components
 _SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
 _TIME_MACHINE_KEY = "detail_performance_time_machine"
 
@@ -311,7 +310,7 @@ multiselect_symbols = get_aumc_instance(key=_SYMBOL_MULTISELECT_KEY,
 time_machine = get_time_machine_component(_TIME_MACHINE_KEY, Periods.ALL)
 
 # create a StatusMessageComponent to display messages to the user
-stat_message = get_status_message_component(key=_STATUS_MESSAGE_COMPONENT_KEY)
+stat_message = get_status_message_component(f"status_{st.context.ip_address}")
 
 # configure the page layout
 st.set_page_config(layout="wide")

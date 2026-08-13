@@ -32,7 +32,6 @@ _logger = get_logger(_logger_name)
 _logger.debug("In module %s", _logger_name)
 
 # local constants
-_STATUS_MESSAGE_COMPONENT_KEY = "manage-balances-status-message"
 _DAILY_BALANCE_TABLE_SESSION_KEY = "daily_balance_table"
 _UPDATE_BALANCE_SESSION_KEY = "update_balance_session_key"
 _UPDATE_DATE_SESSION_KEY = "update_date_session_key"
@@ -60,7 +59,7 @@ elif _UPDATE_DATE_SESSION_KEY not in st.session_state:
 st.title(f"Manage Daily Balances for Account {get_account(1).account_name}")
 
 # create the status message component
-status_message = get_status_message_component(_STATUS_MESSAGE_COMPONENT_KEY)
+status_message = get_status_message_component(f"status_{st.context.ip_address}")
 
 # add user input widgets for maintaining balances to the sidebar
 with st.sidebar:

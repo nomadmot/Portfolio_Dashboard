@@ -2,7 +2,7 @@
 functions to query market holidays
 """
 # standard library imports
-from datetime import date
+from datetime import date, timedelta
 
 # third-party imports
 from duckdb import sql
@@ -85,6 +85,72 @@ def market_is_open(check_date: date) -> bool:
     logger.debug("Exiting function market_is_open with is_open=%s", return_status)
     return return_status
 
+
+def calculate_begin_date(end_date: date, market_days: int) -> date:
+    """
+    calculate the begin date given an end date and number of market days
+    
+    Args:
+        end_date (date): end date
+        market_days (int): number of market days
+        
+    Returns:
+        date: calculated begin date
+    """
+    count = 0
+    one_day = timedelta(days=1)
+    begin_date = end_date
+    # loop backwards from end_date to find the begin date
+    while count < market_days:
+        begin_date = begin_date - one_day
+        if market_is_open(begin_date):
+            count += 1
+
+    return begin_date
+
+
+def calculate_end_date(begin_date: date, market_days: int) -> date:
+    """
+    calculate the end date given a begin date and number of market days
+    
+    Args:
+        begin_date (date): begin date
+        market_days (int): number of market days
+        
+    Returns:
+        date: calculated end date
+    """
+    count = 0
+    one_day = timedelta(days=1)
+    end_date = begin_date
+    # loop forwards from begin_date to find the end date
+    while count < market_days:
+        end_date = end_date + one_day
+        if market_is_open(end_date):
+            count += 1
+
+    return end_date
+
+
+def count_trading_days(start_date: date, end_date: date) -> int:
+    """
+    Count the number of trading days between two dates (inclusive)
+    
+    Arguments:
+        start_date -- the start date
+        end_date -- the end date
+        
+    Returns:
+        int: number of trading days between the dates
+    """
+    count = 0
+    current_date = start_date
+    while current_date <= end_date:
+        if market_is_open(current_date):
+            count += 1
+        current_date += timedelta(days=1)
+    return count
+
 if __name__ == "__main__":
     # test the get_closed_count function
     # RUN: python -m utility.market_calendar
@@ -100,3 +166,9 @@ if __name__ == "__main__":
     test_date=date(2025,7,24)
     is_open = market_is_open(test_date)
     print(f"Market is open on {test_date}: {is_open}")
+
+    # test calculate_end_date
+    begin_date = date(2024, 1, 1)
+    market_days = 5
+    end_date = calculate_end_date(begin_date, market_days)
+    print(f"End date for {begin_date} with {market_days} market days: {end_date}")
