@@ -14,6 +14,14 @@ from utility import get_logger, show_system_info, get_status_message_component
 _logger = get_logger(__name__)
 _logger.debug("Starting Portfolio Dashboard application in module %s", __name__)
 
+# adjust UI for environment
+if ver.__environment__ == "DEV":
+    st.set_option("client.showErrorDetails", "full")
+    st.set_option("client.toolbarMode", "developer")
+else:
+    st.set_option("client.showErrorDetails", "type")
+    st.set_option("client.toolbarMode", "viewer")
+
 # use the stock bull icon
 st.logo(image="images/Stock-Bull.png", size="large")
 
@@ -40,7 +48,7 @@ pg = st.navigation(pages,
 status_component_key = f"status_{st.context.ip_address}"
 status_component = get_status_message_component(status_component_key)
 
-# display a development header
+# add a development header
 if ver.__environment__ == "DEV":
     st.header("*** DEVELOPMENT ***", text_alignment="center")
 
