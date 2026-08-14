@@ -5,7 +5,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 RUN apt-get update && apt-get install -y nodejs
 
 # Expose ports
-EXPOSE 8080
+EXPOSE 8501
 
 # Create a non-root user to work with
 RUN useradd -ms /bin/bash appuser
@@ -21,14 +21,11 @@ WORKDIR /home/appuser
 ADD --exclude=**/.settings --exclude=**/.streamlit --chown=appuser:appuser ../src .
 
 # Create the Python virtual environment without dev tools
-ADD --chown=appuser:appuser ../uv.lock ../pyproject.toml ../run_app.sh ./
-RUN uv venv .venv
+ADD --chown=appuser:appuser ../uv.lock ../pyproject.toml .
 RUN uv sync --no-dev
 
 # Copy production configurations and scripts
 COPY --chown=appuser:appuser docker/files .
 
 # Start the application
-CMD ./run_app.sh
-# Use this if the application won't start:
-#CMD /bin/sh
+CMD /bin/bash -c /home/appuser/run_app.sh
