@@ -97,6 +97,6 @@ def generate_balance_deltas(
 if __name__ == "__main__":
     # Define your parameters here
     START_DATE = "2025-01-01"  # Change this to your desired start date
-    START_BALANCE = 50000.00   # Change this to your starting balance
+    START_BALANCE = 10000.00   # Change this to your starting balance
     END_DATE = "2025-12-31"    # Optional: Specify an end date, or leave as None
     generate_balance_deltas(START_DATE, START_BALANCE, end_date_str=END_DATE)
