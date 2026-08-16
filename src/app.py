@@ -13,6 +13,9 @@ from utility import get_logger, show_system_info, get_status_message_component
 # mark entry into the module
 _logger = get_logger(__name__)
 _logger.debug("Starting Portfolio Dashboard application in module %s", __name__)
+_logger.info ("Starting Portfolio Dashboard application version %s environment %s",
+              ver.__version__,
+              ver.__environment__)
 
 # adjust UI for environment
 if ver.__environment__ == "DEV":
@@ -55,15 +58,16 @@ if ver.__environment__ == "DEV":
 # Display the selected page
 pg.run()
 
-# Instantiate a Borg button at the bottom of the sidebar to display system information
-with st.sidebar:
-    sysinfo_button = st.button(label="",
-                               type="tertiary",
-                               icon=":material/borg:",
-                               help="Geek out")
-if sysinfo_button:
-    #display the sysinfo page
-    sysinfo_nav.run()
+# For DEV environment, instantiate a Borg button at the bottom of the sidebar to display system information
+if ver.__environment__ == "DEV":
+    with st.sidebar:
+        sysinfo_button = st.button(label="",
+                                type="tertiary",
+                                icon=":material/borg:",
+                                    help="Geek out")
+    if sysinfo_button:
+        #display the sysinfo page
+        sysinfo_nav.run()
 
 # Display any collected status messages
 status_component.show_status_messages()
