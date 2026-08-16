@@ -16,3 +16,4 @@ docker/compose-test.yaml
 cliff.toml
 opencode.json
 src/.settings/.env
+Portfolio_Dashboard.code-workspace
