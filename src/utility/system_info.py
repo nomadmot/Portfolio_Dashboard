@@ -10,7 +10,8 @@ import streamlit as st
 
 #local imports
 import __version__ as ver
-from config.settings import SETTINGS
+from config import SETTINGS
+from utility import DUCKDB_DATA_PATH
 from . import get_logger
 
 # mark entry into the module
@@ -57,8 +58,8 @@ def show_system_info():
     st.write(f"Your client IP is: {get_client_ip()}")
     st.write(f"Current Memory Size: {get_memory_size()} blocks")
     st.subheader("Database")
-    st.write(f"Duck Puddle directory: {SETTINGS.duck_puddle}")
-    st.write(f"Duck Puddle URI: {SETTINGS.database_uri}")
+    st.write(f"Duck Puddle data path: {DUCKDB_DATA_PATH}")
+    st.write(f"Duck Puddle catalog: {SETTINGS.database_catalog}")
     st.subheader("Session State Contents:")
     for key, item in st.session_state.items():
         st.write(f"{key} - {item}")

@@ -7,8 +7,7 @@ from config.settings import Settings, LogLevelEnum
 def test_default_settings():
     '''Verify default settings when no environment variables are set'''
     assert not SETTINGS.debug
-    assert SETTINGS.database_uri == "sqlite://///path/to/your/database.db"
-    assert SETTINGS.duck_puddle == "path/to/your/duckdb/files"
+    assert SETTINGS.database_catalog == "sqlite://///path/to/your/database.db"
     assert SETTINGS.loglevel_application == LogLevelEnum("INFO")
     assert SETTINGS.loglevel_streamlit == LogLevelEnum("WARN")
 

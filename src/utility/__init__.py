@@ -3,7 +3,7 @@ Initialize the utility module
 """
 # Export all utility module components for easy access
 from .logging import get_logger
-from .database import DATABASE_CONNECTION
+from .database import DATABASE_CONNECTION, DUCKDB_DATA_PATH
 from .market_calendar import (
     get_closed_count,
     market_is_open,
@@ -32,6 +32,7 @@ from .system_info import get_client_ip, get_memory_size, show_system_info
 __all__ = [
     "get_logger",
     "DATABASE_CONNECTION",
+    "DUCKDB_DATA_PATH",
     "get_closed_count",
     "market_is_open",
     "Periods",
