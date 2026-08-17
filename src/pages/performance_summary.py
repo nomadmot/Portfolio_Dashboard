@@ -162,9 +162,11 @@ time_machine = get_time_machine_component(
                                           _TIME_MACHINE_COMPONENT_KEY,
                                           period=default_period,
                                           end_date=get_last_balance_date(),
-                                          max_date=get_last_balance_date(),
-                                          min_date=get_first_balance_date(),
                                          )
+# set the max and min dates based on current daily balance file contents
+time_machine.max_date=get_last_balance_date()
+time_machine.min_date=get_first_balance_date()
+
 # get the status message component
 status_message = get_status_message_component(f"status_{st.context.ip_address}")
 
