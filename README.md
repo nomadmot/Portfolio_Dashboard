@@ -75,35 +75,15 @@ This is the easiest installation if you just want to give it a try, or use it as
    docker pull nomadmot/portfolio-dashboard:latest
    ```
 
-2. Either download the compose.yaml file from the docker directory of the GitHub repository, or copy the following:
-
-   ```yaml
-   services:
-   PortfolioDashboard:
-      image: docker.io/nomadmot/portfolio-dashboard:latest
-      environment:
-         - DATABASE_URI=sqlite://///home/appuser/investorlab/DATA/portfolio.db
-         - DUCK_PUDDLE=/home/appuser/investorlab/DUCK_PUDDLE
-         - LOGLEVEL_APPLICATION=INFO
-         - LOGLEVEL_STREAMLIT=WARN
-         - LOGLEVEL_SQLALCHEMY=WARN
-         - YFINANCE_DEBUG=FALSE
-         - SQLALCHEMY_ECHO=FALSE
-         - SQLALCHEMY_ECHO_POOL=FALSE
-      ports:
-         - target: 8080
-         published: "8080"
-         protocol: tcp
-      volumes:
-         - type: bind
-         source: /path/to/your/data
-         target: /home/appuser/investorlab
-      ```
-
-3. Run Docker Compose:
+2. Run docker (replace the data file placeholder with the path to your data directory)
 
    ```bash
-   docker compose up
+   docker run -d \
+    --volume /Path/to/your/data/directory:/var/investorlab \
+    --name portfolio-dashboard \
+    --publish 8501 \
+    --restart always \
+    localhost/portfolio-dashboard
    ```
 
 ### Installation (Github)
@@ -117,17 +97,12 @@ This is the easiest installation if you just want to give it a try, or use it as
 
 2. **Set Up the Environment**
 
-   - Create a virtual environment
+   - Create a virtual environment and install dependencies using:
 
    ```bash
-   uv venv
+   uv sync
    ```
 
-   - Install dependencies using:
-
-   ```bash
-   uv pip install .
-   ```
 
 ### Next Steps
 
@@ -152,7 +127,6 @@ I'm continuously improving the Portfolio Dashboard based on community feedback a
 
 ### User Experience & Interface
 
-- [#161](https://github.com/nomadmot/Portfolio_Dashboard/issues/161) add buttons to slide dates forward and backward in Time Machine Component
 - [#145](https://github.com/nomadmot/Portfolio_Dashboard/issues/145) Create an alerts page to view and filter application notifications
 
 ### New Features
@@ -174,9 +148,6 @@ I'm continuously improving the Portfolio Dashboard based on community feedback a
 - Automated upload of user transactions and other data
 - UI for reviewing custom time series on plots (Time Machine)
 - Backtesting
-- Constant refactoring (I love refactoring)
-- Testing suite for regression testing
-
 ---
 
 ## 📝 How You Can Help
