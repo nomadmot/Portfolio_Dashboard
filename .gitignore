@@ -17,5 +17,5 @@ cliff.toml
 opencode.json
 src/.settings/.env
 *.code-workspace
-**/test_daily_balances.csv
-tools/test_daily_balances.csv
+AGENTS.md
+ANALYSIS.md
