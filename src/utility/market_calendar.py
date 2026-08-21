@@ -4,20 +4,12 @@ functions to query market holidays
 # standard library imports
 from datetime import date, timedelta
 
-# third-party imports
-from duckdb import sql
-
 # local application imports
-from utility import DUCKDB_DATA_PATH
-from . import get_logger
+from . import get_logger, DATABASE_CONNECTION
 
 # mark entry into the module
 logger = get_logger(__name__)
 logger.debug("In module %s", __name__)
-
-# resolve duckdb filename
-_MARKET_HOLIDAYS = f"{DUCKDB_DATA_PATH}/market_holidays.parquet"
-logger.info("Using duckdb file at %s", _MARKET_HOLIDAYS)
 
 def get_closed_count(start_date: date, end_date: date) -> int|None:
     """
@@ -31,13 +23,14 @@ def get_closed_count(start_date: date, end_date: date) -> int|None:
                start_date, end_date)
 
     # SQL query to get the count of closed market holidays
-    result = sql(
-        f"SELECT COUNT(*) AS holiday_count "
-        f"FROM '{_MARKET_HOLIDAYS}' "
-        f"WHERE Status = 'Closed' "
-        f"AND Date >= '{start_date}' "
-        f"AND Date <= '{end_date}';"
-        )
+    select_sql = """
+        SELECT COUNT(*) AS holiday_count
+        FROM market_holidays
+        WHERE Status = ?
+        AND Date >= ?
+        AND Date <= ?;
+        """
+    result = DATABASE_CONNECTION.execute(select_sql, ('Closed', start_date, end_date))
     logger.debug("Query executed, result: %s", result)
 
     # extract the count from the result
@@ -66,11 +59,12 @@ def market_is_open(check_date: date) -> bool:
         return False
 
     # SQL query to check if the date is a market holiday
-    result = sql(
-        f"SELECT Status "
-        f"FROM '{_MARKET_HOLIDAYS}' "
-        f"WHERE Date = '{check_date}';"
-        )
+    select_sql = """
+        SELECT Status
+        FROM market_holidays
+        WHERE Date = ?;
+        """
+    result = DATABASE_CONNECTION.execute(select_sql, (check_date,))
     logger.debug("Query executed, result: %s", result)
 
     # determine if market is open
