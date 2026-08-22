@@ -10,8 +10,9 @@ EXPOSE 8501
 # Create a non-root user to work with
 RUN useradd -ms /bin/bash appuser
 
-# create the mount point and set devuser as owner
-RUN mkdir -p /var/investorlab && chown appuser:appuser /var/investorlab
+# create the mount points and set devuser as owner
+RUN mkdir -p /var/investorlab && chown appuser:appuser /var/data
+RUN mkdir -p /var/investorlab && chown appuser:appuser /var/watchlists
 
 # Switch to the created user
 USER appuser
