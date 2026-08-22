@@ -59,12 +59,10 @@ class Settings(BaseSettings):
 
     loglevel_application: LogLevelEnum = LogLevelEnum.INFO
     loglevel_streamlit: LogLevelEnum = LogLevelEnum.WARN
-    loglevel_sqlalchemy: LogLevelEnum = LogLevelEnum.WARN
-    sqlalchemy_echo: bool = False
-    sqlalchemy_echo_pool: bool = False
     yfinance_debug: bool = False
     debug: list[str] = []
-    database_catalog: str = "/path/to/your/database.duckdb"
+    database_file: str = "/path/to/your/database.db"
+    watchlist_folder: str = "/path/to/your/watchlist/folder"
     yaml_config_path: str = ".settings/app_config.yml"
 
     defaults: AppDefaults = AppDefaults()

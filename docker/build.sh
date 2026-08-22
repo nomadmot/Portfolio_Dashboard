@@ -6,13 +6,13 @@ TAG_NAME=latest
 echo "Building the container image: $IMAGE_NAME:$TAG_NAME"
 
 # Remove any existing image with the same name
-docker rmi --force --ignore $IMAGE_NAME
+docker rmi --force --ignore $IMAGE_NAME:$TAG_NAME
 
 # Change directory so build context is at project root
 cd ../
 
 # Build the image using the Dockerfile in the current directory
-docker build -f docker/Dockerfile -t $IMAGE_NAME  --iidfile image_id .
+docker build -f docker/Dockerfile -t $IMAGE_NAME:$TAG_NAME  --iidfile image_id .
 IMAGE_ID=`cat image_id`
 echo "Successfully built image with ID: $IMAGE_ID"
 

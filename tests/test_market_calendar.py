@@ -20,43 +20,32 @@ class MockResult:
         return self.rows
 
 # Test for get_closed_count function
-@patch('src.utility.market_calendar.sql')
-def test_get_closed_count(mock_sql):
-    # Test with holidays
-    def mock_execute_holidays(query):
-        if 'Status = \'Closed\'' in query:
-            return MockResult([(2,)])  # Simulate 2 holidays as a tuple in a list
-        return MockResult()
-    
-    mock_sql.side_effect = mock_execute_holidays
+@patch('src.utility.market_calendar.DATABASE_CONNECTION')
+def test_get_closed_count(mock_connection):
+    # execute() returns a result whose single row holds the count
+    mock_connection.execute.return_value = MockResult([(2,)])
     result = get_closed_count(date(2024, 12, 31), date(2025, 8, 1))
     assert result == 2
 
     # Test with no holidays
-    mock_sql.side_effect = lambda x: MockResult([(0,)])
+    mock_connection.execute.return_value = MockResult([(0,)])
     result = get_closed_count(date(2024, 10, 31), date(2024, 11, 1))
     assert result == 0
 
 # Test for market_is_open function
-@patch('src.utility.market_calendar.sql')
-def test_market_is_open(mock_sql):
-    # Test weekday (open)
-    def mock_execute_open(query):
-        if 'Status' in query:
-            return MockResult([('Open',)])
-        return MockResult()
-    
-    mock_sql.side_effect = mock_execute_open
+@patch('src.utility.market_calendar.DATABASE_CONNECTION')
+def test_market_is_open(mock_connection):
+    # Test weekday (open): table row says Open
+    mock_connection.execute.return_value = MockResult([('Open',)])
     assert market_is_open(date(2025, 7, 24)) == True
-    
-    # Test weekend (closed)
-    mock_sql.side_effect = lambda x: MockResult([('Closed',)])
-    assert market_is_open(date(2025, 12, 28)) == False  # Saturday
+
+    # Test weekend (closed): returns False before querying the database
+    mock_connection.execute.return_value = MockResult([('Closed',)])
+    assert market_is_open(date(2025, 12, 28)) == False  # Sunday
     assert market_is_open(date(2025, 12, 27)) == False  # Saturday
-    
-    # Test known holiday
-    mock_sql.side_effect = lambda x: MockResult([('Closed',)])
-    # The production code for market_is_open checks if the result is 'Closed'
+
+    # Test known holiday on a weekday: table row says Closed
+    mock_connection.execute.return_value = MockResult([('Closed',)])
     assert market_is_open(date(2025, 12, 25)) == False
 
 # Test for calculate_begin_date function
