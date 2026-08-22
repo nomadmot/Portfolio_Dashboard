@@ -17,5 +17,3 @@ cliff.toml
 opencode.json
 src/.settings/.env
 *.code-workspace
-AGENTS.md
-ANALYSIS.md
