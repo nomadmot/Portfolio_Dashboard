@@ -21,7 +21,7 @@ WORKDIR /home/appuser
 ADD --exclude=**/.settings --exclude=**/.streamlit --chown=appuser:appuser ../src .
 
 # Create the Python virtual environment without dev tools
-ADD --chown=appuser:appuser ../uv.lock ../pyproject.toml .
+ADD --chown=appuser:appuser ../uv.lock ../pyproject.toml ./
 RUN uv sync --no-dev
 
 # Copy production configurations and scripts
