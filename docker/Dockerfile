@@ -11,8 +11,8 @@ EXPOSE 8501
 RUN useradd -ms /bin/bash appuser
 
 # create the mount points and set devuser as owner
-RUN mkdir -p /var/investorlab && chown appuser:appuser /var/data
-RUN mkdir -p /var/investorlab && chown appuser:appuser /var/watchlists
+RUN mkdir -p /var/data && chown appuser:appuser /var/data
+RUN mkdir -p /var/watchlists && chown appuser:appuser /var/watchlists
 
 # Switch to the created user
 USER appuser
