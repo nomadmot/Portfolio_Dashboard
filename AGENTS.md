@@ -11,7 +11,7 @@
 
 ## Critical Constraints
 - **Imports**: Python execution path starts in `src/`. Do NOT include `src.` in imports.
-- **Env Vars**: The database is a single DuckDB catalog file configured via `DATABASE_CATALOG` (path to the `.db`). There is **no separate data path and no DuckLake**.
+- **Env Vars**: The database is a single DuckDB file configured via `DATABASE_FILE` (path to the `.db`). There is **no separate data path and no DuckLake**.
 - **Env File**: `.env` must be located in `src/.settings/`.
 - **Docker Mount**: The data volume must be mounted to `/var/investorlab` (see `docker/Dockerfile` and `docker/run.sh`).
 
@@ -20,7 +20,7 @@
 - **Pages**: `src/pages/`
 - **Core Logic**: `src/core/`
 - **Config**: `src/.settings/app_config.yml`
-- **Database**: DuckDB in `src/utility/database.py`. One self-contained catalog file (`SETTINGS.database_catalog`) holds the app's tables (accounts/balances/securities) **and** the `market_holidays` table. The shared `DATABASE_CONNECTION` connection is used across `core/*` and `utility/*`; there is no separate parquet data path.
+- **Database**: DuckDB in `src/utility/database.py`. One self-contained database file (`SETTINGS.database_file`) holds the app's tables (accounts/balances/securities) **and** the `market_holidays` table. The shared `DATABASE_CONNECTION` connection is used across `core/*` and `utility/*`; there is no separate parquet data path.
 - **Market Calendar**: `src/utility/market_calendar.py` queries the `market_holidays` table through `DATABASE_CONNECTION`.
 
 ## Environment Setup

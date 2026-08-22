@@ -9,7 +9,7 @@ use database catalog to determine duck puddle data path"), which:
 - changed the engine to `LOAD ducklake; ATTACH '<path>'` the catalog + data lake,
 - derived the data path by reading the `data_path` key from DuckLake's `ducklake_metadata` table.
 
-Issue #185 reverts this: the app runs on a **single, self-contained DuckDB catalog file**
+Issue #185 reverts this: the app runs on a **single, self-contained DuckDB file**
 with no DuckLake and no separate Parquet directory.
 
 ## Before vs After
@@ -17,14 +17,14 @@ with no DuckLake and no separate Parquet directory.
 | Concern | Before (DuckLake) | After |
 | --- | --- | --- |
 | Catalog | `ducklake:<path>.duckdb` + `LOAD ducklake; ATTACH ...` | plain `duckdb.connect(<path>.db)` |
-| Market holidays | Parquet file read by path via `duckdb.sql()` | `market_holidays` table in the catalog, queried via `DATABASE_CONNECTION` |
+| Market holidays | Parquet file read by path via `duckdb.sql()` | `market_holidays` table in the database file, queried via `DATABASE_CONNECTION` |
 | Data path | `DUCKDB_DATA_PATH` (separate Parquet dir) | **removed** — no separate data path |
-| Env var | `DATABASE_URI` + `DUCK_PUDDLE` | `DATABASE_CATALOG` only |
+| Env var | `DATABASE_URI` + `DUCK_PUDDLE` | `DATABASE_FILE` only |
 | `ducklake` dependency | `LOAD ducklake` at runtime | not needed (no DuckLake extension, no Python dep) |
 
 ## Design Decision
-Everything — the app's mutable tables **and** the market calendar — lives in one catalog
-`.db`. The market-calendar Parquet is imported into a `market_holidays` table, so the
+Everything — the app's mutable tables **and** the market calendar — lives in one
+`.db` file. The market-calendar Parquet is imported into a `market_holidays` table, so the
 separate `DUCK_PUDDLE*/DATA` directory is no longer needed and `DUCKDB_DATA_PATH` is
 deleted. The market calendar now uses the same shared `DATABASE_CONNECTION` the rest of
 the app uses.
@@ -43,7 +43,7 @@ the app uses.
 - `AGENTS.md` — updated the stale env-var, mount, venv, and `load-env.sh` references.
 
 ## Precondition (data, not code)
-The catalog `.db` (e.g. `DUCK_PUDDLE_TEST/portfolio_test.db`) must contain a
+The database file (e.g. `DUCK_PUDDLE_TEST/portfolio_test.db`) must contain a
 **`market_holidays`** table with `Status` and `Date` columns — import the old
 `market_holidays.parquet` into it. The app performs no `CREATE TABLE`; it expects tables
 to pre-exist.
@@ -51,13 +51,16 @@ to pre-exist.
 ## Verification
 - `31 passed` via `./.venv/bin/python -m pytest --ignore=tests/test_obsidian.py`
   (`test_obsidian.py` makes a live HTTP call at collection time and is unrelated to this change).
-- Functional check against a temp catalog with a `market_holidays` table:
+- Functional check against a temp database file with a `market_holidays` table:
   `market_is_open` and `get_closed_count` behave correctly (weekends short-circuit; table
   drives the open/closed result; counts are right).
 - `import utility` succeeds cleanly; **zero** `ducklake` references remain in
   `src/`, `docker/`, or `tests/`.
 
 ## Open Notes / Follow-ups
+- The `database_catalog` setting was renamed to `database_file` (env var `DATABASE_FILE`)
+  after this analysis, and the `.db` extension is the norm. Historical references to
+  `database_catalog` / `DATABASE_CATALOG` above record the original #185 work.
 - `docker/compose.yaml` still mounts to `/home/appuser/investorlab` while `docker/Dockerfile`
   and `docker/run.sh` use `/var/investorlab`. Reconcile to a single path.
 - The `DUCK_PUDDLE*` strings remaining in the `.env` / `compose.yaml` files are directory

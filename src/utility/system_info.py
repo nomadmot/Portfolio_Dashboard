@@ -57,7 +57,7 @@ def show_system_info():
     st.write(f"Your client IP is: {get_client_ip()}")
     st.write(f"Current Memory Size: {get_memory_size()} blocks")
     st.subheader("Database")
-    st.write(f"Duck Puddle catalog: {SETTINGS.database_catalog}")
+    st.write(f"Database file: {SETTINGS.database_file}")
     st.subheader("Session State Contents:")
     for key, item in st.session_state.items():
         st.write(f"{key} - {item}")

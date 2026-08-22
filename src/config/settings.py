@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     sqlalchemy_echo_pool: bool = False
     yfinance_debug: bool = False
     debug: list[str] = []
-    database_catalog: str = "/path/to/your/database.duckdb"
+    database_file: str = "/path/to/your/database.db"
     yaml_config_path: str = ".settings/app_config.yml"
 
     defaults: AppDefaults = AppDefaults()
