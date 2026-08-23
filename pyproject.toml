@@ -1,6 +1,6 @@
 [project]
 name = "portfolio-dashboard"
-version = "0.2.2"
+version = "0.2.3"
 description = "A modern web-based dashboard for tracking, analyzing, and visualizing investment portfolios using Python and Streamlit."
 readme = "README.md"
 requires-python = ">=3.12"
