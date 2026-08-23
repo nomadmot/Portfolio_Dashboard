@@ -11,9 +11,9 @@
 
 ## Critical Constraints
 - **Imports**: Python execution path starts in `src/`. Do NOT include `src.` in imports.
-- **Env Vars**: The database is a single DuckDB file configured via `DATABASE_FILE` (path to the `.db`). There is **no separate data path and no DuckLake**.
+- **Env Vars**: The database is a single DuckDB file configured via `DATABASE_FILE` (path to the `.db`); watchlists live in the folder set by `WATCHLIST_FOLDER`. There is **no separate data path and no DuckLake**.
 - **Env File**: `.env` must be located in `src/.settings/`.
-- **Docker Mount**: The data volume must be mounted to `/var/investorlab` (see `docker/Dockerfile` and `docker/run.sh`).
+- **Docker Mount**: Mount the data volume to `/var/data` (the DuckDB file) and the watchlists volume to `/var/watchlists` (see `docker/Dockerfile` and `docker/run.sh`). The layout may still evolve.
 
 ## Architecture & Key Files
 - **Entry Point**: `src/app.py` (Navigation and routing)

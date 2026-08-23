@@ -9,7 +9,7 @@ NOTE: This is very much a work in progress. I am working to improve data acquisi
 ## 📌 Features
 
 - Portfolio tracking and performance analytics for individual investors
-- Interactive visualizations with Plotly (planned)
+- Interactive visualizations with Plotly
 - SQL database integration using DuckDB
 - Modular architecture with clear separation of concerns
 - Docker support for easy deployment
@@ -40,17 +40,18 @@ NOTE: This is very much a work in progress. I am working to improve data acquisi
 ## 📂 Project Structure
 
 ``` text
-Portfolio-Dashboard/
+Portfolio_Dashboard/
 ├── src/
 │   ├── core/                  # Core logic and utilities
 │   ├── config/                # Configuration logic
 │   ├── images/                # Static assets
-│   ├── models/                # Database models and SQL scripts
+│   ├── schemas/               # Data models and SQL scripts
 │   ├── pages/                 # Individual dashboard pages
 │   ├── utility/               # Helper functions
 │   ├── app.py                 # Main entry point for the Streamlit app
 │   └── ...
 ├── docker/                    # Docker configuration
+├── tools/                     # Test data generation and loading
 ├── tests/                     # Test files
 └── README.md                  # Project documentation
 ```
@@ -75,15 +76,16 @@ This is the easiest installation if you just want to give it a try, or use it as
    docker pull nomadmot/portfolio-dashboard:latest
    ```
 
-2. Run docker (replace the data file placeholder with the path to your data directory)
+2. Run docker (replace the placeholders with the path to your data directory and your watchlists directory)
 
    ```bash
    docker run -d \
-    --volume /Path/to/your/data/directory:/var/investorlab \
+    --volume /Path/to/your/data/directory:/var/data \
+    --volume /Path/to/your/watchlists/directory:/var/watchlists \
     --name portfolio-dashboard \
-    --publish 8501 \
+    --publish 8080:8501 \
     --restart always \
-    localhost/portfolio-dashboard
+    nomadmot/portfolio-dashboard:latest
    ```
 
 ### Installation (Github)
@@ -91,8 +93,8 @@ This is the easiest installation if you just want to give it a try, or use it as
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/nomadmot/Portfolio-Dashboard.git
-   cd Portfolio-Dashboard
+   git clone https://github.com/nomadmot/Portfolio_Dashboard.git
+   cd Portfolio_Dashboard
    ```
 
 2. **Set Up the Environment**
@@ -103,15 +105,32 @@ This is the easiest installation if you just want to give it a try, or use it as
    uv sync
    ```
 
+3. **Configure the Application**
+
+   - Copy `src/.settings/.env-example` to `src/.settings/.env`, then set:
+     - `DATABASE_FILE` — the path to your DuckDB file (the app expects its tables — accounts, daily balances, securities, market holidays — to already exist in it)
+     - `WATCHLIST_FOLDER` — the path to the folder holding your watchlists (reserved for the upcoming Watchlist feature)
+
+4. **Run the App**
+
+    ```bash
+    ./run_app.sh
+    ```
 
 ### Next Steps
 
 1. ***Data Files***
 
-   - If using Docker, mount a directory or volume to the /investorlab/ mount point to contain your data files. Currently, the data is laid out into a DuckDB database for portfolio data and  ancillary information. This may change.
+   - The application's data lives in two places: a single, self-contained DuckDB file holding all portfolio data (accounts, daily balances, securities) and the market holiday calendar, and a folder of watchlists (reserved for the upcoming Watchlist feature).
+   - If using Docker, mount a directory to the `/var/data` mount point for the DuckDB file and a directory to the `/var/watchlists` mount point for your watchlists.
+   - When running from source, point `DATABASE_FILE` and `WATCHLIST_FOLDER` in `src/.settings/.env` at those locations.
 
 2. ***Configuration***
-   - The .settings folder in the application source directory contains example configuration files.
+
+   - The `.settings` folder in the application source directory contains example configuration files:
+     - `.env` — environment variables: `DATABASE_FILE`, `WATCHLIST_FOLDER`, and the log levels
+     - `app_config.yml` — application defaults (performance summary period and comparison symbols, time machine maximum)
+   - Copy the `-example` files to `.env` and `app_config.yml` and adjust them to your setup.
 
 ***More To Come***
 
@@ -165,8 +184,8 @@ If you’re interested in contributing to any of these features or fixes, check 
    - Clone your forked repository to your local machine and install as detailed above
 
      ```bash
-     git clone https://github.com/your-username/Portfolio-Dashboard.git
-     cd Portfolio-Dashboard
+     git clone https://github.com/your-username/Portfolio_Dashboard.git
+     cd Portfolio_Dashboard
      ```
 
 3. **Set Up the Environment**
