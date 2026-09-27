@@ -568,7 +568,6 @@ class TimeMachineComponent:
                         )
             with cols[1]:
                 with st.container():
-                    # with st.container(height=20,vertical_alignment="bottom"):
                     st.slider(
                         label="**Days +/-**",
                         min_value=1,
@@ -578,7 +577,6 @@ class TimeMachineComponent:
                         on_change=_increment_days_callback,
                         args=(self._increment_days_key, self)
                         )
-
             with cols[2]:
                 st.button("", icon=":material/arrow_forward_ios:",
                         key=self._increment_button_key,
