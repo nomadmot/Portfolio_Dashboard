@@ -569,18 +569,16 @@ class TimeMachineComponent:
             with cols[1]:
                 with st.container():
                     # with st.container(height=20,vertical_alignment="bottom"):
-                    st.slider("",
-                            label_visibility="collapsed",
-                            min_value=1,
-                            max_value=SETTINGS.defaults.max_time_machine_days,
-                            value=1,
-                            key=self._increment_days_key,
-                            on_change=_increment_days_callback,
-                            args=(self._increment_days_key, self)
-                            )
-                    st.html(
-                        "<p style='text-align: center; padding: 0px;margin: 0px;'>Days +/-</p>"
+                    st.slider(
+                        label="**Days +/-**",
+                        min_value=1,
+                        max_value=SETTINGS.defaults.max_time_machine_days,
+                        value=1,
+                        key=self._increment_days_key,
+                        on_change=_increment_days_callback,
+                        args=(self._increment_days_key, self)
                         )
+
             with cols[2]:
                 st.button("", icon=":material/arrow_forward_ios:",
                         key=self._increment_button_key,
