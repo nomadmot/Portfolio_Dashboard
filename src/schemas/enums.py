@@ -14,8 +14,17 @@ class TradeType:
     EXERCISE = "EXRC"
     EXPIRE = "EXPR"
     ASSIGN = "ASGN"
+    DEPOSIT = "DEP"
+    WITHDRAWAL = "WDL"
+    DIVIDEND = "DIV"
+    INTEREST = "INT"
+    FEE = "FEE"
+    TAX = "TAX"
+    SPLIT = "SPLT"
+    JOURNAL = "JRNL"
 
-    Types = (BUY, SELL, TRANSFER, EXERCISE, EXPIRE, ASSIGN)
+    Types = (BUY, SELL, TRANSFER, EXERCISE, EXPIRE, ASSIGN,
+             DEPOSIT, WITHDRAWAL, DIVIDEND, INTEREST, FEE, TAX, SPLIT, JOURNAL)
 
     @classmethod
     def is_valid(cls, value):
@@ -42,8 +51,9 @@ class SecurityType:
     ETF = 'E'
     MUTUAL_FUND = 'M'
     OPTION = 'O'
+    CASH = 'C'
 
-    Types = (STOCK, BOND, ETF, MUTUAL_FUND, OPTION)
+    Types = (STOCK, BOND, ETF, MUTUAL_FUND, OPTION, CASH)
 
     @classmethod
     def is_valid(cls, value):
