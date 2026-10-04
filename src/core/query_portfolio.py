@@ -81,9 +81,9 @@ def get_balance_history(account_id: int,
 
     # Select the required fields.
     select_sql = f"""
-        SELECT date, balance FROM daily_balances 
-        WHERE account_id = ? AND date BETWEEN ? AND ?
-        ORDER BY date {'ASC' if ascending else 'DESC'};
+        SELECT balance_date, balance FROM daily_balances 
+        WHERE account_id = ? AND balance_date BETWEEN ? AND ?
+        ORDER BY balance_date {'ASC' if ascending else 'DESC'};
         """
 
     result = DATABASE_CONNECTION.execute(select_sql, (account_id, begin_date, end_date)).fetchall()
@@ -94,7 +94,7 @@ def get_balance_history(account_id: int,
         return DataFrame(columns=['date', 'balance'])
 
     # Convert the list of tuples into the required DataFrame format
-    df_data = [{'date': row[0], 'balance': row[1]} for row in result]
+    df_data = [{'balance_date': row[0], 'balance': row[1]} for row in result]
     df_balances = DataFrame(df_data)
 
     return df_balances
@@ -107,7 +107,7 @@ def get_first_balance_date():
 
     sql = """
     SELECT 
-        MIN(B.date) 
+        MIN(B.balance_date) 
     FROM daily_balances B;
     """
 
@@ -146,7 +146,7 @@ def get_last_balance_date():
 
     sql = """
     SELECT 
-        MAX(B.date) 
+        MAX(B.balance_date) 
     FROM daily_balances B;
     """
 
@@ -282,7 +282,7 @@ def get_trades(symbols: List[str],
     final_sql = f"""
     SELECT 
         T.symbol,
-        S.name,
+        S.security_name,
         T.symbol,
         T.trade_date,
         T.trade_type,

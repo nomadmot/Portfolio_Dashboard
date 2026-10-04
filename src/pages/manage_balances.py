@@ -44,16 +44,16 @@ history = get_balance_history(account_id=1,
                               end_date=to_date,
                               ascending=False)
 
-# if a row is selected, retrieve the date and balance
-selected_row = st.session_state.get(_DAILY_BALANCE_TABLE_SESSION_KEY)
-if selected_row is not None and selected_row != [] and selected_row["selection"]["rows"] != []:
-    selected_row = selected_row["selection"]["rows"][0]
-    # set the values for the update date and balance widgets
-    st.session_state[_UPDATE_DATE_SESSION_KEY] = history.iloc[selected_row]["date"]
-    st.session_state[_UPDATE_BALANCE_SESSION_KEY] = float(history.iloc[selected_row]["balance"])
-# if the update date is not set, initialize it to today's date
-elif _UPDATE_DATE_SESSION_KEY not in st.session_state:
-    st.session_state[_UPDATE_DATE_SESSION_KEY] = date.today()
+    # if a row is selected, retrieve the date and balance
+    selected_row = st.session_state.get(_DAILY_BALANCE_TABLE_SESSION_KEY)
+    if selected_row is not None and selected_row != [] and selected_row["selection"]["rows"] != []:
+        selected_row = selected_row["selection"]["rows"][0]
+        # set the values for the update date and balance widgets
+        st.session_state[_UPDATE_DATE_SESSION_KEY] = history.iloc[selected_row]["balance_date"]
+        st.session_state[_UPDATE_BALANCE_SESSION_KEY] = float(history.iloc[selected_row]["balance"])
+    # if the update date is not set, initialize it to today's date
+    elif _UPDATE_DATE_SESSION_KEY not in st.session_state:
+        st.session_state[_UPDATE_DATE_SESSION_KEY] = date.today()
 
 # header elements for the page
 st.title(f"Manage Daily Balances for Account {get_account(1).account_name}")
@@ -164,8 +164,8 @@ daily_balance_table = st.dataframe(
             hide_index=True,
             selection_mode="single-row",
             on_select="rerun",
-            column_config={
-                "date": st.column_config.DateColumn("Date"),
+                column_config={
+                "balance_date": st.column_config.DateColumn("Date"),
                 "balance": st.column_config.NumberColumn("Balance", format="accounting"),
                 },
             )

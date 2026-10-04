@@ -126,7 +126,7 @@ def get_security_info(symbol: str) -> Security:
         # This replaces the ORM object return.
         return Security(
             symbol=result[0],
-            name=result[1],
+            security_name=result[1],
             security_type=result[2],
             associated_symbol=result[3]
         )
@@ -136,6 +136,9 @@ def get_security_info(symbol: str) -> Security:
     except ValueError as e:
         # Re-raise specific business logic errors
         raise e
+    except Exception as e:
+        _logger.error("Error retrieving security:", exc_info=True)
+        raise RuntimeError(f"Error during security retrieval: {e}") from e
 
 def get_basic_quote(symbol: str) -> dict:
     """
