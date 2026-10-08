@@ -1,5 +1,6 @@
 '''
 classes and methods related to modeling equity options
+NOTE: Not currently used in the main program, but may be useful in the future
 '''
 from enum import Enum
 import datetime as dt
