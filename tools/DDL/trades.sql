@@ -1,6 +1,6 @@
 -- ===========================================================================
 -- Table: trades
--- Run sequence: 3 of 5   Dependencies: accounts, securities
+-- Run sequence: 3 of 6   Dependencies: accounts, securities
 -- Stock/option/cash transactions; FK -> accounts + securities; CHECK on trade_type.
 -- ===========================================================================
 BEGIN TRANSACTION;

@@ -1,6 +1,6 @@
 -- ===========================================================================
 -- Table: securities
--- Run sequence: 2 of 5   Dependencies: none
+-- Run sequence: 2 of 6   Dependencies: none
 -- Security directory: symbol (PK), security_name, security_type, associated_symbol.
 -- ===========================================================================
 BEGIN TRANSACTION;

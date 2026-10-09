@@ -1,6 +1,6 @@
 -- ===========================================================================
 -- Table: notes
--- Run sequence: 5 of 5   Dependencies: none
+-- Run sequence: 5 of 6   Dependencies: none
 -- Free-text notes: account_id, note_date, symbol, content.
 -- ===========================================================================
 BEGIN TRANSACTION;

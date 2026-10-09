@@ -1,6 +1,6 @@
 -- ===========================================================================
 -- Table: accounts
--- Run sequence: 1 of 5   Dependencies: none
+-- Run sequence: 1 of 6   Dependencies: none
 -- Brokerage account directory: account_id (PK) + account_name.
 -- ===========================================================================
 BEGIN TRANSACTION;
