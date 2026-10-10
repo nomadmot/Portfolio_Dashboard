@@ -108,6 +108,19 @@ def security_type_for(action, symbol, description):
     return "S"
 
 
+def position_effect_for(action, symbol, quantity):
+    """Determine the trades.position_effect value for an imported row."""
+    if symbol == CASH_SYMBOL:
+        return None
+    if action in ("Buy", "Buy to Open", "Sell to Open"):
+        return "To Open"
+    if action in ("Sell", "Buy to Close", "Sell to Close", "Expired"):
+        return "To Close"
+    if action in ("Journal", "Security Transfer") and quantity != 0:
+        return "To Open" if quantity > 0 else "To Close"
+    return None
+
+
 def normalize_row(row, line_no):
     """Convert one raw CSV row into normalized trade and security data."""
     action = row["Action"].strip()
@@ -142,10 +155,11 @@ def normalize_row(row, line_no):
 
     security_name = "Cash" if symbol == CASH_SYMBOL else (description or symbol)
     security_type = security_type_for(action, symbol, description)
+    position_effect = position_effect_for(action, symbol, quantity)
 
     return {
         "trade": (ACCOUNT_ID, symbol, parse_trade_date(row["Date"]), trade_type,
-                  float(quantity), float(price), float(fees)),
+                  position_effect, float(quantity), float(price), float(fees)),
         "security": (symbol, security_name, security_type, associated_symbol),
     }
 
@@ -189,8 +203,8 @@ def main(argv=None):
             con.executemany("INSERT INTO securities VALUES (?, ?, ?, ?)", new_securities)
 
         existing_trades = set(con.execute(
-            "SELECT account_id, symbol, trade_date, trade_type, quantity, price, fees "
-            "FROM trades").fetchall())
+            "SELECT account_id, symbol, trade_date, trade_type, position_effect, "
+            "quantity, price, fees FROM trades").fetchall())
         next_id = con.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM trades").fetchone()[0]
 
         new_trades = []
@@ -202,7 +216,10 @@ def main(argv=None):
             new_trades.append((next_id, *row["trade"]))
             next_id += 1
         if new_trades:
-            con.executemany("INSERT INTO trades VALUES (?, ?, ?, ?, ?, ?, ?, ?)", new_trades)
+            con.executemany(
+                "INSERT INTO trades (id, account_id, symbol, trade_date, trade_type, "
+                "position_effect, quantity, price, fees) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                new_trades)
 
         type_counts = {}
         for trade in (t[1:] for t in new_trades):

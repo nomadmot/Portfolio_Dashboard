@@ -2,6 +2,7 @@
 -- Table: trades
 -- Run sequence: 3 of 6   Dependencies: accounts, securities
 -- Stock/option/cash transactions; FK -> accounts + securities; CHECK on trade_type.
+-- position_effect ('To Open'/'To Close') is NULL for non-position events.
 -- ===========================================================================
 BEGIN TRANSACTION;
 DROP TABLE IF EXISTS trades;
@@ -11,6 +12,7 @@ CREATE TABLE trades (
 	symbol VARCHAR NOT NULL,
 	trade_date DATE NOT NULL,
 	trade_type VARCHAR NOT NULL,
+	position_effect VARCHAR,
 	quantity DOUBLE NOT NULL,
 	price DOUBLE NOT NULL,
 	fees DOUBLE NOT NULL,
