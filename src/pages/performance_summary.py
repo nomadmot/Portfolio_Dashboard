@@ -213,8 +213,8 @@ if df_balances.empty:
 
 # check the returned dates against the date pickers in the time machine
 # adjust the date pickers if necessary to ensure they match the returned data
-df_begin_date = df_balances['date'].iloc[0]
-df_end_date = df_balances['date'].iloc[-1]
+df_begin_date = df_balances['balance_date'].iloc[0]
+df_end_date = df_balances['balance_date'].iloc[-1]
 if time_machine.begin_date != df_begin_date or time_machine.end_date != df_end_date:
     time_machine.update_date_pickers(df_begin_date, df_end_date)
     status_message.set_status_message(stat.INFO, "Dates updated to reflect dates on file")
@@ -229,7 +229,7 @@ df_comparison: pd.DataFrame = get_stock_history(
 # drop the time component from the Date column
 df_comparison['Date'] = pd.to_datetime(df_comparison['Date']).dt.date
 # merge the balances with the comparison data
-merged = pd.merge(df_comparison, df_balances, how='left', left_on="Date", right_on="date")
+merged = pd.merge(df_comparison, df_balances, how='left', left_on='Date', right_on='balance_date')
 # fill in any missing balance values
 merged['balance'] = merged['balance'].ffill().bfill()
 

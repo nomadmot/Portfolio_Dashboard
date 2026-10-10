@@ -1,9 +1,8 @@
 """
 Import a Schwab transactions CSV (e.g. tools/data/Schwab_Transactions.csv)
 into the trades and securities tables of a DuckDB database
-(default: tools/data/portfolio.db). If the database file does not exist,
-it is created and initialized by executing the DDL scripts in tools/DDL
-in their declared run sequence.
+(default: tools/data/portfolio.db). The database must already exist;
+create it with tools/initialize_database.py.
 """
 import argparse
 import csv
@@ -61,26 +60,6 @@ def parse_args(argv=None):
     parser.add_argument("--db", type=Path, default=DEFAULT_DB,
                         help=f"path to the DuckDB database file (default: {DEFAULT_DB})")
     return parser.parse_args(argv)
-
-
-def load_ddl_scripts():
-    """Return the DDL scripts in tools/DDL sorted by their declared run sequence."""
-    if not DDL_DIR.is_dir():
-        raise SystemExit(f"DDL directory not found: {DDL_DIR}")
-    scripts = []
-    for path in sorted(DDL_DIR.glob("*.sql")):
-        match = re.search(r"Run sequence:\s*(\d+)", path.read_text())
-        if not match:
-            raise SystemExit(f"No 'Run sequence' header found in {path}; cannot order DDL scripts.")
-        scripts.append((int(match.group(1)), path))
-    scripts.sort(key=lambda item: (item[0], item[1].name))
-    return [path for _, path in scripts]
-
-
-def initialize_database(con, scripts):
-    """Create all tables by executing each DDL script directly from tools/DDL."""
-    for path in scripts:
-        con.execute(path.read_text())
 
 
 def table_exists(con, name):
@@ -164,10 +143,11 @@ def normalize_row(row, line_no):
 
     security_name = "Cash" if symbol == CASH_SYMBOL else (description or symbol)
     security_type = security_type_for(action, symbol, description)
+    position_effect = position_effect_for(action, symbol, quantity)
 
     return {
         "trade": (ACCOUNT_ID, symbol, parse_trade_date(row["Date"]), trade_type,
-                  float(quantity), float(price), float(fees)),
+                  position_effect, float(quantity), float(price), float(fees)),
         "security": (symbol, security_name, security_type, associated_symbol),
     }
 
@@ -190,19 +170,16 @@ def main(argv=None):
 
     rows = read_csv(args.csv)
 
-    is_new_db = not args.db.exists()
-    args.db.parent.mkdir(parents=True, exist_ok=True)
+    if not args.db.exists():
+        raise SystemExit(
+            f"Database {args.db} does not exist. Run tools/initialize_database.py first.")
     con = duckdb.connect(str(args.db))
     try:
-        if is_new_db:
-            scripts = load_ddl_scripts()
-            initialize_database(con, scripts)
-            print(f"Created {args.db} and initialized {len(scripts)} tables from {DDL_DIR}")
-        else:
-            missing = [t for t in ("securities", "trades") if not table_exists(con, t)]
-            if missing:
-                raise SystemExit(
-                    f"Database {args.db} exists but is missing tables: {', '.join(missing)}")
+        missing = [t for t in ("securities", "trades") if not table_exists(con, t)]
+        if missing:
+            raise SystemExit(
+                f"Database {args.db} is missing tables: {', '.join(missing)}. "
+                "Run tools/initialize_database.py first.")
 
         securities_map = {}
         for row in rows:
@@ -214,8 +191,8 @@ def main(argv=None):
             con.executemany("INSERT INTO securities VALUES (?, ?, ?, ?)", new_securities)
 
         existing_trades = set(con.execute(
-            "SELECT account_id, symbol, trade_date, trade_type, quantity, price, fees "
-            "FROM trades").fetchall())
+            "SELECT account_id, symbol, trade_date, trade_type, position_effect, "
+            "quantity, price, fees FROM trades").fetchall())
         next_id = con.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM trades").fetchone()[0]
 
         new_trades = []
@@ -227,7 +204,10 @@ def main(argv=None):
             new_trades.append((next_id, *row["trade"]))
             next_id += 1
         if new_trades:
-            con.executemany("INSERT INTO trades VALUES (?, ?, ?, ?, ?, ?, ?, ?)", new_trades)
+            con.executemany(
+                "INSERT INTO trades (id, account_id, symbol, trade_date, trade_type, "
+                "position_effect, quantity, price, fees) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                new_trades)
 
         type_counts = {}
         for trade in (t[1:] for t in new_trades):
