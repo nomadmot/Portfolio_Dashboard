@@ -50,7 +50,7 @@ def test_get_security_info(mock_db):
     
     result = get_security_info("AAPL")
     assert result.symbol == "AAPL"
-    assert result.name == "Apple Inc."
+    assert result.security_name == "Apple Inc."
     assert result.security_type == "S"
     assert result.associated_symbol == "AAPL"
 

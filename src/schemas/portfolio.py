@@ -20,7 +20,7 @@ class Security(BaseModel):
     Raises: Value error if the security_type field is invalid
     """
     symbol: str = Field(..., description="Unique stock ticker symbol.")
-    name: str
+    security_name: str
     security_type: str = Field(..., description="Must be a valid SecurityType.")
     associated_symbol: Optional[str] = Field(None, description="Underlying symbol for options.")
 
@@ -58,6 +58,7 @@ class Trade(BaseModel):
 
     Raises: Value error if the security_type field is invalid
     """
+    id: int
     account_id: int
     symbol: str
     trade_date: dt.date
@@ -90,6 +91,7 @@ class Note(BaseModel):
     """
     Pydantic model representing a text note aplicable to a specific date and stock symbol
     """
+    account_id: int
     symbol: str
     note_date: dt.datetime
     content: str
@@ -99,6 +101,6 @@ class DailyBalance(BaseModel):
     """
     Pydantic model representing the ending balance on the given date for the given account
     """
-    date: dt.date
+    balance_date: dt.date
     account_id: int
     balance: float

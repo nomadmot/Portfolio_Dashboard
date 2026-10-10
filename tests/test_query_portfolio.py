@@ -142,7 +142,7 @@ def test_get_balance_history_success(mock_connection):
     assert isinstance(df, pd.DataFrame)
     assert len(df) == 2
     # Check if sorting worked (if we mocked the sorting correctly)
-    assert df['date'].iloc[0] == date(2023, 1, 1)
+    assert df['balance_date'].iloc[0] == date(2023, 1, 1)
 
 def test_get_balance_history_no_results(mock_connection):
     """Tests case where no balance records are found."""
