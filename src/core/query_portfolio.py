@@ -283,7 +283,7 @@ def get_trades(symbols: List[str],
     SELECT 
         T.symbol,
         S.security_name,
-        T.symbol,
+        S.security_type,
         T.trade_date,
         T.trade_type,
         T.quantity,
@@ -302,12 +302,12 @@ def get_trades(symbols: List[str],
     # Process Results and Build DataFrame
     trades = []
     for row in result:
-        # row structure: (symbol, name, symbol, trade_date, trade_type, quantity, price, fees)
+        # row structure: (symbol, name, security_type, trade_date, trade_type, quantity, price, fees)
         symbol = row[0]
         trade_amount = row[6] * row[5] # price * quantity
 
         # Option contracts are 100 shares per contract
-        if row[3] == SecurityType.OPTION:
+        if row[2] == SecurityType.OPTION:
             trade_amount *= 100
 
         # Negate the amount for the final 'Amount' column

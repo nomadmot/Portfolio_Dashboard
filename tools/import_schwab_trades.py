@@ -17,6 +17,7 @@ import duckdb
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CSV = REPO_ROOT / "tools" / "data" / "Schwab_Transactions.csv"
 DEFAULT_DB = REPO_ROOT / "tools" / "data" / "portfolio.db"
+DDL_DIR = REPO_ROOT / "tools" / "DDL"
 
 CASH_SYMBOL = "$CASH"
 ACCOUNT_ID = 1
@@ -106,19 +107,6 @@ def security_type_for(action, symbol, description):
     if "ETF" in description.upper():
         return "E"
     return "S"
-
-
-def position_effect_for(action, symbol, quantity):
-    """Determine the trades.position_effect value for an imported row."""
-    if symbol == CASH_SYMBOL:
-        return None
-    if action in ("Buy", "Buy to Open", "Sell to Open"):
-        return "To Open"
-    if action in ("Sell", "Buy to Close", "Sell to Close", "Expired"):
-        return "To Close"
-    if action in ("Journal", "Security Transfer") and quantity != 0:
-        return "To Open" if quantity > 0 else "To Close"
-    return None
 
 
 def normalize_row(row, line_no):

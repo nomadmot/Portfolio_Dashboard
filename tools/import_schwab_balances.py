@@ -78,15 +78,18 @@ def main(argv=None):
 
     rows = read_csv(args.csv)
 
-    if not args.db.exists():
-        raise SystemExit(
-            f"Database {args.db} does not exist. Run tools/initialize_database.py first.")
+    is_new_db = not args.db.exists()
+    args.db.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(args.db))
     try:
-        if not table_exists(con, "daily_balances"):
-            raise SystemExit(
-                f"Database {args.db} is missing the daily_balances table. "
-                "Run tools/initialize_database.py first.")
+        if is_new_db:
+            scripts = load_ddl_scripts()
+            initialize_database(con, scripts)
+            print(f"Created {args.db} and initialized {len(scripts)} tables from {DDL_DIR}")
+        else:
+            if not table_exists(con, "daily_balances"):
+                raise SystemExit(
+                    f"Database {args.db} exists but is missing the daily_balances table")
 
         existing = set(con.execute(
             "SELECT account_id, balance_date FROM daily_balances").fetchall())

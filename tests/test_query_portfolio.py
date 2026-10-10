@@ -213,23 +213,27 @@ def test_lookup_associated_symbols_none_found(mock_connection):
 # ==============================================================================
 def test_get_trades_success(mock_connection):
     """Tests successful retrieval and DataFrame transformation for trades."""
-    # Mocking a complex result set: (symbol, name, symbol, date, type, quantity, price, fees)
+    # Mocking a complex result set: (symbol, name, security_type, date, type, quantity, price, fees)
     mock_connection.execute.return_value.fetchall.return_value = [
-        ('AAPL', 'Apple Inc.', 'AAPL', date(2023, 1, 1), 'BUY', 10, 150.00, 5.00),
-        ('GOOGL', 'Google Inc.', 'GOOGL', date(2023, 1, 1), 'SELL', 5, 100.00, 2.00),
+        ('AAPL', 'Apple Inc.', 'S', date(2023, 1, 1), 'BUY', 10, 150.00, 5.00),
+        ('GOOGL', 'Google Inc.', 'S', date(2023, 1, 1), 'SELL', 5, 100.00, 2.00),
+        ('QQQ251121P00612000', 'PUT INVESCO QQQ TR $612 EXP 11/21/25', 'O',
+         date(2023, 1, 5), 'BUY', 1, 13.36, 0.66),
     ]
 
     df = get_trades(
-        symbols=['AAPL', 'GOOGL'],
+        symbols=['AAPL', 'GOOGL', 'QQQ251121P00612000'],
         begin_date=date(2023, 1, 1),
         end_date=date(2023, 1, 31),
         ascending=False
     )
 
     assert isinstance(df, pd.DataFrame)
-    assert len(df) == 2
+    assert len(df) == 3
     # Check the calculated amount for the SELL trade (should be negative)
     assert df[df['Symbol'] == 'GOOGL']['Amount'].iloc[0] == -500.00
+    # Option contracts are multiplied by 100 shares per contract
+    assert df[df['Symbol'] == 'QQQ251121P00612000']['Amount'].iloc[0] == -1336.00
 
 # ==============================================================================
 # TEST SUITE FOR get_last_trade_date
