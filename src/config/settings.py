@@ -48,6 +48,13 @@ class AppDefaults(BaseModel):
     performance_summary_period: str = "D50"
     # The default comparison symbol for the Performance Summary page
     performance_summary_symbols: list[str] = ["SPY"]
+    # The default calculation method for the Performance Summary page
+    # (must be one of schemas.CalculationMethod.Types)
+    performance_summary_method: str = "Time-Weighted"
+    # Whether dividends and interest count as part of the return (default True)
+    include_dividends_interest: bool = True
+    # Whether fees and taxes reduce the return (default True)
+    include_fees_taxes: bool = True
     # Maximum days for the time machine component increment slider
     # (default 180)
     max_time_machine_days: int = 180
