@@ -62,6 +62,7 @@ from core import (
     get_security_symbols,
     lookup_associated_symbols,
     get_trades,
+    get_cash_flows,
     get_last_trade_date,
     get_first_balance_date,
     get_first_trade_date,
@@ -291,4 +292,60 @@ def test_get_first_trade_date_no_results(mock_connection):
 
     first_date = get_first_trade_date()
     assert first_date is None
+
+
+# ==============================================================================
+# TEST SUITE FOR get_cash_flows
+# ==============================================================================
+def test_get_cash_flows_success(mock_connection):
+    """Tests successful retrieval and per-date summation of cash flows."""
+    # Mocking a result set: (trade_date, cash_flow)
+    mock_connection.execute.return_value.fetchall.return_value = [
+        (date(2023, 1, 5), 60000.00),
+        (date(2023, 1, 9), -60000.00),
+    ]
+
+    df = get_cash_flows(
+        account_id=1,
+        begin_date=date(2023, 1, 1),
+        end_date=date(2023, 1, 31),
+        trade_types=["DEP", "WDL"],
+    )
+
+    assert isinstance(df, pd.DataFrame)
+    assert len(df) == 2
+    assert list(df.columns) == ['trade_date', 'cash_flow']
+    assert df['cash_flow'].iloc[0] == 60000.00
+    assert df['cash_flow'].iloc[1] == -60000.00
+
+
+def test_get_cash_flows_no_results(mock_connection):
+    """Tests the empty case where no cash flows are found."""
+    mock_connection.execute.return_value.fetchall.return_value = []
+
+    df = get_cash_flows(
+        account_id=1,
+        begin_date=date(2023, 1, 1),
+        end_date=date(2023, 1, 31),
+        trade_types=["DEP", "WDL"],
+    )
+
+    assert isinstance(df, pd.DataFrame)
+    assert df.empty
+    assert list(df.columns) == ['trade_date', 'cash_flow']
+
+
+def test_get_cash_flows_no_types_returns_empty(mock_connection):
+    """An empty type list short-circuits to an empty frame without querying."""
+    df = get_cash_flows(
+        account_id=1,
+        begin_date=date(2023, 1, 1),
+        end_date=date(2023, 1, 31),
+        trade_types=[],
+    )
+
+    assert isinstance(df, pd.DataFrame)
+    assert df.empty
+    # the connection should not have been used for a query
+    mock_connection.execute.assert_not_called()
 
