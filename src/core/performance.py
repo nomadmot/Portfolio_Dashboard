@@ -16,6 +16,9 @@ an optional series of net external cash flows:
 A "cash flow" is a net external movement of money that should be excluded from
 the measured return (e.g. deposits and withdrawals). Its sign follows the stored
 transaction amount: positive adds to the balance, negative removes from it.
+
+AI-Generated
+note: The IRR solver is adapted from the public-domain implementation
 """
 # Import 3rd party libraries
 import numpy as np
