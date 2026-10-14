@@ -100,8 +100,15 @@ def parse_money(value):
 
 
 def parse_trade_date(value):
-    """Parse 'MM/DD/YYYY' (tolerating an 'as of ...' suffix) into a date."""
-    match = re.match(r"^(\d{2})/(\d{2})/(\d{4})", value.strip())
+    """Parse a Schwab transaction date into a date.
+
+    Values look like 'MM/DD/YYYY' or 'MM/DD/YYYY as of MM/DD/YYYY'. A trade is
+    always attributed to the 'as of' date when present, otherwise its posted date.
+    """
+    value = value.strip()
+    match = re.search(r"as of\s+(\d{2})/(\d{2})/(\d{4})", value)
+    if not match:
+        match = re.match(r"^(\d{2})/(\d{2})/(\d{4})", value)
     if not match:
         raise ValueError(f"Unrecognized date format: {value!r}")
     return date(int(match.group(3)), int(match.group(1)), int(match.group(2)))
@@ -162,12 +169,22 @@ def normalize_row(row, line_no):
     price = price if price is not None else Decimal(0)
     fees = fees if fees is not None else Decimal(0)
 
+    # position_effect is directly known only for option open/close actions; it is
+    # NULL for cash events and stock trades (which would require position tracking)
+    if action in ("Buy to Open", "Sell to Open"):
+        position_effect = "To Open"
+    elif action in ("Buy to Close", "Sell to Close"):
+        position_effect = "To Close"
+    else:
+        position_effect = None
+
     security_name = "Cash" if symbol == CASH_SYMBOL else (description or symbol)
     security_type = security_type_for(action, symbol, description)
 
     return {
         "trade": (ACCOUNT_ID, symbol, parse_trade_date(row["Date"]), trade_type,
                   float(quantity), float(price), float(fees)),
+        "position_effect": position_effect,
         "security": (symbol, security_name, security_type, associated_symbol),
     }
 
@@ -224,10 +241,17 @@ def main(argv=None):
             if row["trade"] in existing_trades:
                 skipped += 1
                 continue
-            new_trades.append((next_id, *row["trade"]))
+            account_id, symbol, trade_date, trade_type, quantity, price, fees = row["trade"]
+            # explicit column list (position_effect between trade_type and quantity) so
+            # the insert is correct regardless of the table's physical column order
+            new_trades.append((next_id, account_id, symbol, trade_date, trade_type,
+                               row["position_effect"], quantity, price, fees))
             next_id += 1
         if new_trades:
-            con.executemany("INSERT INTO trades VALUES (?, ?, ?, ?, ?, ?, ?, ?)", new_trades)
+            con.executemany(
+                "INSERT INTO trades (id, account_id, symbol, trade_date, trade_type,"
+                " position_effect, quantity, price, fees) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                new_trades)
 
         type_counts = {}
         for trade in (t[1:] for t in new_trades):
