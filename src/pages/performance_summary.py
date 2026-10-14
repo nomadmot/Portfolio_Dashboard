@@ -7,6 +7,7 @@ from pathlib import Path
 
 # Import 3rd party libraries
 import streamlit as st
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -77,7 +78,8 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
 
     # create the plot
     fig: go.Figure = go.Figure()
-    fig.add_trace(go.Scatter(x=dates, y=dly_pct_change,
+    fig.add_trace(go.Scatter(x=dates, y=np.zeros(len(dates)),
+            # y trace is set to zero to avoid affecting the y-axis scale
             # no line, just a placeholder for hover text
             mode='none', showlegend=False,
             # add the daily balance and percent change to the hover text
@@ -265,10 +267,11 @@ elif selected_method == CalculationMethod.TWR:
     merged['dly_pct_change'] = twr_daily(balance_series, cash_flow_series).to_numpy()
 else:  # Money-Weighted (IRR)
     merged['pct_change'] = mwr_cumulative(balance_series, cash_flow_series).to_numpy()
-    # the "daily" figure for MWR is the day-over-day change of the cumulative series
-    dly_mwr = merged['pct_change'].pct_change(fill_method=None)
-    dly_mwr.iloc[0] = 0.0
-    merged['dly_pct_change'] = dly_mwr.to_numpy()
+    # the "daily" figure (hover text and subheader) is the plain day-over-day
+    # balance change, same definition as the Simple method; the day-over-day
+    # change of the cumulative would divide by a near-zero total return and
+    # stretch the plot scale to thousands of percent
+    merged['dly_pct_change'] = simple_daily(balance_series).to_numpy()
 
 # calculate the 10-day moving average of the percentage change
 merged['10_day_avg'] = merged['pct_change'].rolling(window=10).mean()
