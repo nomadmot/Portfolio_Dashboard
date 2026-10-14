@@ -336,3 +336,63 @@ def get_trades(symbols: List[str],
     else:
         # No trades found
         return DataFrame(columns=['Symbol', 'Date', 'Type', 'Quantity', 'Price', 'Amount'])
+
+
+def get_cash_flows(account_id: int,
+                   begin_date: date,
+                   end_date: date,
+                   trade_types: List[str]) -> DataFrame:
+    """
+    Query the Trades table for net external cash flows per date.
+
+    A cash flow is the signed dollar amount of a trade whose type is one of the
+    given ``trade_types`` (e.g. deposits, withdrawals, dividends, fees). For
+    cash-type rows the amount is stored in ``price`` with a ``quantity`` of 0;
+    for position rows it is ``price * quantity``. The per-date sum is returned
+    so callers can net these flows out of a return calculation.
+
+    Arguments:
+        account_id -- The ID of the account to retrieve cash flows for.
+        begin_date -- The begin date for which to retrieve cash flows.
+        end_date -- The end date for which to retrieve cash flows.
+        trade_types -- A list of trade_type values to include in the sum.
+
+    Returns:
+        A pandas DataFrame with columns ['trade_date', 'cash_flow'], one row per
+        date that has at least one matching trade, sorted ascending by date.
+    """
+    # mark entry into the method
+    _logger.debug(("Entering method get_cash_flows with: ",
+                  "account_id = %s ",
+                  "begin_date = %s ",
+                  "end_date = %s ",
+                  "trade_types = %s"),
+                  account_id, begin_date, end_date, trade_types)
+
+    if not trade_types:
+        # no types requested; nothing to sum
+        return DataFrame(columns=['trade_date', 'cash_flow'])
+
+    # Dynamically build the parameter list for the IN clause
+    placeholders = ', '.join(['?'] * len(trade_types))
+    final_sql = f"""
+    SELECT
+        trade_date,
+        SUM(CASE WHEN quantity = 0 THEN price ELSE price * quantity END) AS cash_flow
+    FROM trades
+    WHERE account_id = ?
+    AND trade_type IN ({placeholders})
+    AND trade_date BETWEEN ? AND ?
+    GROUP BY trade_date
+    ORDER BY trade_date ASC;
+    """
+
+    params = (account_id, *tuple(trade_types), begin_date, end_date)
+    result = DATABASE_CONNECTION.execute(final_sql, params).fetchall()
+
+    if not result:
+        # no cash flows found
+        return DataFrame(columns=['trade_date', 'cash_flow'])
+
+    df_data = [{'trade_date': row[0], 'cash_flow': row[1]} for row in result]
+    return DataFrame(df_data)

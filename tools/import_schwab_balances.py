@@ -1,8 +1,9 @@
 """
 Import a Schwab daily balances CSV (e.g. tools/data/Schwab_Balances.CSV)
 into the daily_balances table of a DuckDB database
-(default: tools/data/portfolio.db). The database must already exist;
-create it with tools/initialize_database.py.
+(default: tools/data/portfolio.db). If the database file does not exist,
+it is created and initialized by executing the DDL scripts in tools/DDL
+in their declared run sequence.
 """
 import argparse
 import csv
@@ -17,6 +18,7 @@ import duckdb
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CSV = REPO_ROOT / "tools" / "data" / "Schwab_Balances.CSV"
 DEFAULT_DB = REPO_ROOT / "tools" / "data" / "portfolio.db"
+DDL_DIR = REPO_ROOT / "tools" / "DDL"
 
 ACCOUNT_ID = 1
 
@@ -32,6 +34,26 @@ def parse_args(argv=None):
     parser.add_argument("--db", type=Path, default=DEFAULT_DB,
                         help=f"path to the DuckDB database file (default: {DEFAULT_DB})")
     return parser.parse_args(argv)
+
+
+def load_ddl_scripts():
+    """Return the DDL scripts in tools/DDL sorted by their declared run sequence."""
+    if not DDL_DIR.is_dir():
+        raise SystemExit(f"DDL directory not found: {DDL_DIR}")
+    scripts = []
+    for path in sorted(DDL_DIR.glob("*.sql")):
+        match = re.search(r"Run sequence:\s*(\d+)", path.read_text())
+        if not match:
+            raise SystemExit(f"No 'Run sequence' header found in {path}; cannot order DDL scripts.")
+        scripts.append((int(match.group(1)), path))
+    scripts.sort(key=lambda item: (item[0], item[1].name))
+    return [path for _, path in scripts]
+
+
+def initialize_database(con, scripts):
+    """Create all tables by executing each DDL script directly from tools/DDL."""
+    for path in scripts:
+        con.execute(path.read_text())
 
 
 def table_exists(con, name):

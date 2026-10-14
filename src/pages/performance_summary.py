@@ -7,6 +7,7 @@ from pathlib import Path
 
 # Import 3rd party libraries
 import streamlit as st
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -24,9 +25,18 @@ from utility import (
 from core import (
     get_account,
     get_balance_history,
+    get_cash_flows,
     get_first_balance_date,
     get_last_balance_date,
 )
+from core.performance import (
+    simple_daily,
+    simple_cumulative,
+    twr_daily,
+    twr_cumulative,
+    mwr_cumulative,
+)
+from schemas import CalculationMethod, TradeType
 
 # initialize the logger
 _logger_name = f"pages.{Path(__file__).stem}"
@@ -36,54 +46,9 @@ _logger.debug("In module %s", _logger_name)
 
 # set local constants
 _TIME_MACHINE_COMPONENT_KEY = "summary-performance-time-machine"
-
-# function to calculate the cumulative performance for a given series
-def calculate_cumulative_performance(data: pd.Series):
-    """
-    Calculate the cumulative performance for a given account over a specified number of days.
-
-    :param series: The series over which performance will be calculated.
-    """
-    # mark entry into the function
-    _logger.debug("Entering function calculate_cumulative_performance with %d entries", len(data))
-
-    # store the initial balance value for efficient calculation
-    initial_balance = data.iloc[0]
-    # calculate the cumulative percent change
-    ret_val = data.rolling(window=1).apply(
-            lambda x: (x.iloc[0] - initial_balance) / initial_balance
-            )
-    # set the first day pct_change to 0
-    ret_val.iloc[0] = 0
-
-    #return the dataframe for further processing
-    _logger.debug("Exiting function calculate_cumulative_performance, ret_val length is %d",
-                 len(ret_val))
-    return ret_val
-
-
-# function to calculate the daily performance for a given series
-def calculate_daily_performance(data: pd.Series):
-    """
-    Calculate the daily performance for a given account over a specified number of days.
-
-    :param series: The series over which performance will be calculated.
-    """
-    # mark entry into the function
-    _logger.debug("entering function calculate_daily_performance with %d entries", len(data))
-
-    # calculate the cumulative percent change
-    ret_val = data.rolling(window=2).apply(
-            lambda x: (x.iloc[1] - x.iloc[0]) / x.iloc[0]
-            )
-    # set the first day pct_change to 0
-    ret_val.iloc[0] = 0
-
-    #return the dataframe for further processing
-    _logger.debug(
-        "Exiting function calculate_daily_performance, "
-        "ret_val length is %d", len(ret_val))
-    return ret_val
+_METHOD_KEY = "summary-performance-method"
+_INCLUDE_DIV_INT_KEY = "summary-performance-include-div-int"
+_INCLUDE_FEES_TAX_KEY = "summary-performance-include-fees-tax"
 
 
 # function to draw a graph comparing cumulative performance for the selected portfolio and SPY
@@ -113,7 +78,8 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
 
     # create the plot
     fig: go.Figure = go.Figure()
-    fig.add_trace(go.Scatter(x=dates, y=dly_pct_change,
+    fig.add_trace(go.Scatter(x=dates, y=np.zeros(len(dates)),
+            # y trace is set to zero to avoid affecting the y-axis scale
             # no line, just a placeholder for hover text
             mode='none', showlegend=False,
             # add the daily balance and percent change to the hover text
@@ -188,6 +154,33 @@ with st.sidebar:
                             index=0,
                             width=150)
 
+    # select which performance calculation to display
+    default_method = SETTINGS.defaults.performance_summary_method
+    if not CalculationMethod.is_valid(default_method):
+        default_method = CalculationMethod.TWR
+    selected_method = st.selectbox(
+                            "Calculation Method:",
+                            CalculationMethod.Types,
+                            index=CalculationMethod.Types.index(default_method),
+                            key=_METHOD_KEY)
+
+    # the cash-flow toggles only apply to the TWR and MWR methods
+    toggles_disabled = selected_method == CalculationMethod.SIMPLE
+
+    # include dividends and interest as part of the return (default on)
+    include_div_int = st.toggle(
+                            "Include dividends and interest",
+                            value=SETTINGS.defaults.include_dividends_interest,
+                            key=_INCLUDE_DIV_INT_KEY,
+                            disabled=toggles_disabled)
+
+    # include fees and taxes in the return (default on; they reduce returns)
+    include_fees_tax = st.toggle(
+                            "Include Fees and Taxes",
+                            value=SETTINGS.defaults.include_fees_taxes,
+                            key=_INCLUDE_FEES_TAX_KEY,
+                            disabled=toggles_disabled)
+
 # if the time machine isn't set, don't continue
 if time_machine.period_selected == Periods.NONE:
     status_message.set_status_message(stat.WARNING,
@@ -233,25 +226,73 @@ merged = pd.merge(df_comparison, df_balances, how='left', left_on='Date', right_
 # fill in any missing balance values
 merged['balance'] = merged['balance'].ffill().bfill()
 
-# add the cumulative performance for the daily balances
-merged['pct_change'] = calculate_cumulative_performance(merged['balance'])
-# add the daily performance for the daily balances
-merged['dly_pct_change'] = calculate_daily_performance(merged['balance'])
+# build a date-indexed balance series (MWR needs the dates for day counts)
+balance_series = pd.Series(merged['balance'].to_numpy(), index=merged['Date'])
+
+# determine which trade types are netted out of the return based on the toggles.
+# deposits/withdrawals are always external; dividends/interest and fees/taxes are
+# netted out only when their respective toggle is switched off.
+netted_out_types = [TradeType.DEPOSIT, TradeType.WITHDRAWAL]
+if not include_div_int:
+    netted_out_types += [TradeType.DIVIDEND, TradeType.INTEREST]
+if not include_fees_tax:
+    netted_out_types += [TradeType.FEE, TradeType.TAX]
+
+# fetch the net external cash flows for the period (only needed for TWR and MWR)
+if selected_method in (CalculationMethod.TWR, CalculationMethod.MWR):
+    df_cash_flows = get_cash_flows(
+        account_id=1,
+        begin_date=df_begin_date,
+        end_date=df_end_date,
+        trade_types=netted_out_types,
+    )
+    cash_flow_series = pd.Series(0.0, index=balance_series.index)
+    if not df_cash_flows.empty:
+        cf_by_date = df_cash_flows.set_index('trade_date')['cash_flow']
+        # attribute each flow to the first balance day on/after its trade date so
+        # a flow dated off-calendar still nets out of the correct period
+        for trade_date, amount in cf_by_date.items():
+            pos = balance_series.index.searchsorted(trade_date)
+            if pos < len(balance_series.index):
+                cash_flow_series.iloc[pos] += amount
+else:
+    cash_flow_series = pd.Series(0.0, index=balance_series.index)
+
+# add the portfolio performance for the selected calculation method
+if selected_method == CalculationMethod.SIMPLE:
+    merged['pct_change'] = simple_cumulative(balance_series).to_numpy()
+    merged['dly_pct_change'] = simple_daily(balance_series).to_numpy()
+elif selected_method == CalculationMethod.TWR:
+    merged['pct_change'] = twr_cumulative(balance_series, cash_flow_series).to_numpy()
+    merged['dly_pct_change'] = twr_daily(balance_series, cash_flow_series).to_numpy()
+else:  # Money-Weighted (IRR)
+    merged['pct_change'] = mwr_cumulative(balance_series, cash_flow_series).to_numpy()
+    # the "daily" figure (hover text and subheader) is the plain day-over-day
+    # balance change, same definition as the Simple method; the day-over-day
+    # change of the cumulative would divide by a near-zero total return and
+    # stretch the plot scale to thousands of percent
+    merged['dly_pct_change'] = simple_daily(balance_series).to_numpy()
+
 # calculate the 10-day moving average of the percentage change
 merged['10_day_avg'] = merged['pct_change'].rolling(window=10).mean()
 # calculate the 21-day moving average of the percentage change
 merged['21_day_avg'] = merged['pct_change'].rolling(window=21).mean()
-# add the cumulative performance for the comparison ticker
-merged['comp_change'] = calculate_cumulative_performance(merged['Close'])
+# add the cumulative performance for the comparison ticker (always simple returns)
+merged['comp_change'] = simple_cumulative(merged['Close'])
 # add the daily performance for the comparison ticker
-merged['dly_comp_change'] = calculate_daily_performance(merged['Close'])
+merged['dly_comp_change'] = simple_daily(merged['Close'])
 
 # display summary subheader
 if time_machine.period_selected == Periods.CUS:
     selected_period = f"{df_begin_date} to {df_end_date}" # pylint: disable-msg=C0103
 else:
     selected_period = Periods.get_label(time_machine.period_selected)
-st.subheader(f"Total Cumulative Performance for period "
+# label the headline figure according to the selected calculation method
+if selected_method == CalculationMethod.MWR:
+    perf_label = "Money-Weighted Return (IRR, cumulative)"
+else:
+    perf_label = f"Total Cumulative Performance ({selected_method})"
+st.subheader(f"{perf_label} for period "
              f"{selected_period}: {merged['pct_change'].iloc[-1]:.1%}"
              )
 st.subheader(f"Comparison ({selected_comparison}) Cumulative Performance: "

@@ -65,6 +65,34 @@ class SecurityType:
             value -- The input value to be validated
 
         Returns:
-            True if the input is valid, otherwise false
+            True if the value is valid, otherwise false
+        """
+        return value in (cls.Types)
+
+# enumeration class for performance calculation methods
+class CalculationMethod:
+    """
+    Class representing the different portfolio performance calculation
+    methods that can be selected on the Performance Summary page.
+
+    The member values double as their human-readable display labels.
+    """
+    SIMPLE = "Simple"
+    TWR = "Time-Weighted"
+    MWR = "Money-Weighted (IRR)"
+
+    Types = (SIMPLE, TWR, MWR)
+
+    @classmethod
+    def is_valid(cls, value):
+        """
+        Validate the input value by verifying whether or not the value exists
+        within the CalculationMethod enumeration
+
+        Arguments:
+            value -- The input value to be validated
+
+        Returns:
+            True if the value is valid, otherwise false
         """
         return value in (cls.Types)
