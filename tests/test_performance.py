@@ -5,6 +5,8 @@ The performance routines are pure pandas/numpy, but importing them through the
 ``core`` package executes ``core/__init__.py``, which pulls in the database
 connection. We therefore mock duckdb/utility/config before import, mirroring
 tests/test_query_portfolio.py.
+
+AI generated
 """
 # import standard libraries
 import os
