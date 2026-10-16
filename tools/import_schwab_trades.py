@@ -163,9 +163,14 @@ def normalize_row(row, line_no):
         trade_type = "DEP" if (amount or Decimal(0)) >= 0 else "WDL"
 
     if quantity is None and price is None:
+        # use total amount as price for cash events (e.g. dividends, interest, fees)
         price = amount if amount is not None else Decimal(0)
+    if quantity is None:
         quantity = Decimal(0)
-    quantity = quantity if quantity is not None else Decimal(0)
+    else:
+        # negate the quantity for sell actions
+        if trade_type == "SELL":
+            quantity = -quantity
     price = price if price is not None else Decimal(0)
     fees = fees if fees is not None else Decimal(0)
 
