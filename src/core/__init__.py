@@ -11,6 +11,7 @@ from .manage_portfolio_balances import (
 
 from .query_portfolio import (
     get_account,
+    get_accounts,
     get_balance_history,
     get_last_balance_date,
     get_first_balance_date,
@@ -26,6 +27,7 @@ __all__ = [
     "update_daily_balance",
     "delete_daily_balance",
     "get_account",
+    "get_accounts",
     "get_balance_history",
     "get_last_balance_date",
     "get_first_balance_date",

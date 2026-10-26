@@ -58,14 +58,16 @@ import pytest
 from schemas import Account
 from core import (
     get_account,
+    get_accounts,
     get_balance_history,
     get_security_symbols,
     lookup_associated_symbols,
     get_trades,
     get_cash_flows,
     get_last_trade_date,
-    get_first_balance_date,
     get_first_trade_date,
+    get_first_balance_date,
+    get_last_balance_date,
 )
 
 # --- Fixtures for Mocking ---
@@ -121,6 +123,29 @@ def test_get_account_not_found(mock_connection):
 
     with pytest.raises(ValueError, match="Account with ID 999 does not exist."):
         get_account(account_id=999)
+
+# ==============================================================================
+# TEST SUITE FOR get_accounts
+# ==============================================================================
+def test_get_accounts_success(mock_connection):
+    """Tests mapping of result rows to Account objects."""
+    # Mock the result set: (account_id, account_name)
+    mock_connection.execute.return_value.fetchall.return_value = [
+        (1, "Alpha"),
+        (2, "Beta"),
+    ]
+
+    accounts = get_accounts()
+    assert accounts == [
+        Account(account_id=1, account_name="Alpha"),
+        Account(account_id=2, account_name="Beta"),
+    ]
+
+def test_get_accounts_empty(mock_connection):
+    """Tests the case where no accounts exist."""
+    mock_connection.execute.return_value.fetchall.return_value = []
+
+    assert get_accounts() == []
 
 # ==============================================================================
 # TEST SUITE FOR get_balance_history
@@ -223,7 +248,8 @@ def test_get_trades_success(mock_connection):
     ]
 
     df = get_trades(
-        symbols=['AAPL', 'GOOGL', 'QQQ251121P00612000'],
+        symbols=['AAPL', 'GOOGL', 'QQQ251121P0061200'],
+        account_ids=[1],
         begin_date=date(2023, 1, 1),
         end_date=date(2023, 1, 31),
         ascending=False
@@ -235,6 +261,22 @@ def test_get_trades_success(mock_connection):
     assert df[df['Symbol'] == 'GOOGL']['Amount'].iloc[0] == -500.00
     # Option contracts are multiplied by 100 shares per contract
     assert df[df['Symbol'] == 'QQQ251121P00612000']['Amount'].iloc[0] == -1336.00
+
+def test_get_trades_binds_account_ids(mock_connection):
+    """Tests that the requested account IDs are bound to the query parameters."""
+    mock_connection.execute.return_value.fetchall.return_value = []
+
+    get_trades(
+        symbols=['AAPL'],
+        account_ids=[1, 2],
+        begin_date=date(2023, 1, 1),
+        end_date=date(2023, 1, 31),
+    )
+
+    params = mock_connection.execute.call_args[0][1]
+    assert 1 in params
+    assert 2 in params
+    assert 'AAPL' in params
 
 # ==============================================================================
 # TEST SUITE FOR get_last_trade_date
@@ -268,11 +310,30 @@ def test_get_first_balance_date_success(mock_connection):
 
 def test_get_first_balance_date_no_results(mock_connection):
     """Tests case where no balance records are found."""
-    # Mock the result set to be None
+    # Mock the result set: None
     mock_connection.execute.return_value.fetchone.return_value = None
 
     first_date = get_first_balance_date()
     assert first_date is None
+
+def test_get_first_balance_date_for_account(mock_connection):
+    """Tests that the account ID is bound when scoping to one account."""
+    mock_connection.execute.return_value.fetchone.return_value = (date(2020, 1, 1),)
+
+    first_date = get_first_balance_date(account_id=5)
+    assert first_date == date(2020, 1, 1)
+    assert mock_connection.execute.call_args[0][1] == (5, 5)
+
+# ==============================================================================
+# TEST SUITE FOR get_last_balance_date
+# ==============================================================================
+def test_get_last_balance_date_for_account(mock_connection):
+    """Tests that the account ID is bound when scoping to one account."""
+    mock_connection.execute.return_value.fetchone.return_value = (date(2020, 6, 1),)
+
+    last_date = get_last_balance_date(account_id=5)
+    assert last_date == date(2020, 6, 1)
+    assert mock_connection.execute.call_args[0][1] == (5, 5)
 
 # ==============================================================================
 # TEST SUITE FOR get_first_trade_date

@@ -54,6 +54,27 @@ def get_account(account_id: int) -> Account:
         raise e
 
 
+def get_accounts() -> List[Account]:
+    """
+    Look up all accounts in the directory.
+
+    Returns:
+        A list of Account objects ordered by account name.
+    """
+    # mark entry into the method
+    _logger.debug("Entering get_accounts")
+
+    try:
+        select_sql = """
+        SELECT account_id, account_name FROM accounts ORDER BY account_name;
+        """
+        result = DATABASE_CONNECTION.execute(select_sql).fetchall()
+        return [Account(account_id=row[0], account_name=row[1]) for row in result]
+    except duckdb.Error as e:
+        _logger.error("DuckDB Error retrieving accounts:", exc_info=True)
+        raise RuntimeError(f"Database error during account retrieval: {e}") from e
+
+
 def get_balance_history(account_id: int,
                         begin_date: date,
                         end_date: date,
@@ -100,18 +121,26 @@ def get_balance_history(account_id: int,
     return df_balances
 
 
-def get_first_balance_date():
-    """Get the earliest balance date from the daily_balances table."""
+def get_first_balance_date(account_id: int | None = None):
+    """
+    Get the earliest balance date from the daily_balances table.
+
+    Arguments:
+        account_id -- Restrict the search to the given account
+            (default is all accounts).
+    """
     # mark entry into the method
-    _logger.debug("Entering method get_first_balance_date")
+    _logger.debug("Entering method get_first_balance_date with account_id = %s",
+                  account_id)
 
     sql = """
     SELECT 
         MIN(B.balance_date) 
-    FROM daily_balances B;
+    FROM daily_balances B
+    WHERE ? IS NULL OR B.account_id = ?;
     """
 
-    result = DATABASE_CONNECTION.execute(sql).fetchone()
+    result = DATABASE_CONNECTION.execute(sql, (account_id, account_id)).fetchone()
 
     if result:
         # The result is a tuple (date,)
@@ -140,17 +169,26 @@ def get_first_trade_date():
         return None
 
 
-def get_last_balance_date():
+def get_last_balance_date(account_id: int | None = None):
+    """
+    Get the latest balance date from the daily_balances table.
+
+    Arguments:
+        account_id -- Restrict the search to the given account
+            (default is all accounts).
+    """
     # mark entry into the method
-    _logger.debug("Entering method get_last_trade_date")
+    _logger.debug("Entering method get_last_balance_date with account_id = %s",
+                  account_id)
 
     sql = """
     SELECT 
         MAX(B.balance_date) 
-    FROM daily_balances B;
+    FROM daily_balances B
+    WHERE ? IS NULL OR B.account_id = ?;
     """
 
-    result = DATABASE_CONNECTION.execute(sql).fetchone()
+    result = DATABASE_CONNECTION.execute(sql, (account_id, account_id)).fetchone()
 
     if result:
         # The result is a tuple (date,)
@@ -253,32 +291,36 @@ def lookup_associated_symbols(symbols: List[str]) -> List[str]:
 
 
 def get_trades(symbols: List[str],
+               account_ids: List[int],
                begin_date: date,
                end_date: date,
                ascending: bool = False) -> DataFrame:
     """
-    Query the Trades table for the selected security symbols.  
+    Query the Trades table for the selected security symbols and accounts.
 
     Arguments:
         symbols -- a list of security symbols to query trades for.
+        account_ids -- a list of account IDs to query trades for.
         begin_date -- The begin date for which to retrieve trades
         end_date -- The end date for which to retrieve trades
         ascending -- Whether to sort the results in ascending order by date (default is False).
 
     Returns:
-        A pandas DataFrame containing the trades for the specified symbols.
+        A pandas DataFrame containing the trades for the specified symbols and accounts.
     """
     # mark entry into the method
     _logger.debug(("Entering method get_trades with: ",
-                 "symbols = %s ",
-                 "begin_date = %s ",
-                 "end_date = %s ",
-                 "ascending = %s"),
-                 symbols, begin_date, end_date, ascending,
-                 )
+                  "symbols = %s ",
+                  "account_ids = %s ",
+                  "begin_date = %s ",
+                  "end_date = %s ",
+                  "ascending = %s"),
+                  symbols, account_ids, begin_date, end_date, ascending,
+                  )
 
-    # Dynamically build the parameters list for the IN clause
-    placeholders = ', '.join(['?'] * len(symbols))
+    # Dynamically build the parameters list for the IN clauses
+    account_placeholders = ', '.join(['?'] * len(account_ids))
+    symbol_placeholders = ', '.join(['?'] * len(symbols))
     final_sql = f"""
     SELECT 
         T.symbol,
@@ -291,12 +333,13 @@ def get_trades(symbols: List[str],
         T.fees
     FROM trades T
     JOIN securities S ON T.symbol = S.symbol
-    WHERE T.symbol IN ({placeholders})
+    WHERE T.account_id IN ({account_placeholders})
+    AND T.symbol IN ({symbol_placeholders})
     AND T.trade_date BETWEEN ? AND ?;
     """
 
     # Execute the query
-    params = tuple(symbols) + (begin_date, end_date)
+    params = tuple(account_ids) + tuple(symbols) + (begin_date, end_date)
     result = DATABASE_CONNECTION.execute(final_sql, params).fetchall()
 
     # Process Results and Build DataFrame
