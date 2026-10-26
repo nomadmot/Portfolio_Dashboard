@@ -13,7 +13,7 @@ from numpy import nan
 
 # Import local modules
 from core import (
-                  get_account,
+                  get_accounts,
                   get_security_symbols,
                   get_trades,
                   get_last_trade_date,
@@ -23,6 +23,7 @@ from schemas.portfolio import SecurityType
 from utility import (
                 get_logger,
                 get_aumc_instance,
+                get_account_selection_component,
                 get_time_machine_component,
                 get_status_message_component,
                 StatusType as stat,
@@ -60,6 +61,7 @@ class Summary(NamedTuple):
 _TRADE_SUMMARY = []
 
 # the key for the detail performance multiselect and timemachine components
+_ACCOUNT_SELECTION_KEY = "detail_performance_account_selection"
 _SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
 _TIME_MACHINE_KEY = "detail_performance_time_machine"
 
@@ -309,6 +311,15 @@ multiselect_symbols = get_aumc_instance(key=_SYMBOL_MULTISELECT_KEY,
 # create a time machine component to select the time period for the analysis
 time_machine = get_time_machine_component(_TIME_MACHINE_KEY, Periods.ALL)
 
+# create the account selection component (multiple accounts may be selected)
+accounts = get_accounts()
+account_selector = get_account_selection_component(
+                                        _ACCOUNT_SELECTION_KEY,
+                                        label="Select Account(s):",
+                                        options=accounts,
+                                        allow_multiple=True,
+                                        )
+
 # create a StatusMessageComponent to display messages to the user
 stat_message = get_status_message_component(f"status_{st.context.ip_address}")
 
@@ -316,11 +327,18 @@ stat_message = get_status_message_component(f"status_{st.context.ip_address}")
 st.set_page_config(layout="wide")
 
 # page header
-st.title(f"Detail Performance Analysis for {get_account(1).account_name}")
+selected_accounts = account_selector.selected
+account_names = ", ".join(
+    a.account_name for a in accounts if a.account_id in selected_accounts
+)
+st.title(f"Detail Performance Analysis for {account_names}")
 st.markdown(f"*Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}*",)
 
 # add widgets for user inputs to sidebar
 with st.sidebar:
+    # render the account selection component
+    account_selector.render()
+
     # render the time machine
     time_machine.render()
 
@@ -343,6 +361,9 @@ selected_symbols = multiselect_symbols.selected
 if len(selected_symbols) == 0:
     # the user needs to select a symbol
     stat_message.set_status_message(stat.INFO, "Please select at least one symbol")
+elif len(selected_accounts) == 0:
+    # the user needs to select an account
+    stat_message.set_status_message(stat.INFO, "Please select at least one account")
 else:
     if load_options:
         stat_message.set_status_message(stat.INFO, "Options loaded")
@@ -351,9 +372,10 @@ else:
         # re-render the multiselect with updated selected symbols
         multiselect_symbols.update_options(selected_symbols)
 
-    # get the trades for the selected symbols and period
+    # get the trades for the selected accounts, symbols, and period
     selected_trades = get_trades(
         symbols=selected_symbols,
+        account_ids=selected_accounts,
         begin_date=time_machine.begin_date,
         end_date=time_machine.end_date,
         ascending=True,

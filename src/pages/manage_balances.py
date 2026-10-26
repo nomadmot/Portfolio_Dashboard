@@ -13,12 +13,14 @@ import duckdb
 # local imports
 from core import (
                 get_account,
+                get_accounts,
                 get_balance_history,
                 update_daily_balance,
                 delete_daily_balance,
                 )
 from utility import (
                 get_status_message_component,
+                get_account_selection_component,
                 get_logger,
                 Periods,
                 get_period_dates,
@@ -32,14 +34,34 @@ _logger = get_logger(_logger_name)
 _logger.debug("In module %s", _logger_name)
 
 # local constants
+_ACCOUNT_SELECTION_KEY = "manage_balances_account_selection"
 _DAILY_BALANCE_TABLE_SESSION_KEY = "daily_balance_table"
 _UPDATE_BALANCE_SESSION_KEY = "update_balance_session_key"
 _UPDATE_DATE_SESSION_KEY = "update_date_session_key"
 
 
+# get the account selection component
+account_selector = get_account_selection_component(
+                                        _ACCOUNT_SELECTION_KEY,
+                                        label="Account:",
+                                        options=get_accounts(),
+                                        )
+
+# create the status message component
+status_message = get_status_message_component(f"status_{st.context.ip_address}")
+
+# if no account is available, don't continue
+selected_account_id = account_selector.selected
+if selected_account_id is None:
+    status_message.set_status_message(stat.WARNING, "No accounts available")
+    status_message.show_status_messages()
+    st.stop()
+
+selected_account = get_account(selected_account_id)
+
 # initialize balance history
 from_date, to_date = get_period_dates(Periods.ALL)
-history = get_balance_history(account_id=1,
+history = get_balance_history(account_id=selected_account_id,
                               begin_date=from_date,
                               end_date=to_date,
                               ascending=False)
@@ -48,21 +70,22 @@ history = get_balance_history(account_id=1,
 selected_row = st.session_state.get(_DAILY_BALANCE_TABLE_SESSION_KEY)
 if selected_row is not None and selected_row != [] and selected_row["selection"]["rows"] != []:
     selected_row = selected_row["selection"]["rows"][0]
-    # set the values for the update date and balance widgets
-    st.session_state[_UPDATE_DATE_SESSION_KEY] = history.iloc[selected_row]["balance_date"]
-    st.session_state[_UPDATE_BALANCE_SESSION_KEY] = float(history.iloc[selected_row]["balance"])
+    if selected_row < len(history):
+        # set the values for the update date and balance widgets
+        st.session_state[_UPDATE_DATE_SESSION_KEY] = history.iloc[selected_row]["balance_date"]
+        st.session_state[_UPDATE_BALANCE_SESSION_KEY] = float(history.iloc[selected_row]["balance"])
 # if the update date is not set, initialize it to today's date
 elif _UPDATE_DATE_SESSION_KEY not in st.session_state:
     st.session_state[_UPDATE_DATE_SESSION_KEY] = date.today()
 
 # header elements for the page
-st.title(f"Manage Daily Balances for Account {get_account(1).account_name}")
-
-# create the status message component
-status_message = get_status_message_component(f"status_{st.context.ip_address}")
+st.title(f"Manage Daily Balances for Account {selected_account.account_name}")
 
 # add user input widgets for maintaining balances to the sidebar
 with st.sidebar:
+    # render the account selection component
+    account_selector.render()
+
     update_date = st.date_input("Select Date",
                     key=_UPDATE_DATE_SESSION_KEY,
                     help="Select the date for which you want to manage the balance",
@@ -95,7 +118,7 @@ with st.sidebar:
 if update_record:
     if update_balance is not None and update_date is not None:
         try:
-            update_daily_balance(1, update_balance, update_date)
+            update_daily_balance(selected_account_id, update_balance, update_date)
         except ValueError as e:
             status_message.set_status_message(
                                             stat.WARNING,
@@ -127,7 +150,7 @@ if update_record:
 if delete_record:
     if update_date is not None:
         try:
-            delete_daily_balance(1, update_date)
+            delete_daily_balance(selected_account_id, update_date)
         except ValueError as e:
             status_message.set_status_message(
                                         stat.WARNING,
@@ -149,9 +172,9 @@ if delete_record:
                                           "Please enter the date to be deleted"
                                           )
 
-# fetch the updated balance history
+# fetch the updated balance history for the selected account
 from_date, to_date = get_period_dates(Periods.ALL)
-history = get_balance_history(account_id=1,
+history = get_balance_history(account_id=selected_account_id,
                               begin_date=from_date,
                               end_date=to_date,
                               ascending=False)

@@ -16,6 +16,7 @@ from config import SETTINGS
 from utility import (
     get_time_machine_component,
     get_status_message_component,
+    get_account_selection_component,
     get_logger,
     Periods,
     get_period,
@@ -24,6 +25,7 @@ from utility import (
 )
 from core import (
     get_account,
+    get_accounts,
     get_balance_history,
     get_cash_flows,
     get_first_balance_date,
@@ -45,6 +47,7 @@ _logger = get_logger(_logger_name)
 _logger.debug("In module %s", _logger_name)
 
 # set local constants
+_ACCOUNT_SELECTION_KEY = "performance_summary_account_selection"
 _TIME_MACHINE_COMPONENT_KEY = "summary-performance-time-machine"
 _METHOD_KEY = "summary-performance-method"
 _INCLUDE_DIV_INT_KEY = "summary-performance-include-div-int"
@@ -52,13 +55,13 @@ _INCLUDE_FEES_TAX_KEY = "summary-performance-include-fees-tax"
 
 
 # function to draw a graph comparing cumulative performance for the selected portfolio and SPY
-def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
+def plot_daily_balance(df: pd.DataFrame, compare, account_id):
     """
     Plot the daily balance for a given account over a specified number of days.
 
     :param df: The dataframe containing balance and comparison data.
     :param compare: The comparison ticker symbol.
-    :param account_id: The account ID to plot (default is 1).
+    :param account_id: The account ID to plot.
     """
     # mark entry into the function
     _logger.debug("Entering function plot_daily_balance with %d entries", len(df))
@@ -122,28 +125,45 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id=1):
 
     return fig
 
+# get the account selection component
+account_selector = get_account_selection_component(
+                                        _ACCOUNT_SELECTION_KEY,
+                                        label="Account:",
+                                        options=get_accounts(),
+                                        )
+
+# get the status message component
+status_message = get_status_message_component(f"status_{st.context.ip_address}")
+
+# if no account is available, don't continue
+selected_account_id = account_selector.selected
+if selected_account_id is None:
+    status_message.set_status_message(stat.WARNING, "No accounts available")
+    status_message.show_status_messages()
+    st.stop()
+
 # get the time machine component
 default_period = get_period(SETTINGS.defaults.performance_summary_period)
 time_machine = get_time_machine_component(
                                           _TIME_MACHINE_COMPONENT_KEY,
                                           period=default_period,
-                                          end_date=get_last_balance_date(),
-                                         )
-# set the max and min dates based on current daily balance file contents
-time_machine.max_date=get_last_balance_date()
-time_machine.min_date=get_first_balance_date()
-
-# get the status message component
-status_message = get_status_message_component(f"status_{st.context.ip_address}")
+                                          end_date=get_last_balance_date(selected_account_id),
+                                          )
+# set the max and min dates based on the selected account's balance history
+time_machine.max_date=get_last_balance_date(selected_account_id)
+time_machine.min_date=get_first_balance_date(selected_account_id)
 
 # configure the page layout
 st.set_page_config(layout="wide")
 
 # page title
-st.title(f"Performance Summary for {get_account(1).account_name}")
+st.title(f"Performance Summary for {get_account(selected_account_id).account_name}")
 
 # add input widgets to the sidebar
 with st.sidebar:
+    # render the account selection component
+    account_selector.render()
+
     # render the time machine component
     time_machine.render()
 
@@ -189,8 +209,8 @@ if time_machine.period_selected == Periods.NONE:
     status_message.show_status_messages()
     st.stop()
 
-# get the balance history for the specified account
-df_balances = get_balance_history(account_id=1,
+# get the balance history for the selected account
+df_balances = get_balance_history(account_id=selected_account_id,
                                   begin_date=time_machine.begin_date,
                                   end_date=time_machine.end_date,
                                   ascending=True
@@ -241,7 +261,7 @@ if not include_fees_tax:
 # fetch the net external cash flows for the period (only needed for TWR and MWR)
 if selected_method in (CalculationMethod.TWR, CalculationMethod.MWR):
     df_cash_flows = get_cash_flows(
-        account_id=1,
+        account_id=selected_account_id,
         begin_date=df_begin_date,
         end_date=df_end_date,
         trade_types=netted_out_types,
@@ -302,7 +322,7 @@ st.subheader(f"Comparison ({selected_comparison}) Cumulative Performance: "
 # display statistics for the current day
 st.subheader(
     f"Current Day Performance for "
-    f"{get_account(1).account_name} ({merged['Date'].iloc[-1]}):"
+    f"{get_account(selected_account_id).account_name} ({merged['Date'].iloc[-1]}):"
     )
 st.write(f"- Balance: ${merged['balance'].iloc[-1]:,.2f}")
 st.write(f"- Daily Change: {merged['dly_pct_change'].iloc[-1]:.1%}")
@@ -313,7 +333,7 @@ st.write(f"- Comparison ({selected_comparison})"
 # plot the daily balance for the selected period
 st.plotly_chart(plot_daily_balance(merged,
                 compare=selected_comparison,
-                account_id=1),
+                account_id=selected_account_id),
                 width='stretch'
                 )
 
