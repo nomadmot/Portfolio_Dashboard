@@ -3,7 +3,8 @@ Import a Schwab daily balances CSV (e.g. tools/data/Schwab_Balances.CSV)
 into the daily_balances table of a DuckDB database
 (default: tools/data/portfolio.db). If the database file does not exist,
 it is created and initialized by executing the DDL scripts in tools/DDL
-in their declared run sequence.
+in their declared run sequence. The target account is taken from --account
+or selected interactively from the accounts table.
 """
 import argparse
 import csv
@@ -13,14 +14,10 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-import duckdb
+from common import REPO_ROOT, open_database, resolve_account_id, table_exists
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CSV = REPO_ROOT / "tools" / "data" / "Schwab_Balances.CSV"
 DEFAULT_DB = REPO_ROOT / "tools" / "data" / "portfolio.db"
-DDL_DIR = REPO_ROOT / "tools" / "DDL"
-
-ACCOUNT_ID = 1
 
 BALANCE_DATE_RE = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
 
@@ -33,35 +30,9 @@ def parse_args(argv=None):
                         help=f"path to the Schwab balances CSV (default: {DEFAULT_CSV})")
     parser.add_argument("--db", type=Path, default=DEFAULT_DB,
                         help=f"path to the DuckDB database file (default: {DEFAULT_DB})")
+    parser.add_argument("--account", type=int, default=None,
+                        help="account ID to import into (default: prompt interactively)")
     return parser.parse_args(argv)
-
-
-def load_ddl_scripts():
-    """Return the DDL scripts in tools/DDL sorted by their declared run sequence."""
-    if not DDL_DIR.is_dir():
-        raise SystemExit(f"DDL directory not found: {DDL_DIR}")
-    scripts = []
-    for path in sorted(DDL_DIR.glob("*.sql")):
-        match = re.search(r"Run sequence:\s*(\d+)", path.read_text())
-        if not match:
-            raise SystemExit(f"No 'Run sequence' header found in {path}; cannot order DDL scripts.")
-        scripts.append((int(match.group(1)), path))
-    scripts.sort(key=lambda item: (item[0], item[1].name))
-    return [path for _, path in scripts]
-
-
-def initialize_database(con, scripts):
-    """Create all tables by executing each DDL script directly from tools/DDL."""
-    for path in scripts:
-        con.execute(path.read_text())
-
-
-def table_exists(con, name):
-    """Return True if the given table exists in the connected database."""
-    row = con.execute(
-        "SELECT 1 FROM information_schema.tables WHERE table_name = ?", [name]
-    ).fetchone()
-    return row is not None
 
 
 def parse_money(value):
@@ -98,20 +69,14 @@ def main(argv=None):
     if not args.csv.is_file():
         raise SystemExit(f"CSV file not found: {args.csv}")
 
-    rows = read_csv(args.csv)
-
-    is_new_db = not args.db.exists()
-    args.db.parent.mkdir(parents=True, exist_ok=True)
-    con = duckdb.connect(str(args.db))
+    con = open_database(args.db)
     try:
-        if is_new_db:
-            scripts = load_ddl_scripts()
-            initialize_database(con, scripts)
-            print(f"Created {args.db} and initialized {len(scripts)} tables from {DDL_DIR}")
-        else:
-            if not table_exists(con, "daily_balances"):
-                raise SystemExit(
-                    f"Database {args.db} exists but is missing the daily_balances table")
+        account_id = resolve_account_id(con, args.account)
+        if not table_exists(con, "daily_balances"):
+            raise SystemExit(
+                f"Database {args.db} exists but is missing the daily_balances table")
+
+        rows = read_csv(args.csv)
 
         existing = set(con.execute(
             "SELECT account_id, balance_date FROM daily_balances").fetchall())
@@ -119,17 +84,18 @@ def main(argv=None):
         new_rows = []
         skipped = 0
         for balance_date, balance in rows:
-            key = (ACCOUNT_ID, balance_date)
+            key = (account_id, balance_date)
             if key in existing or key in seen:
                 skipped += 1
                 continue
             seen.add(key)
-            new_rows.append((balance_date, ACCOUNT_ID, balance))
+            new_rows.append((balance_date, account_id, balance))
         if new_rows:
             con.executemany("INSERT INTO daily_balances VALUES (?, ?, ?)", new_rows)
 
         print(f"CSV: {args.csv}")
         print(f"Database: {args.db}")
+        print(f"Account: {account_id}")
         print(f"Rows read: {len(rows)}")
         print(f"Balances inserted: {len(new_rows)}, skipped as duplicates: {skipped}")
         if new_rows:
