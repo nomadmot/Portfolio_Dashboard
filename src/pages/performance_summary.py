@@ -138,7 +138,7 @@ status_message = get_status_message_component(f"status_{st.context.ip_address}")
 # if no account is available, don't continue
 selected_account_id = account_selector.selected
 if selected_account_id is None:
-    status_message.set_status_message(stat.WARNING, "No accounts available")
+    status_message.set_status_message(stat.WARNING, "Please select an account")
     status_message.show_status_messages()
     st.stop()
 
