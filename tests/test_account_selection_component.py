@@ -16,6 +16,21 @@ os.chdir(root_dir)
 
 # Remember the original module table entries so they can be restored below;
 # other test files (e.g. test_config) must not see the mocks installed next.
+#
+# KNOWN PRE-EXISTING BUG: this file snapshots the module table at COLLECTION
+# time (top of module) but only restores it at the bottom of the module body
+# below. If another test module in the same pytest session has ALREADY imported
+# the real 'duckdb'/'config'/'config.settings'/'utility.database' modules
+# (e.g. test_config.py importing the real config.settings), those real modules
+# are replaced here by the mocks and restored there, which is fine; BUT if this
+# file is collected/imported AFTER the real modules are already cached in
+# sys.modules, the restore loop unconditionally writes back the ORIGINAL
+# (possibly-None) values, which can drop the real modules from sys.modules
+# mid-session and cause confusing import errors in later test files.
+# Correct fix: only restore an entry if this file actually replaced it
+# (i.e. only write back / pop if the current sys.modules value is the mock
+# installed above, not something else). Do not change test behavior when
+# working on this file.
 _original_modules = {
     name: sys.modules.get(name)
     for name in ("duckdb", "config", "config.settings", "utility.database")
@@ -59,9 +74,15 @@ from utility.account_selection_component import (
     AccountSelectionComponent,
     get_account_selection_component,
 )
+from utility.autoupdate_multiselect_component import (
+    AutoUpdateMultiselectComponent,
+    get_aumc_instance,
+)
 
 # Restore the original module table entries now that the local imports
 # have completed; the imported module objects remain cached and usable.
+# (See KNOWN PRE-EXISTING BUG note above about the _original_modules
+# snapshot/restore pattern in this file.)
 for _name, _original in _original_modules.items():
     if _original is None:
         sys.modules.pop(_name, None)
@@ -216,3 +237,86 @@ def test_factory_returns_existing_instance_for_same_key():
                                              options)
     assert first is get_account_selection_component("shared_key", "Account:", options)
     assert first is not second
+
+
+# ==============================================================================
+# TEST SUITE FOR AutoUpdateMultiselectComponent
+# ==============================================================================
+def test_set_options_replaces_options_and_prunes_selection():
+    """
+    set_options replaces the options list, drops any selected values that are
+    no longer available, and re-renders the widget so that the stale selection
+    is no longer reported.
+    """
+    app_test = AppTest.from_string("""
+import streamlit as st
+from utility.autoupdate_multiselect_component import get_aumc_instance
+component = get_aumc_instance(
+    "smoke_set_options", "Select Symbol(s):", ["AAPL", "GOOGL", "MSFT"],
+    accept_new_options=False, placeholder="Select symbols...",)
+component.selected = ["AAPL", "MSFT"]
+component.set_options(["GOOGL", "IBM"])
+st.text(str(component._options))
+""")
+    app_test.run()
+    # the replacement options were rendered, and the stale selection pruned
+    assert app_test.multiselect[0].options == ["GOOGL", "IBM"]
+    assert app_test.multiselect[0].value == []
+    assert app_test.main.children[1].value == "['GOOGL', 'IBM']"
+
+def test_set_options_preserves_still_available_selections():
+    """Selections that remain in the new options list are kept in the widget."""
+    app_test = AppTest.from_string("""
+import streamlit as st
+from utility.autoupdate_multiselect_component import get_aumc_instance
+component = get_aumc_instance(
+    "smoke_set_options_keep", "Select Symbol(s):", ["AAPL", "GOOGL"],
+    accept_new_options=False, placeholder="Select symbols...",)
+component.selected = ["AAPL", "GOOGL"]
+component.set_options(["AAPL", "GOOGL", "MSFT"])
+st.text(str(component.selected))
+""")
+    app_test.run()
+    assert app_test.multiselect[0].options == ["AAPL", "GOOGL", "MSFT"]
+    assert app_test.multiselect[0].value == ["AAPL", "GOOGL"]
+    assert app_test.main.children[1].value == "['AAPL', 'GOOGL']"
+
+def test_set_options_deduplicates_and_sorts():
+    """The new options list is deduplicated and kept sorted."""
+    component = AutoUpdateMultiselectComponent(
+        "set_options_sort", "Select Symbol(s):", ["ZZZ"])
+    component.selected = []
+
+    component.set_options(["MSFT", "AAPL", "MSFT"])
+
+    assert component._options == ["AAPL", "MSFT"]
+
+def test_set_options_selection_persists_across_runs():
+    """
+    A selection survives a rerun after the options have been replaced.
+    AppTest does not re-register widget values after a second run, so the
+    persistence is verified through the component instance instead.
+    """
+    app_test = AppTest.from_string("""
+import streamlit as st
+from utility.autoupdate_multiselect_component import get_aumc_instance
+component = get_aumc_instance(
+    "smoke_set_options_persist", "Select Symbol(s):", ["AAPL", "GOOGL"],
+    accept_new_options=False, placeholder="Select symbols...",)
+if "done" not in st.session_state:
+    component.selected = ["GOOGL"]
+    component.set_options(["GOOGL", "MSFT"])
+    st.session_state["done"] = True
+st.text(str(component.selected))
+""")
+    app_test.run()
+    assert app_test.multiselect[0].value == ["GOOGL"]
+    assert app_test.multiselect[0].options == ["GOOGL", "MSFT"]
+
+    from utility.autoupdate_multiselect_component import _COMPONENT_INSTANCES
+    component = _COMPONENT_INSTANCES["smoke_set_options_persist"]
+    assert component.selected == ["GOOGL"]
+
+    # rerun without user interaction; the selection must persist
+    app_test.run()
+    assert component.selected == ["GOOGL"]
