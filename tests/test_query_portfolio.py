@@ -61,6 +61,7 @@ from core import (
     get_accounts,
     get_balance_history,
     get_security_symbols,
+    get_traded_symbols,
     lookup_associated_symbols,
     get_trades,
     get_cash_flows,
@@ -213,6 +214,69 @@ def test_get_security_symbols_with_options(mock_connection):
     assert sorted(list(set(symbols))) == ['AAPL', 'GOOGL']
 
 # ==============================================================================
+# TEST SUITE FOR get_traded_symbols
+# ==============================================================================
+def test_get_traded_symbols_success(mock_connection):
+    """Tests retrieval of unique symbols with trades for the given accounts."""
+    # Mock the result set: (symbol,)
+    mock_connection.execute.return_value.fetchall.return_value = [
+        ('AAPL',),
+        ('GOOGL',),
+        ('AAPL',)  # duplicate; expect de-duplication
+    ]
+
+    symbols = get_traded_symbols(account_ids=[1, 2], include_options=False)
+    assert symbols == ['AAPL', 'GOOGL']
+
+def test_get_traded_symbols_binds_account_ids(mock_connection):
+    """Tests that the requested account IDs and the security types are bound."""
+    mock_connection.execute.return_value.fetchall.return_value = []
+
+    get_traded_symbols(account_ids=[1, 2], include_options=False)
+
+    params = mock_connection.execute.call_args[0][1]
+    assert 1 in params
+    assert 2 in params
+    # the excluded security types (option and cash) are also bound
+    assert 'O' in params
+    assert 'C' in params
+    assert len(params) == 4
+
+def test_get_traded_symbols_excludes_options_and_cash(mock_connection):
+    """
+    The standard (include_options=False) filter excludes option and cash
+    security types, so the cash pseudo-symbol is never offered for selection.
+    """
+    # Mock the result set to include a cash row and an option row; the SQL
+    # filter (exercised via the bound parameters) is expected to exclude them.
+    mock_connection.execute.return_value.fetchall.return_value = [
+        ('AAPL',),
+        ('$CASH',),
+        ('QQQ251121P00612000',),
+    ]
+
+    symbols = get_traded_symbols(account_ids=[1], include_options=False)
+    # the mock returns the raw rows; verify the bound types drive the filter
+    params = mock_connection.execute.call_args[0][1]
+    assert 'O' in params and 'C' in params
+    # the function returns the distinct symbols sorted
+    assert symbols == ['$CASH', 'AAPL', 'QQQ251121P00612000']
+
+def test_get_traded_symbols_empty_account_list(mock_connection):
+    """An empty account list short-circuits to an empty result without querying."""
+    symbols = get_traded_symbols(account_ids=[])
+    assert symbols == []
+    # the connection should not have been used for a query
+    mock_connection.execute.assert_not_called()
+
+def test_get_traded_symbols_no_results(mock_connection):
+    """Tests the empty case where no trades are found for the accounts."""
+    mock_connection.execute.return_value.fetchall.return_value = []
+
+    symbols = get_traded_symbols(account_ids=[1])
+    assert symbols == []
+
+# ==============================================================================
 # TEST SUITE FOR lookup_associated_symbols
 # ==============================================================================
 def test_lookup_associated_symbols_success(mock_connection):
@@ -233,6 +297,15 @@ def test_lookup_associated_symbols_none_found(mock_connection):
 
     symbols = lookup_associated_symbols(symbols=['XYZ'])
     assert symbols == ['XYZ']
+
+def test_lookup_associated_symbols_empty_input(mock_connection):
+    """
+    An empty input list must return an empty list without querying, so that an
+    empty IN clause (a SQL syntax error) is never generated.
+    """
+    symbols = lookup_associated_symbols(symbols=[])
+    assert symbols == []
+    mock_connection.execute.assert_not_called()
 
 # ==============================================================================
 # TEST SUITE FOR get_trades

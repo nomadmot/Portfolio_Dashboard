@@ -253,6 +253,62 @@ def get_security_symbols(include_options: bool = False) -> List[str]:
     return symbols
 
 
+def get_traded_symbols(account_ids: List[int], include_options: bool = False) -> List[str]:
+    """
+    Get a list of symbols that have at least one transaction for any of the
+    given accounts over the full trade history.
+
+    Keyword Arguments:
+        account_ids -- the account IDs to query transactions for.
+        include_options -- Select whether or not options are included in the
+            results (default: False).
+
+    Returns:
+        A sorted list of unique symbols with transactions for the given
+        accounts. An empty account list yields an empty list.
+    """
+    # mark entry into the method
+    _logger.debug(("Entering method get_traded_symbols with: ",
+                  "account_ids = %s ",
+                  "include_options = %s "),
+                  account_ids,
+                  include_options,
+                  )
+
+    if not account_ids:
+        # no accounts to query; nothing to return
+        return []
+
+    # Dynamically build the parameter list for the IN clause
+    account_placeholders = ', '.join(['?'] * len(account_ids))
+
+    if include_options:
+        # include options but still exclude the cash pseudo-security
+        security_filter = "S.security_type != ?"
+        params = tuple(account_ids) + (SecurityType.CASH,)
+    else:
+        # standard securities only: exclude options and the cash pseudo-security
+        security_filter = "S.security_type NOT IN (?, ?)"
+        params = tuple(account_ids) + (SecurityType.OPTION, SecurityType.CASH)
+
+    final_sql = f"""
+    SELECT DISTINCT
+        T.symbol
+    FROM trades T
+    JOIN securities S ON T.symbol = S.symbol
+    WHERE T.account_id IN ({account_placeholders})
+    AND {security_filter}
+    ORDER BY T.symbol;
+    """
+    _logger.debug("Generated SQL statement: %s", final_sql)
+
+    # Execute the query
+    result = DATABASE_CONNECTION.execute(final_sql, params).fetchall()
+
+    symbols = sorted({row[0] for row in result})
+    return symbols
+
+
 def lookup_associated_symbols(symbols: List[str]) -> List[str]:
     """
     Append associated options symbols from the database to the input list of stock symbols. 
@@ -265,9 +321,13 @@ def lookup_associated_symbols(symbols: List[str]) -> List[str]:
     """
     # mark entry into the method
     _logger.debug(("Entering method lookup_associated_symbols with: ",
-                 "symbols = %s "),
-                 symbols,
-                 )
+                  "symbols = %s "),
+                  symbols,
+                  )
+
+    if not symbols:
+        # nothing to look up; an empty IN clause is a SQL syntax error
+        return []
 
     # Dynamically build the parameter list for the IN clause
     placeholders = ', '.join(['?'] * len(symbols))
