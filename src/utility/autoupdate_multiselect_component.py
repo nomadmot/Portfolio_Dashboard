@@ -136,6 +136,44 @@ class AutoUpdateMultiselectComponent:
                 key=self._widget_id
             )
 
+    def set_options(self, new_options: list[str]):
+        """
+        Replace the list of options for the multiselect widget and re-render.
+        Any currently selected values that are no longer in the new options
+        list are dropped from the selection.
+
+        Arguments:
+            new_options -- The complete replacement list of options
+        """
+        # mark debug entry into the method
+        _logger.debug("Entering AutoUpdateMultiselectComponent.set_options with new options: %s",
+                      new_options,
+                      )
+        # Drop any selected options that are no longer available
+        self._selected = [option for option in self._selected if option in new_options]
+        self._default = self._selected
+
+        # Replace the options list and keep it sorted alphabetically
+        self._options = sorted(set(new_options))
+
+        # Swap out the current multiselect widget, if necessary
+        if self._widget_id in st.session_state:
+            del st.session_state[self._widget_id]
+        self._widget_id = self._key + "_" + str(uuid())
+
+        # Create the multiselect component
+        with self.widget_placeholder:
+            st.multiselect(
+                self._label,
+                options=self._options,
+                default=self._default,
+                accept_new_options=self._accept_new_options,
+                placeholder=self._placeholder,
+                on_change=option_multiselect_callback,
+                args=(self._widget_id, self),
+                key=self._widget_id
+            )
+
     def update_options(self, new_options: list[str]):
         """
         Update the list of options for the multiselect widget
