@@ -111,15 +111,15 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         prev_cost_basis = prev_shares * prev_avg_price
 
         # use the trade price as the current price
-        row_price: float = row.Price
+        row_price: float = row.Price # type: ignore
         current_price = row_price
 
         # calculate the current holdings
-        row_shares: float = row.Quantity
+        row_shares: float = row.Quantity # type: ignore
         current_shares += row_shares
 
         # get the transaction amount
-        row_amount: float = row.Amount
+        row_amount: float = row.Amount # type: ignore
 
         # calculate the total cost and realized profit/loss
         if prev_shares < 0:
