@@ -26,6 +26,7 @@ from .stock_data import (
 
 from .status_message_component import get_status_message_component, StatusType
 from .autoupdate_multiselect_component import get_aumc_instance
+from .account_selection_component import get_account_selection_component
 from .time_machine_component import get_time_machine_component
 from .system_info import get_client_ip, get_memory_size, show_system_info
 
@@ -45,6 +46,7 @@ __all__ = [
     "get_status_message_component",
     "StatusType",
     "get_aumc_instance",
+    "get_account_selection_component",
     "get_time_machine_component",
     "show_system_info",
     "get_client_ip",

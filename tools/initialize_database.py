@@ -1,9 +1,9 @@
 """
 Create and initialize the portfolio DuckDB database (default:
 tools/data/portfolio.db) by executing the DDL scripts in tools/DDL in
-their declared run sequence. The seed INSERT for the accounts table is
-executed as a parameterized statement using an account name supplied via
---account-name or entered interactively.
+their declared run sequence. The accounts table is created empty; after
+initialization the script offers to add accounts interactively using the
+add logic from manage_accounts.py.
 """
 import argparse
 import re
@@ -12,15 +12,11 @@ from pathlib import Path
 
 import duckdb
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+from common import DDL_DIR, MANAGE_ACCOUNTS_HINT, REPO_ROOT, initialize_database, load_ddl_scripts
+from manage_accounts import cmd_add
+
 DEFAULT_DB = REPO_ROOT / "tools" / "data" / "portfolio.db"
-DDL_DIR = REPO_ROOT / "tools" / "DDL"
 
-DEFAULT_ACCOUNT_NAME = "Schwab Trading"
-ACCOUNT_ID = 1
-
-ACCOUNTS_INSERT_RE = re.compile(r"INSERT\s+INTO\s+accounts\b", re.IGNORECASE)
-STRING_LITERAL_RE = re.compile(r"'[^']*'")
 CREATE_TABLE_RE = re.compile(
     r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][A-Za-z0-9_]*)", re.IGNORECASE)
 
@@ -31,41 +27,9 @@ def parse_args(argv=None):
         description="Create and initialize the portfolio database from tools/DDL.")
     parser.add_argument("--db", type=Path, default=DEFAULT_DB,
                         help=f"path to the DuckDB database file (default: {DEFAULT_DB})")
-    parser.add_argument("--account-name",
-                        help=f"name for account {ACCOUNT_ID}; prompted if omitted "
-                             f"(default: {DEFAULT_ACCOUNT_NAME!r})")
     parser.add_argument("--force", action="store_true",
                         help="re-initialize an existing database, dropping all tables")
     return parser.parse_args(argv)
-
-
-def load_ddl_scripts():
-    """Return the DDL scripts in tools/DDL sorted by their declared run sequence."""
-    if not DDL_DIR.is_dir():
-        raise SystemExit(f"DDL directory not found: {DDL_DIR}")
-    scripts = []
-    for path in sorted(DDL_DIR.glob("*.sql")):
-        match = re.search(r"Run sequence:\s*(\d+)", path.read_text())
-        if not match:
-            raise SystemExit(f"No 'Run sequence' header found in {path}; cannot order DDL scripts.")
-        scripts.append((int(match.group(1)), path))
-    scripts.sort(key=lambda item: (item[0], item[1].name))
-    return [path for _, path in scripts]
-
-
-def split_statements(text):
-    """Split a DDL script into individual statements, ignoring comment lines."""
-    lines = [line for line in text.splitlines() if not line.strip().startswith("--")]
-    return [chunk.strip() for chunk in "\n".join(lines).split(";") if chunk.strip()]
-
-
-def parameterize_account_insert(statement):
-    """Replace the string literal in an accounts INSERT statement with a placeholder."""
-    literals = STRING_LITERAL_RE.findall(statement)
-    if len(literals) != 1:
-        raise SystemExit(
-            f"Expected exactly one string literal in {statement!r}, found {len(literals)}.")
-    return STRING_LITERAL_RE.sub("?", statement)
 
 
 def drop_existing_tables(con, scripts):
@@ -76,18 +40,36 @@ def drop_existing_tables(con, scripts):
             con.execute(f'DROP TABLE IF EXISTS "{match.group(1)}"')
 
 
-def initialize_database(con, scripts, account_name):
-    """Create all tables by executing each DDL script directly from tools/DDL."""
-    for path in scripts:
-        text = path.read_text()
-        if ACCOUNTS_INSERT_RE.search(text):
-            for statement in split_statements(text):
-                if ACCOUNTS_INSERT_RE.search(statement):
-                    con.execute(parameterize_account_insert(statement), [account_name])
-                else:
-                    con.execute(statement)
-        else:
-            con.execute(text)
+def offer_add_accounts(con):
+    """
+    Interactively offer to add accounts to a database with an empty
+    accounts table, looping until the user declines. On non-interactive
+    stdin, print a pointer to manage_accounts.py instead.
+    """
+    print("No accounts in the database.")
+    if not sys.stdin.isatty():
+        print(f"Add one with: {MANAGE_ACCOUNTS_HINT}")
+        return
+
+    first = True
+    while True:
+        prompt = "Add an account now? [y/N]: " if first else "Add another account? [y/N]: "
+        first = False
+        try:
+            answer = input(prompt).strip().lower()
+        except EOFError:
+            return
+        if answer not in ("y", "yes"):
+            return
+        try:
+            name = input("Account name: ").strip()
+        except EOFError:
+            print("Aborted.")
+            return
+        if not name:
+            print("No name given; skipping.")
+            continue
+        cmd_add(con, name, None)
 
 
 def main(argv=None):
@@ -98,20 +80,11 @@ def main(argv=None):
             f"Database {args.db} already exists. Re-initializing drops all tables; "
             "pass --force to override.")
 
-    account_name = args.account_name
-    if account_name is None:
-        entered = input(f"Account name [{DEFAULT_ACCOUNT_NAME}]: ").strip()
-        account_name = entered or DEFAULT_ACCOUNT_NAME
-
     con = duckdb.connect(str(args.db))
     try:
         scripts = load_ddl_scripts()
         drop_existing_tables(con, scripts)
-        initialize_database(con, scripts, account_name)
-
-        count = con.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
-        if count == 0:
-            con.execute("INSERT INTO accounts VALUES (?, ?)", [ACCOUNT_ID, account_name])
+        initialize_database(con, scripts)
 
         tables = [r[0] for r in con.execute(
             "SELECT table_name FROM information_schema.tables "
@@ -120,11 +93,13 @@ def main(argv=None):
 
         print(f"Database: {args.db}")
         print(f"Initialized {len(scripts)} DDL scripts from {DDL_DIR}")
-        print(f"Tables: {', '.join(tables)}")
         for account_id, name in accounts:
             print(f"Account {account_id}: {name}")
+        if not accounts:
+            offer_add_accounts(con)
     finally:
         con.close()
+    return 0
 
 
 if __name__ == "__main__":

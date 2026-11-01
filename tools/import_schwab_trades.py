@@ -3,7 +3,8 @@ Import a Schwab transactions CSV (e.g. tools/data/Schwab_Transactions.csv)
 into the trades and securities tables of a DuckDB database
 (default: tools/data/portfolio.db). If the database file does not exist,
 it is created and initialized by executing the DDL scripts in tools/DDL
-in their declared run sequence.
+in their declared run sequence. The target account is taken from --account
+or selected interactively from the accounts table.
 """
 import argparse
 import csv
@@ -13,21 +14,20 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-import duckdb
+from common import REPO_ROOT, open_database, resolve_account_id, table_exists
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CSV = REPO_ROOT / "tools" / "data" / "Schwab_Transactions.csv"
 DEFAULT_DB = REPO_ROOT / "tools" / "data" / "portfolio.db"
-DDL_DIR = REPO_ROOT / "tools" / "DDL"
 
 CASH_SYMBOL = "$CASH"
-ACCOUNT_ID = 1
 
 OPTION_ACTIONS = {"Buy to Open", "Sell to Open", "Buy to Close",
                   "Sell to Close", "Expired"}
 
 ACTION_TO_TRADE_TYPE = {
     "Buy": "BUY",
+    "Reinvest Dividend": "BUY",
+    "Reinvest Shares": "BUY",
     "Sell": "SELL",
     "Buy to Open": "BUY",
     "Sell to Open": "SELL",
@@ -46,6 +46,9 @@ ACTION_TO_TRADE_TYPE = {
     "Service Fee": "FEE",
     "Funds Received": "DEP",
     "MoneyLink Transfer": "DEP",
+    "Bank Interest": "DEP",
+    "Advisor Fee": "WDL",
+    "Tax Withholding": "WDL",
     "Returned Check": "WDL",
 }
 
@@ -60,35 +63,9 @@ def parse_args(argv=None):
                         help=f"path to the Schwab transactions CSV (default: {DEFAULT_CSV})")
     parser.add_argument("--db", type=Path, default=DEFAULT_DB,
                         help=f"path to the DuckDB database file (default: {DEFAULT_DB})")
+    parser.add_argument("--account", type=int, default=None,
+                        help="account ID to import into (default: prompt interactively)")
     return parser.parse_args(argv)
-
-
-def load_ddl_scripts():
-    """Return the DDL scripts in tools/DDL sorted by their declared run sequence."""
-    if not DDL_DIR.is_dir():
-        raise SystemExit(f"DDL directory not found: {DDL_DIR}")
-    scripts = []
-    for path in sorted(DDL_DIR.glob("*.sql")):
-        match = re.search(r"Run sequence:\s*(\d+)", path.read_text())
-        if not match:
-            raise SystemExit(f"No 'Run sequence' header found in {path}; cannot order DDL scripts.")
-        scripts.append((int(match.group(1)), path))
-    scripts.sort(key=lambda item: (item[0], item[1].name))
-    return [path for _, path in scripts]
-
-
-def initialize_database(con, scripts):
-    """Create all tables by executing each DDL script directly from tools/DDL."""
-    for path in scripts:
-        con.execute(path.read_text())
-
-
-def table_exists(con, name):
-    """Return True if the given table exists in the connected database."""
-    row = con.execute(
-        "SELECT 1 FROM information_schema.tables WHERE table_name = ?", [name]
-    ).fetchone()
-    return row is not None
 
 
 def parse_money(value):
@@ -137,7 +114,7 @@ def security_type_for(action, symbol, description):
     return "S"
 
 
-def normalize_row(row, line_no):
+def normalize_row(row, line_no, account_id):
     """Convert one raw CSV row into normalized trade and security data."""
     action = row["Action"].strip()
     trade_type = ACTION_TO_TRADE_TYPE.get(action)
@@ -187,20 +164,21 @@ def normalize_row(row, line_no):
     security_type = security_type_for(action, symbol, description)
 
     return {
-        "trade": (ACCOUNT_ID, symbol, parse_trade_date(row["Date"]), trade_type,
+        "trade": (account_id, symbol, parse_trade_date(row["Date"]), trade_type,
                   float(quantity), float(price), float(fees)),
+        "action": action,
         "position_effect": position_effect,
         "security": (symbol, security_name, security_type, associated_symbol),
     }
 
 
-def read_csv(path):
+def read_csv(path, account_id):
     """Read and normalize every row of the transactions CSV."""
     rows = []
     with open(path, newline="") as handle:
         reader = csv.DictReader(handle)
         for line_no, row in enumerate(reader, start=2):
-            rows.append(normalize_row(row, line_no))
+            rows.append(normalize_row(row, line_no, account_id))
     return rows
 
 
@@ -210,21 +188,15 @@ def main(argv=None):
     if not args.csv.is_file():
         raise SystemExit(f"CSV file not found: {args.csv}")
 
-    rows = read_csv(args.csv)
-
-    is_new_db = not args.db.exists()
-    args.db.parent.mkdir(parents=True, exist_ok=True)
-    con = duckdb.connect(str(args.db))
+    con = open_database(args.db)
     try:
-        if is_new_db:
-            scripts = load_ddl_scripts()
-            initialize_database(con, scripts)
-            print(f"Created {args.db} and initialized {len(scripts)} tables from {DDL_DIR}")
-        else:
-            missing = [t for t in ("securities", "trades") if not table_exists(con, t)]
-            if missing:
-                raise SystemExit(
-                    f"Database {args.db} exists but is missing tables: {', '.join(missing)}")
+        account_id = resolve_account_id(con, args.account)
+        missing = [t for t in ("securities", "trades") if not table_exists(con, t)]
+        if missing:
+            raise SystemExit(
+                f"Database {args.db} exists but is missing tables: {', '.join(missing)}")
+
+        rows = read_csv(args.csv, account_id)
 
         securities_map = {}
         for row in rows:
@@ -247,15 +219,17 @@ def main(argv=None):
                 skipped += 1
                 continue
             account_id, symbol, trade_date, trade_type, quantity, price, fees = row["trade"]
-            # explicit column list (position_effect between trade_type and quantity) so
-            # the insert is correct regardless of the table's physical column order
+            # explicit column list (action and position_effect between trade_type and
+            # quantity) so the insert is correct regardless of the table's physical
+            # column order
             new_trades.append((next_id, account_id, symbol, trade_date, trade_type,
-                               row["position_effect"], quantity, price, fees))
+                               row["action"], row["position_effect"], quantity, price, fees))
             next_id += 1
         if new_trades:
             con.executemany(
                 "INSERT INTO trades (id, account_id, symbol, trade_date, trade_type,"
-                " position_effect, quantity, price, fees) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                " action, position_effect, quantity, price, fees) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 new_trades)
 
         type_counts = {}
@@ -264,6 +238,7 @@ def main(argv=None):
 
         print(f"CSV: {args.csv}")
         print(f"Database: {args.db}")
+        print(f"Account: {account_id}")
         print(f"Rows read: {len(rows)}")
         print(f"Securities inserted: {len(new_securities)} (of {len(securities_map)} distinct)")
         print(f"Trades inserted: {len(new_trades)}, skipped as duplicates: {skipped}")

@@ -10,5 +10,4 @@ CREATE TABLE accounts (
 	account_name VARCHAR NOT NULL,
 	PRIMARY KEY (account_id)
 );
-INSERT INTO accounts VALUES (1, 'Schwab Trading');
 END TRANSACTION;
