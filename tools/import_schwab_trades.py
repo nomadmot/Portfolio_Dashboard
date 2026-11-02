@@ -39,6 +39,8 @@ ACTION_TO_TRADE_TYPE = {
     "Stock Split": "SPLT",
     "Qualified Dividend": "DIV",
     "Cash Dividend": "DIV",
+    "Short Term Cap Gain Reinvest": "DIV",
+    "Long Term Cap Gain Reinvest": "DIV",
     "Credit Interest": "INT",
     "Margin Interest": "INT",
     "Interest Adj": "INT",
@@ -46,6 +48,7 @@ ACTION_TO_TRADE_TYPE = {
     "Service Fee": "FEE",
     "Funds Received": "DEP",
     "MoneyLink Transfer": "DEP",
+    "MoneyLink Adj": "DEP",
     "Bank Interest": "DEP",
     "Advisor Fee": "WDL",
     "Tax Withholding": "WDL",
@@ -136,7 +139,7 @@ def normalize_row(row, line_no, account_id):
     fees = parse_money(row["Fees & Comm"])
     amount = parse_money(row["Amount"])
 
-    if action == "MoneyLink Transfer":
+    if action in ("MoneyLink Transfer", "MoneyLink Adj"):
         trade_type = "DEP" if (amount or Decimal(0)) >= 0 else "WDL"
 
     if quantity is None and price is None:
