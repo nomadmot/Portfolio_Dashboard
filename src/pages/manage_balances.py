@@ -72,8 +72,9 @@ if selected_row is not None and selected_row != [] and selected_row["selection"]
     selected_row = selected_row["selection"]["rows"][0]
     if selected_row < len(history):
         # set the values for the update date and balance widgets
-        st.session_state[_UPDATE_DATE_SESSION_KEY] = history.iloc[selected_row]["balance_date"]
-        st.session_state[_UPDATE_BALANCE_SESSION_KEY] = float(history.iloc[selected_row]["balance"])
+        row = history.row(selected_row)
+        st.session_state[_UPDATE_DATE_SESSION_KEY] = row["balance_date"]
+        st.session_state[_UPDATE_BALANCE_SESSION_KEY] = float(row["balance"])
 # if the update date is not set, initialize it to today's date
 elif _UPDATE_DATE_SESSION_KEY not in st.session_state:
     st.session_state[_UPDATE_DATE_SESSION_KEY] = date.today()

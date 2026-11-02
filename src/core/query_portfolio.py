@@ -6,7 +6,7 @@ from typing import List
 from datetime import date
 
 # Import 3rd party libraries
-from pandas import DataFrame
+import polars as pl
 import duckdb
 
 # Import local modules
@@ -78,7 +78,7 @@ def get_accounts() -> List[Account]:
 def get_balance_history(account_id: int,
                         begin_date: date,
                         end_date: date,
-                        ascending: bool = False) -> DataFrame:
+                        ascending: bool = False) -> pl.DataFrame:
     """
     Retrieve the balance history for the specified account and time period.
 
@@ -89,16 +89,16 @@ def get_balance_history(account_id: int,
         ascending -- Whether to sort the results in ascending order by date (default is False).
 
     Returns:
-        A pandas DataFrame containing the balance history, indexed by date.
+        A polars DataFrame containing the balance history.
     """
     # mark entry into the method
     _logger.debug(("Entering method get_balance_history with: ",
-                 "account_id = %s ",
-                 "from_date = %s ",
-                 "to_date = %s ",
-                 "ascending = %s"),
-                 account_id, begin_date, end_date, ascending,
-                 )
+                  "account_id = %s ",
+                  "from_date = %s ",
+                  "to_date = %s ",
+                  "ascending = %s"),
+                  account_id, begin_date, end_date, ascending,
+                  )
 
     # Select the required fields.
     select_sql = f"""
@@ -107,18 +107,13 @@ def get_balance_history(account_id: int,
         ORDER BY balance_date {'ASC' if ascending else 'DESC'};
         """
 
-    result = DATABASE_CONNECTION.execute(select_sql, (account_id, begin_date, end_date)).fetchall()
-
-    # Mapping and DataFrame Creation
-    if not result:
-        # no results found
-        return DataFrame(columns=['date', 'balance'])
-
-    # Convert the list of tuples into the required DataFrame format
-    df_data = [{'balance_date': row[0], 'balance': row[1]} for row in result]
-    df_balances = DataFrame(df_data)
-
-    return df_balances
+    # Convert the query result directly to a polars DataFrame. DuckDB carries the
+    # column names and types from the database, so the frame's schema is derived
+    # from the live tables rather than re-declared here (and an empty result still
+    # yields the correct, typed empty schema).
+    return DATABASE_CONNECTION.execute(
+        select_sql, (account_id, begin_date, end_date)
+    ).pl()
 
 
 def get_first_balance_date(account_id: int | None = None):
@@ -230,9 +225,9 @@ def get_security_symbols(include_options: bool = False) -> List[str]:
     """
     # mark entry into the method
     _logger.debug(("Entering method get_security_symbols with: ",
-                 "include_options = %s "),
-                 include_options,
-                 )
+                  "include_options = %s "),
+                  include_options,
+                  )
 
     # Build the base query
     if include_options:
@@ -269,11 +264,11 @@ def get_traded_symbols(account_ids: List[int], include_options: bool = False) ->
     """
     # mark entry into the method
     _logger.debug(("Entering method get_traded_symbols with: ",
-                  "account_ids = %s ",
-                  "include_options = %s "),
-                  account_ids,
-                  include_options,
-                  )
+                   "account_ids = %s ",
+                   "include_options = %s "),
+                   account_ids,
+                   include_options,
+                   )
 
     if not account_ids:
         # no accounts to query; nothing to return
@@ -321,9 +316,9 @@ def lookup_associated_symbols(symbols: List[str]) -> List[str]:
     """
     # mark entry into the method
     _logger.debug(("Entering method lookup_associated_symbols with: ",
-                  "symbols = %s "),
-                  symbols,
-                  )
+                   "symbols = %s "),
+                   symbols,
+                   )
 
     if not symbols:
         # nothing to look up; an empty IN clause is a SQL syntax error
@@ -354,7 +349,7 @@ def get_trades(symbols: List[str],
                account_ids: List[int],
                begin_date: date,
                end_date: date,
-               ascending: bool = False) -> DataFrame:
+               ascending: bool = False) -> pl.DataFrame:
     """
     Query the Trades table for the selected security symbols and accounts.
 
@@ -366,17 +361,17 @@ def get_trades(symbols: List[str],
         ascending -- Whether to sort the results in ascending order by date (default is False).
 
     Returns:
-        A pandas DataFrame containing the trades for the specified symbols and accounts.
+        A polars DataFrame containing the trades for the specified symbols and accounts.
     """
     # mark entry into the method
     _logger.debug(("Entering method get_trades with: ",
-                  "symbols = %s ",
-                  "account_ids = %s ",
-                  "begin_date = %s ",
-                  "end_date = %s ",
-                  "ascending = %s"),
-                  symbols, account_ids, begin_date, end_date, ascending,
-                  )
+                   "symbols = %s ",
+                   "account_ids = %s ",
+                   "begin_date = %s ",
+                   "end_date = %s ",
+                   "ascending = %s"),
+                   symbols, account_ids, begin_date, end_date, ascending,
+                   )
 
     # Dynamically build the parameters list for the IN clauses
     account_placeholders = ', '.join(['?'] * len(account_ids))
@@ -398,53 +393,57 @@ def get_trades(symbols: List[str],
     AND T.trade_date BETWEEN ? AND ?;
     """
 
-    # Execute the query
+    # Execute the query and read the raw rows as a polars frame. Column values
+    # are accessed by name (not position) so the result schema is derived from
+    # the live database tables rather than a hard-coded column order.
     params = tuple(account_ids) + tuple(symbols) + (begin_date, end_date)
-    result = DATABASE_CONNECTION.execute(final_sql, params).fetchall()
+    raw = DATABASE_CONNECTION.execute(final_sql, params).pl()
 
-    # Process Results and Build DataFrame
+    # Process the results into the presentation frame. The ``Amount`` column is
+    # the signed dollar value of the trade (negative = money leaving the
+    # account); option contracts are valued at 100 shares per contract.
     trades = []
-    for row in result:
-        # row structure: (symbol, name, security_type, trade_date, trade_type, quantity, price, fees)
-        symbol = row[0]
-        trade_amount = row[6] * row[5] # price * quantity
+    for row in raw.iter_rows(named=True):
+        trade_amount = row["price"] * row["quantity"]
 
         # Option contracts are 100 shares per contract
-        if row[2] == SecurityType.OPTION:
+        if row["security_type"] == SecurityType.OPTION:
             trade_amount *= 100
 
         # Negate the amount for the final 'Amount' column
         final_amount = -trade_amount
 
         trades.append({
-            'Symbol': symbol,
-            'Date': row[3],
-            'Type': row[4],
-            'Quantity': row[5],
-            'Price': row[6],
+            'Symbol': row["symbol"],
+            'Date': row["trade_date"],
+            'Type': row["trade_type"],
+            'Quantity': row["quantity"],
+            'Price': row["price"],
             'Amount': final_amount,
         })
 
-    # Return DataFrame
-    if trades:
-        df = DataFrame(trades)
-        # Sort values according to input parameter
-        df.sort_values(
-            by=['Date', 'Type'],
-            ascending=ascending,
-            inplace=True
+    if not trades:
+        # No trades found; return an empty frame with the presentation schema.
+        return pl.DataFrame(
+            schema={
+                'Symbol': pl.String,
+                'Date': pl.Date,
+                'Type': pl.String,
+                'Quantity': pl.Float64,
+                'Price': pl.Float64,
+                'Amount': pl.Float64,
+            }
         )
-        df.reset_index(drop=True, inplace=True)
-        return df
-    else:
-        # No trades found
-        return DataFrame(columns=['Symbol', 'Date', 'Type', 'Quantity', 'Price', 'Amount'])
+
+    df = pl.DataFrame(trades)
+    df = df.sort(by=['Date', 'Type'], descending=not ascending, maintain_order=True)
+    return df
 
 
 def get_cash_flows(account_id: int,
                    begin_date: date,
                    end_date: date,
-                   trade_types: List[str]) -> DataFrame:
+                   trade_types: List[str]) -> pl.DataFrame:
     """
     Query the Trades table for net external cash flows per date.
 
@@ -461,20 +460,22 @@ def get_cash_flows(account_id: int,
         trade_types -- A list of trade_type values to include in the sum.
 
     Returns:
-        A pandas DataFrame with columns ['trade_date', 'cash_flow'], one row per
+        A polars DataFrame with columns ['trade_date', 'cash_flow'], one row per
         date that has at least one matching trade, sorted ascending by date.
     """
     # mark entry into the method
     _logger.debug(("Entering method get_cash_flows with: ",
-                  "account_id = %s ",
-                  "begin_date = %s ",
-                  "end_date = %s ",
-                  "trade_types = %s"),
-                  account_id, begin_date, end_date, trade_types)
+                   "account_id = %s ",
+                   "begin_date = %s ",
+                   "end_date = %s ",
+                   "trade_types = %s"),
+                   account_id, begin_date, end_date, trade_types)
 
     if not trade_types:
         # no types requested; nothing to sum
-        return DataFrame(columns=['trade_date', 'cash_flow'])
+        return pl.DataFrame(
+            schema={"trade_date": pl.Date, "cash_flow": pl.Float64}
+        )
 
     # Dynamically build the parameter list for the IN clause
     placeholders = ', '.join(['?'] * len(trade_types))
@@ -491,11 +492,8 @@ def get_cash_flows(account_id: int,
     """
 
     params = (account_id, *tuple(trade_types), begin_date, end_date)
-    result = DATABASE_CONNECTION.execute(final_sql, params).fetchall()
 
-    if not result:
-        # no cash flows found
-        return DataFrame(columns=['trade_date', 'cash_flow'])
-
-    df_data = [{'trade_date': row[0], 'cash_flow': row[1]} for row in result]
-    return DataFrame(df_data)
+    # Convert the result directly to a polars frame. The column names and types
+    # come from the database (including the empty case), so there is no hard-
+    # coded schema to keep in sync with the trades table.
+    return DATABASE_CONNECTION.execute(final_sql, params).pl()

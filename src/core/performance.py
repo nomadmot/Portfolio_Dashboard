@@ -17,46 +17,100 @@ A "cash flow" is a net external movement of money that should be excluded from
 the measured return (e.g. deposits and withdrawals). Its sign follows the stored
 transaction amount: positive adds to the balance, negative removes from it.
 
+All public functions accept polars objects (``pl.Series`` / one-column
+``pl.DataFrame``) and return a one-column ``pl.DataFrame``. For the MWR
+routines the balance series must be a two-column DataFrame of
+``["date" (pl.Datetime), "value"]`` so that day counts can be computed for the
+IRR solver; the same shape is accepted (optionally) for ``cash_flows``.
+
 AI-Generated
 note: The IRR solver is adapted from the public-domain implementation
 """
 # Import 3rd party libraries
 import numpy as np
-import pandas as pd
+import polars as pl
+
+
+# --- input normalization ---
+def _to_numpy(obj) -> np.ndarray:
+    """Extract a numpy float array from a polars Series / one-column DataFrame."""
+    if obj is None:
+        return np.zeros(0, dtype=float)
+    if isinstance(obj, pl.DataFrame):
+        # take the last column as the value column (a two-column frame's
+        # leading date column is ignored by the value-based routines)
+        obj = obj.to_series(-1)
+    if not isinstance(obj, pl.Series):
+        return np.asarray(obj, dtype=float)
+    return np.asarray(obj.to_list(), dtype=float)
+
+
+def _split(obj):
+    """
+    Split an input into ``(dates, values)``.
+
+    ``dates`` is ``None`` unless the input is a two-column DataFrame whose first
+    column is a date/datetime column.
+    """
+    if isinstance(obj, pl.DataFrame):
+        cols = obj.columns
+        if len(cols) >= 2:
+            first = obj[cols[0]].dtype
+            if first in (pl.Datetime, pl.Date):
+                return obj[cols[0]].to_list(), _to_numpy(obj[cols[1]])
+            # first column is not a date; treat last column as values
+            return None, _to_numpy(obj[cols[-1]])
+        return None, _to_numpy(obj.to_series(0))
+    return None, _to_numpy(obj)
 
 
 # --- Simple (naive) performance ---
-def simple_daily(balances: pd.Series) -> pd.Series:
+def simple_daily(balances: pl.Series | pl.DataFrame) -> pl.DataFrame:
     """
     Day-over-day percent change for a balance series (first day = 0).
 
     Arguments:
-        balances -- Series of end-of-period values, ascending.
+        balances -- polars Series (or one-column DataFrame) of end-of-period
+            values, ascending.
 
     Returns:
-        A Series of daily percent changes aligned to ``balances``.
+        A one-column polars DataFrame of daily percent changes aligned to
+        ``balances``.
     """
-    daily = balances.pct_change(fill_method=None)
-    daily.iloc[0] = 0.0
-    return daily
+    bal = _to_numpy(balances)
+    n = len(bal)
+    if n == 0:
+        return pl.DataFrame({"value": np.zeros(0, dtype=float)})
+    daily = np.zeros(n, dtype=float)
+    for i in range(1, n):
+        daily[i] = (bal[i] - bal[i - 1]) / bal[i - 1] if bal[i - 1] != 0 else np.nan
+    daily[0] = 0.0
+    return pl.DataFrame({"value": daily})
 
 
-def simple_cumulative(balances: pd.Series) -> pd.Series:
+def simple_cumulative(balances: pl.Series | pl.DataFrame) -> pl.DataFrame:
     """
     Cumulative percent change from the first value (first day = 0).
 
     Arguments:
-        balances -- Series of end-of-period values, ascending.
+        balances -- polars Series (or one-column DataFrame) of end-of-period
+            values, ascending.
 
     Returns:
-        A Series of cumulative percent changes aligned to ``balances``.
+        A one-column polars DataFrame of cumulative percent changes aligned to
+        ``balances``.
     """
-    initial = balances.iloc[0]
-    return balances / initial - 1.0
+    bal = _to_numpy(balances)
+    if len(bal) == 0 or bal[0] == 0:
+        return pl.DataFrame({"value": np.zeros(len(bal), dtype=float)})
+    result = bal / bal[0] - 1.0
+    return pl.DataFrame({"value": result})
 
 
 # --- Time-weighted performance ---
-def twr_daily(balances: pd.Series, cash_flows=None) -> pd.Series:
+def twr_daily(balances: pl.Series | pl.DataFrame,
+              cash_flows: pl.Series | pl.DataFrame | float | None = None
+              ) -> pl.DataFrame:
     """
     Time-weighted daily return, netting out external cash flows.
 
@@ -65,36 +119,53 @@ def twr_daily(balances: pd.Series, cash_flows=None) -> pd.Series:
     to the simple daily percent change.
 
     Arguments:
-        balances -- Series of end-of-period values, ascending.
-        cash_flows -- Series aligned to ``balances`` (or a scalar) of net
-            external cash flows per date; None/0 means no cash flows.
+        balances -- polars Series (or one-column DataFrame) of end-of-period
+            values, ascending.
+        cash_flows -- polars Series aligned to ``balances`` (or a scalar) of
+            net external cash flows per date; None/0 means no cash flows.
 
     Returns:
-        A Series of time-weighted daily returns aligned to ``balances``.
+        A one-column polars DataFrame of time-weighted daily returns aligned to
+        ``balances``.
     """
-    if cash_flows is None:
-        cash_flows = 0.0
-    adjusted = balances - cash_flows      # V_t - CF_t
-    prev = balances.shift(1)              # V_{t-1}
-    daily = adjusted / prev - 1.0
-    daily.iloc[0] = 0.0
-    return daily
+    bal = _to_numpy(balances)
+    n = len(bal)
+    if isinstance(cash_flows, (int, float)):
+        cf = np.full(n, float(cash_flows), dtype=float)
+    else:
+        cf = _to_numpy(cash_flows)
+        if len(cf) != n:
+            cf = np.zeros(n, dtype=float)
+    if n == 0:
+        return pl.DataFrame({"value": np.zeros(0, dtype=float)})
+    adjusted = bal - cf            # V_t - CF_t
+    daily = np.full(n, np.nan, dtype=float)
+    daily[0] = 0.0
+    for i in range(1, n):
+        prev = bal[i - 1]
+        daily[i] = (adjusted[i] / prev - 1.0) if prev != 0 else np.nan
+    return pl.DataFrame({"value": daily})
 
 
-def twr_cumulative(balances: pd.Series, cash_flows=None) -> pd.Series:
+def twr_cumulative(balances: pl.Series | pl.DataFrame,
+                   cash_flows: pl.Series | pl.DataFrame | float | None = None
+                   ) -> pl.DataFrame:
     """
     Time-weighted cumulative return (chain-linked daily returns).
 
     Arguments:
-        balances -- Series of end-of-period values, ascending.
-        cash_flows -- Series aligned to ``balances`` (or a scalar) of net
-            external cash flows per date; None/0 means no cash flows.
+        balances -- polars Series (or one-column DataFrame) of end-of-period
+            values, ascending.
+        cash_flows -- polars Series aligned to ``balances`` (or a scalar) of
+            net external cash flows per date; None/0 means no cash flows.
 
     Returns:
-        A Series of time-weighted cumulative returns aligned to ``balances``.
+        A one-column polars DataFrame of time-weighted cumulative returns
+        aligned to ``balances``.
     """
-    daily = twr_daily(balances, cash_flows)
-    return (1.0 + daily).cumprod() - 1.0
+    daily = np.asarray(twr_daily(balances, cash_flows)["value"].to_list(), dtype=float)
+    result = np.cumprod(1.0 + daily) - 1.0
+    return pl.DataFrame({"value": result})
 
 
 # --- Money-weighted performance (IRR) ---
@@ -155,62 +226,82 @@ def xirr(flows, initial_guess: float = None):
         r = (lo + hi) / 2.0
 
     for _ in range(200):
-        f = npv(r)
-        if abs(f) < 1e-8:
-            return r
         df = dnpv(r)
         # Newton step; fall back to bisection when it leaves the bracket
-        r_new = r - f / df if df != 0.0 else (lo + hi) / 2.0
+        r_new = r - npv(r) / df if df != 0.0 else (lo + hi) / 2.0
         if not (lo < r_new < hi):
             r_new = (lo + hi) / 2.0
+        # converge on the *rate* (a dimensionless number), not on NPV which is
+        # in dollar units and can be non-zero even at the exact root
+        if abs(r_new - r) < 1e-12:
+            return r_new
         # narrow the bracket using the sign at r_new
+        f_lo = npv(lo)
         f_new = npv(r_new)
         if f_lo * f_new <= 0:
-            hi, f_hi = r_new, f_new
+            hi = r_new
         else:
-            lo, f_lo = r_new, f_new
-        if abs(hi - lo) < 1e-9:
+            lo = r_new
+        if abs(hi - lo) < 1e-12:
             return (hi + lo) / 2.0
         r = r_new
 
     return (lo + hi) / 2.0
 
 
-def mwr_series(balances: pd.Series, cash_flows=None) -> pd.Series:
+def mwr_series(balances: pl.Series | pl.DataFrame,
+                cash_flows: pl.Series | pl.DataFrame | float | None = None
+                ) -> pl.DataFrame:
     """
     Running money-weighted return (annualized IRR) since the first date.
 
     For each day t the annualized IRR is solved over the flows
     ``[-V_0 @ t0, -CF_d @ d for each netted-out flow, +V_t @ t]``, warm-starting
-    Newton's method from the previous day's IRR for speed. The index of
-    ``balances`` must be date-like so that day counts can be computed.
+    Newton's method from the previous day's IRR for speed. Each ``CF_d`` is a net
+    external cash flow supplied via ``cash_flows`` (e.g. a deposit, withdrawal,
+    dividend, or fee) that should be excluded from the measured return. With no
+    external flows this reduces to the plain day-over-day value change.
 
     Arguments:
-        balances -- Series of end-of-period values indexed by date, ascending.
-        cash_flows -- Series aligned to ``balances`` (or a scalar) of net
-            external cash flows per date; None/0 means no cash flows.
+        balances -- a two-column DataFrame of ``["date" (pl.Datetime),
+            "value"]`` (ascending), or a one-column value series paired with
+            dates via ``cash_flows``.
+        cash_flows -- a two-column DataFrame of ``["date", "value"]`` of net
+            external cash flows, or a scalar; None/0 means no cash flows.
 
     Returns:
-        A Series aligned to ``balances`` whose value at each date is the
-        annualized IRR from the first date up to and including that date. The
-        first element is 0.0.
+        A one-column polars DataFrame aligned to ``balances`` whose value at each
+        date is the annualized IRR from the first date up to and including that
+        date. The first element is 0.0.
     """
-    n = len(balances)
-    if cash_flows is None or not isinstance(cash_flows, pd.Series):
-        cf_arr = np.full(n, float(cash_flows) if cash_flows is not None else 0.0)
-    else:
-        cf_arr = cash_flows.reindex(balances.index).fillna(0.0).to_numpy(dtype=float)
+    dates, values = _split(balances)
+    n = len(values)
 
-    values = balances.to_numpy(dtype=float)
-    dates = list(balances.index)
-
+    # Build a per-balance-date array of net external cash flows. A cash flow is
+    # attributed to the first balance day on/after its own date so a flow dated
+    # off-calendar still nets out of the correct period.
+    cf_values = np.zeros(n, dtype=float)
+    if cash_flows is not None:
+        cf_dates, cf_amounts = _split(cash_flows)
+        if cf_dates is None:
+            # a scalar or one-column series of flows aligned to the balance dates
+            if isinstance(cash_flows, (int, float)):
+                cf_values = np.full(n, float(cash_flows), dtype=float)
+            elif cf_amounts is not None and len(cf_amounts) == n:
+                cf_values = cf_amounts
+        else:
+            for d, amount in zip(cf_dates, cf_amounts):
+                for i, bdate in enumerate(dates):
+                    if bdate >= d:
+                        cf_values[i] += float(amount)
+                        break
     result = np.zeros(n, dtype=float)
     running_flows = [(dates[0], -values[0])]  # investor funds the start (outflow)
     prev_irr = None
 
     for i in range(1, n):
-        if cf_arr[i] != 0.0:
-            running_flows.append((dates[i], -cf_arr[i]))
+        if cf_values[i] != 0.0:
+            running_flows.append((dates[i], -cf_values[i]))
         day_flows = running_flows + [(dates[i], values[i])]  # terminal value (inflow)
         irr = xirr(day_flows, initial_guess=prev_irr)
         if irr is None:
@@ -219,28 +310,40 @@ def mwr_series(balances: pd.Series, cash_flows=None) -> pd.Series:
             result[i] = irr
             prev_irr = irr
 
-    return pd.Series(result, index=balances.index)
+    return pl.DataFrame({"value": result})
 
 
-def mwr_cumulative(balances: pd.Series, cash_flows=None) -> pd.Series:
+def mwr_cumulative(balances: pl.Series | pl.DataFrame,
+                   cash_flows: pl.Series | pl.DataFrame | float | None = None
+                   ) -> pl.DataFrame:
     """
     Running money-weighted CUMULATIVE (total, non-annualized) return since the
     first date, suitable for direct comparison with a time-weighted cumulative
     series on the same axis.
 
-    Each day's annualized IRR is converted to a total return over the elapsed
-    time: ``(1 + IRR_t) ** ((t - t0).days / 365) - 1``.
+    The daily money-weighted returns from ``mwr_series`` are chained:
+    ``(1 + r_t)`` is cumulated and 1 is subtracted, exactly mirroring how
+    ``twr_cumulative`` chains its daily returns.
 
     Arguments:
-        balances -- Series of end-of-period values indexed by date, ascending.
-        cash_flows -- Series aligned to ``balances`` (or a scalar) of net
-            external cash flows per date; None/0 means no cash flows.
+        balances -- a two-column DataFrame of ``["date" (pl.Datetime),
+            "value"]`` (ascending), or a one-column value series.
+        cash_flows -- a two-column DataFrame of ``["date", "value"]`` of net
+            external cash flows, or a scalar; None/0 means no cash flows.
 
     Returns:
-        A Series aligned to ``balances`` of cumulative money-weighted returns.
+        A one-column polars DataFrame aligned to ``balances`` of cumulative
+        money-weighted returns.
     """
-    irr = mwr_series(balances, cash_flows).to_numpy(dtype=float)
-    t0 = balances.index[0]
-    elapsed_days = np.array([(d - t0).days for d in balances.index], dtype=float) / 365.0
-    total = (1.0 + irr) ** elapsed_days - 1.0
-    return pd.Series(total, index=balances.index)
+    dates, _ = _split(balances)
+    irr = np.asarray(mwr_series(balances, cash_flows)["value"].to_list(), dtype=float)
+    # each element of ``irr`` is the annualized IRR over the window from the
+    # first date up to and including that date. Convert each to a *total* return
+    # over the elapsed time since the first date; the last element is the
+    # cumulative money-weighted return for the period.
+    t0 = dates[0]
+    elapsed = np.array([(d - t0).days for d in dates], dtype=float) / 365.0
+    with np.errstate(invalid="ignore", over="ignore"):
+        total = (1.0 + irr) ** elapsed - 1.0
+    total = np.where((1.0 + irr) < 0.0, np.nan, total)
+    return pl.DataFrame({"value": total})

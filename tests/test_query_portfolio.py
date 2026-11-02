@@ -47,7 +47,7 @@ sys.modules['config.settings'] = mock_settings_module
 
 
 # import 3rd party libraries
-import pandas as pd
+import polars as pl
 import pytest
 
 
@@ -81,11 +81,45 @@ def mock_connection():
     """
     # Create a mock connection object that simulates the behavior of the real connection
     mock_conn = MagicMock()
+    mock_result = MagicMock()
 
-    # We need to mock the execute method which is called repeatedly
-    mock_conn.execute.return_value.fetchone.return_value = (1, "TestAccount")
-    mock_conn.execute.return_value.fetchall.return_value = []
-    mock_conn.execute.return_value.rowcount = 0
+    # The core functions read results via ``.pl()`` (which the real DuckDB driver
+    # turns into a polars frame whose schema comes from the database). Emulate that:
+    # build the frame from the mocked ``fetchall`` rows, giving the columns the same
+    # names the SELECT clause requests, so the tests exercise the same code path as
+    # production without a live database.
+    def _select_columns(sql):
+        import re
+        match = re.search(r"SELECT\s+(.*?)\s+FROM", sql or "", re.I | re.S)
+        if not match:
+            return []
+        names = []
+        for part in match.group(1).split(","):
+            alias = re.search(r"\bAS\s+(\w+)\s*$", part, re.I)
+            if alias:
+                names.append(alias.group(1))
+            else:
+                names.append(part.split(".")[-1].split()[0])
+        return names
+
+    def _make_pl_frame():
+        import polars as pl
+        last_sql = mock_conn.execute.call_args[0][0] if mock_conn.execute.call_args else ""
+        rows = list(mock_result.fetchall.return_value or [])
+        columns = _select_columns(last_sql)
+        if rows and len(columns) != len(rows[0]):
+            columns = [f"col_{i}" for i in range(len(rows[0]))]
+        if not rows:
+            # an empty result still carries the schema the SELECT requests,
+            # matching the real driver's ``pl()`` behavior for zero rows
+            return pl.DataFrame({name: [] for name in columns})
+        return pl.DataFrame([dict(zip(columns, r)) for r in rows])
+
+    mock_result.pl.side_effect = _make_pl_frame
+    mock_result.fetchone.return_value = (1, "TestAccount")
+    mock_result.fetchall.return_value = []
+    mock_result.rowcount = 0
+    mock_conn.execute.return_value = mock_result
 
     return mock_conn
 
@@ -166,10 +200,10 @@ def test_get_balance_history_success(mock_connection):
         ascending=False,
     )
 
-    assert isinstance(df, pd.DataFrame)
+    assert isinstance(df, pl.DataFrame)
     assert len(df) == 2
     # Check if sorting worked (if we mocked the sorting correctly)
-    assert df['balance_date'].iloc[0] == date(2023, 1, 1)
+    assert df['balance_date'].item(0) == date(2023, 1, 1)
 
 def test_get_balance_history_no_results(mock_connection):
     """Tests case where no balance records are found."""
@@ -182,8 +216,8 @@ def test_get_balance_history_no_results(mock_connection):
         end_date=date(2023, 1, 31)
     )
 
-    assert isinstance(df, pd.DataFrame)
-    assert df.empty
+    assert isinstance(df, pl.DataFrame)
+    assert df.is_empty()
 
 # ==============================================================================
 # TEST SUITE FOR get_security_symbols
@@ -328,12 +362,12 @@ def test_get_trades_success(mock_connection):
         ascending=False
     )
 
-    assert isinstance(df, pd.DataFrame)
+    assert isinstance(df, pl.DataFrame)
     assert len(df) == 3
     # Check the calculated amount for the SELL trade (should be negative)
-    assert df[df['Symbol'] == 'GOOGL']['Amount'].iloc[0] == -500.00
+    assert df.filter(pl.col('Symbol') == 'GOOGL')['Amount'].item(0) == -500.00
     # Option contracts are multiplied by 100 shares per contract
-    assert df[df['Symbol'] == 'QQQ251121P00612000']['Amount'].iloc[0] == -1336.00
+    assert df.filter(pl.col('Symbol') == 'QQQ251121P00612000')['Amount'].item(0) == -1336.00
 
 def test_get_trades_binds_account_ids(mock_connection):
     """Tests that the requested account IDs are bound to the query parameters."""
@@ -446,11 +480,11 @@ def test_get_cash_flows_success(mock_connection):
         trade_types=["DEP", "WDL"],
     )
 
-    assert isinstance(df, pd.DataFrame)
+    assert isinstance(df, pl.DataFrame)
     assert len(df) == 2
     assert list(df.columns) == ['trade_date', 'cash_flow']
-    assert df['cash_flow'].iloc[0] == 60000.00
-    assert df['cash_flow'].iloc[1] == -60000.00
+    assert df['cash_flow'].item(0) == 60000.00
+    assert df['cash_flow'].item(1) == -60000.00
 
 
 def test_get_cash_flows_no_results(mock_connection):
@@ -464,8 +498,8 @@ def test_get_cash_flows_no_results(mock_connection):
         trade_types=["DEP", "WDL"],
     )
 
-    assert isinstance(df, pd.DataFrame)
-    assert df.empty
+    assert isinstance(df, pl.DataFrame)
+    assert df.is_empty()
     assert list(df.columns) == ['trade_date', 'cash_flow']
 
 
@@ -478,8 +512,8 @@ def test_get_cash_flows_no_types_returns_empty(mock_connection):
         trade_types=[],
     )
 
-    assert isinstance(df, pd.DataFrame)
-    assert df.empty
+    assert isinstance(df, pl.DataFrame)
+    assert df.is_empty()
     # the connection should not have been used for a query
     mock_connection.execute.assert_not_called()
 
