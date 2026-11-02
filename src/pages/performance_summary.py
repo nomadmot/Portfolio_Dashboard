@@ -3,12 +3,13 @@ Plot the daily performance of the specified account compared to a selected stock
 """
 # Import standard libraries
 from typing import List
+from datetime import date, datetime
 from pathlib import Path
 
 # Import 3rd party libraries
 import streamlit as st
 import numpy as np
-import pandas as pd
+import polars as pl
 import plotly.graph_objects as go
 
 # Import local modules
@@ -54,8 +55,64 @@ _INCLUDE_DIV_INT_KEY = "summary-performance-include-div-int"
 _INCLUDE_FEES_TAX_KEY = "summary-performance-include-fees-tax"
 
 
+def _align_to_dates(pl_dates, values):
+    """
+    Back-fill a values array (with possible nulls) aligned to the merged
+    calendar: forward-fill from the last seen value, then back-fill any leading
+    nulls from the last seen value. Mirrors the legacy ``.ffill().bfill()`` on
+    the date-merged balance/Close columns.
+    """
+    vals = [None if v is None else float(v) for v in values]
+    n = len(pl_dates)
+    result = np.full(n, np.nan, dtype=float)
+    # forward fill
+    last = np.nan
+    for i in range(n):
+        if vals[i] is not None:
+            last = vals[i]
+        result[i] = last
+    # back fill leading nulls from the first valid value
+    first = np.nan
+    for i in range(n):
+        if vals[i] is not None:
+            first = vals[i]
+            break
+    for i in range(n):
+        if np.isnan(result[i]):
+            result[i] = first
+    return result
+
+
+def _date_df(pl_dates, pl_values):
+    """
+    Build a two-column ``["date", "value"]`` DataFrame aligned to the merged
+    calendar dates (fwd/bwd filled), the shape the performance routines expect.
+    """
+    return pl.DataFrame({
+        "date": pl.Series(pl_dates, dtype=pl.Datetime),
+        "value": pl.Series(_align_to_dates(pl_dates, pl_values), dtype=pl.Float64),
+    })
+
+
+def _as_date(d):
+    """Normalize a polars date/datetime value to a ``datetime.date``."""
+    if isinstance(d, datetime):
+        return d.date()
+    return d
+
+
+def _ts(d):
+    """Normalize a date/datetime/timestamp to a midnight datetime for comparison."""
+    if isinstance(d, datetime):
+        return d if d.hour == d.minute == d.second == 0 else d.replace(
+            hour=0, minute=0, second=0, microsecond=0)
+    if isinstance(d, date):
+        return datetime(d.year, d.month, d.day)
+    return d
+
+
 # function to draw a graph comparing cumulative performance for the selected portfolio and SPY
-def plot_daily_balance(df: pd.DataFrame, compare, account_id):
+def plot_daily_balance(df: pl.DataFrame, compare, account_id):
     """
     Plot the daily balance for a given account over a specified number of days.
 
@@ -70,7 +127,7 @@ def plot_daily_balance(df: pd.DataFrame, compare, account_id):
     account_name = get_account(account_id).account_name
 
     # prepare data for plotting
-    dates: List[pd.Timestamp] = list(df['Date'])
+    dates: List[datetime] = list(df['Date'])
     dly_balance = list(df['balance'])
     dly_pct_change: List[float] = list(df['dly_pct_change'])
     change: List[float] = list(df['pct_change'])
@@ -216,43 +273,62 @@ df_balances = get_balance_history(account_id=selected_account_id,
                                   ascending=True
                                   )
 # skip if there is no balance data
-if df_balances.empty:
+if df_balances.is_empty():
     status_message.set_status_message(
-                                     stat.WARNING,
-                                     "No balance data found for the specified period",
-                                     )
+                                       stat.WARNING,
+                                       "No balance data found for the specified period",
+                                       )
     status_message.show_status_messages()
     st.stop()
 
 # check the returned dates against the date pickers in the time machine
 # adjust the date pickers if necessary to ensure they match the returned data
-df_begin_date = df_balances['balance_date'].iloc[0]
-df_end_date = df_balances['balance_date'].iloc[-1]
+df_begin_date = _as_date(df_balances["balance_date"].item(0))
+df_end_date = _as_date(df_balances["balance_date"].item(-1))
 if time_machine.begin_date != df_begin_date or time_machine.end_date != df_end_date:
     time_machine.update_date_pickers(df_begin_date, df_end_date)
     status_message.set_status_message(stat.INFO, "Dates updated to reflect dates on file")
 
 # fetch historical data for the comparison ticker
 # since the begin date
-df_comparison: pd.DataFrame = get_stock_history(
+df_comparison = get_stock_history(
                 selected_comparison,
                 start_date=df_begin_date,
                 end_date=df_end_date,
-            )
-# drop the time component from the Date column
-df_comparison['Date'] = pd.to_datetime(df_comparison['Date']).dt.date
-# merge the balances with the comparison data
-merged = pd.merge(df_comparison, df_balances, how='left', left_on='Date', right_on='balance_date')
-# fill in any missing balance values
-merged['balance'] = merged['balance'].ffill().bfill()
+                )
+# normalize the comparison Date column to calendar dates so it matches the
+# date-only balance dates
+df_comparison = df_comparison.with_columns(
+    pl.col("Date").cast(pl.Date).alias("Date")
+)
+# normalize the balance dates to the same type so the join keys match
+df_balances = df_balances.with_columns(
+    pl.col("balance_date").cast(pl.Date).alias("balance_date")
+)
 
-# build a date-indexed balance series (MWR needs the dates for day counts)
-balance_series = pd.Series(merged['balance'].to_numpy(), index=merged['Date'])
+# merge the balances with the comparison data on the date
+merged = df_comparison.join(
+    df_balances.rename({"balance_date": "Date"}),
+    on="Date", how="left")
+# keep only the needed columns in a stable order
+merged = merged.select("Date", "balance", "Close")
+merged = merged.sort("Date", maintain_order=True)
+merged_dates = merged["Date"].to_list()
+
+# the merged frame's balance/Close are already aligned to the calendar by the
+# join; back-fill any nulls (calendar days with no source row) ffill/bfill-style
+merged_balance = _align_to_dates(merged_dates, merged["balance"].to_list())
+merged_close = _align_to_dates(merged_dates, merged["Close"].to_list())
+# the comparison source dates/values (the merged frame is the comparison calendar)
+close_values = merged["Close"].to_list()
 
 # determine which trade types are netted out of the return based on the toggles.
-# deposits/withdrawals are always external; dividends/interest and fees/taxes are
-# netted out only when their respective toggle is switched off.
-netted_out_types = [TradeType.DEPOSIT, TradeType.WITHDRAWAL]
+# deposits/withdrawals and security transfers (ACAT) are always external money
+# moving in or out of the account; dividends/interest and fees/taxes are netted
+# out only when their respective "include" toggle is off. (Those toggles default
+# on, so by default only deposits, withdrawals and transfers are netted -- this
+# is what makes the money-weighted return differ from the simple return.)
+netted_out_types = [TradeType.DEPOSIT, TradeType.WITHDRAWAL, TradeType.TRANSFER]
 if not include_div_int:
     netted_out_types += [TradeType.DIVIDEND, TradeType.INTEREST]
 if not include_fees_tax:
@@ -266,41 +342,79 @@ if selected_method in (CalculationMethod.TWR, CalculationMethod.MWR):
         end_date=df_end_date,
         trade_types=netted_out_types,
     )
-    cash_flow_series = pd.Series(0.0, index=balance_series.index)
-    if not df_cash_flows.empty:
-        cf_by_date = df_cash_flows.set_index('trade_date')['cash_flow']
-        # attribute each flow to the first balance day on/after its trade date so
-        # a flow dated off-calendar still nets out of the correct period
-        for trade_date, amount in cf_by_date.items():
-            pos = balance_series.index.searchsorted(trade_date)
-            if pos < len(balance_series.index):
-                cash_flow_series.iloc[pos] += amount
+    # initialize a zero cash-flow value per merged calendar date
+    cf_values = np.zeros(len(merged_dates), dtype=float)
+    if not df_cash_flows.is_empty():
+        for d, amount in zip(
+                df_cash_flows["trade_date"].to_list(),
+                df_cash_flows["cash_flow"].to_list()):
+            # attribute each flow to the first balance day on/after its trade
+            # date so a flow dated off-calendar still nets out of the correct
+            # period
+            d_mid = _ts(d)
+            for i, cal in enumerate(merged_dates):
+                if _ts(cal) >= d_mid:
+                    cf_values[i] += float(amount)
+                    break
 else:
-    cash_flow_series = pd.Series(0.0, index=balance_series.index)
+    cf_values = np.zeros(len(merged_dates), dtype=float)
+
+# build a balance series aligned to the merged calendar (fwd/bwd filled)
+balance_series = _date_df(merged_dates, merged_balance)
+# build a cash-flow series aligned to the same calendar
+cash_flow_series = pl.DataFrame({
+    "date": pl.Series(merged_dates, dtype=pl.Datetime),
+    "value": pl.Series(cf_values, dtype=pl.Float64),
+})
+# build the comparison close series aligned to the merged calendar
+close_series = _date_df(merged_dates, merged_close)
 
 # add the portfolio performance for the selected calculation method
+pct_change = None
+dly_pct_change = None
 if selected_method == CalculationMethod.SIMPLE:
-    merged['pct_change'] = simple_cumulative(balance_series).to_numpy()
-    merged['dly_pct_change'] = simple_daily(balance_series).to_numpy()
+    pct_change = simple_cumulative(balance_series)["value"].to_list()
+    dly_pct_change = simple_daily(balance_series)["value"].to_list()
 elif selected_method == CalculationMethod.TWR:
-    merged['pct_change'] = twr_cumulative(balance_series, cash_flow_series).to_numpy()
-    merged['dly_pct_change'] = twr_daily(balance_series, cash_flow_series).to_numpy()
+    pct_change = twr_cumulative(balance_series, cash_flow_series)["value"].to_list()
+    dly_pct_change = twr_daily(balance_series, cash_flow_series)["value"].to_list()
 else:  # Money-Weighted (IRR)
-    merged['pct_change'] = mwr_cumulative(balance_series, cash_flow_series).to_numpy()
+    # the main line is the cumulative money-weighted return (total, not
+    # annualized); it nets external cash flows out of each day's IRR, so it
+    # tracks the simple method on days with no flows and diverges on days
+    # that have deposits/withdrawals/dividends/fees.
+    pct_change = mwr_cumulative(balance_series, cash_flow_series)["value"].to_list()
     # the "daily" figure (hover text and subheader) is the plain day-over-day
     # balance change, same definition as the Simple method; the day-over-day
     # change of the cumulative would divide by a near-zero total return and
     # stretch the plot scale to thousands of percent
-    merged['dly_pct_change'] = simple_daily(balance_series).to_numpy()
+    dly_pct_change = simple_daily(balance_series)["value"].to_list()
 
-# calculate the 10-day moving average of the percentage change
-merged['10_day_avg'] = merged['pct_change'].rolling(window=10).mean()
-# calculate the 21-day moving average of the percentage change
-merged['21_day_avg'] = merged['pct_change'].rolling(window=21).mean()
+# calculate the moving averages of the percentage change
+pct_arr = np.asarray(pct_change, dtype=float)
+n = len(pct_arr)
+avg10 = np.full(n, np.nan, dtype=float)
+avg21 = np.full(n, np.nan, dtype=float)
+csum = np.cumsum(np.insert(pct_arr, 0, 0.0))
+for w, avg in ((10, avg10), (21, avg21)):
+    for i in range(w - 1, n):
+        avg[i] = (csum[i + 1] - csum[i + 1 - w]) / w
+
 # add the cumulative performance for the comparison ticker (always simple returns)
-merged['comp_change'] = simple_cumulative(merged['Close'])
+comp_change = simple_cumulative(close_series)["value"].to_list()
 # add the daily performance for the comparison ticker
-merged['dly_comp_change'] = simple_daily(merged['Close'])
+dly_comp_change = simple_daily(close_series)["value"].to_list()
+
+# assemble the merged frame for display and plotting
+merged = merged.with_columns([
+    pl.Series("balance", merged_balance),
+    pl.Series("pct_change", pct_change),
+    pl.Series("dly_pct_change", dly_pct_change),
+    pl.Series("10_day_avg", avg10),
+    pl.Series("21_day_avg", avg21),
+    pl.Series("comp_change", comp_change),
+    pl.Series("dly_comp_change", dly_comp_change),
+])
 
 # display summary subheader
 if time_machine.period_selected == Periods.CUS:
@@ -309,25 +423,25 @@ else:
     selected_period = Periods.get_label(time_machine.period_selected)
 # label the headline figure according to the selected calculation method
 if selected_method == CalculationMethod.MWR:
-    perf_label = "Money-Weighted Return (IRR, cumulative)"
+    perf_label = "Money-Weighted Return"
 else:
     perf_label = f"Total Cumulative Performance ({selected_method})"
 st.subheader(f"{perf_label} for period "
-             f"{selected_period}: {merged['pct_change'].iloc[-1]:.1%}"
+             f"{selected_period}: {merged['pct_change'].item(-1):.1%}"
              )
 st.subheader(f"Comparison ({selected_comparison}) Cumulative Performance: "
-         f"{merged['comp_change'].iloc[-1]:.1%}"
+         f"{merged['comp_change'].item(-1):.1%}"
          )
 
 # display statistics for the current day
 st.subheader(
     f"Current Day Performance for "
-    f"{get_account(selected_account_id).account_name} ({merged['Date'].iloc[-1]}):"
+    f"{get_account(selected_account_id).account_name} ({_as_date(merged['Date'].item(-1))}):"
     )
-st.write(f"- Balance: ${merged['balance'].iloc[-1]:,.2f}")
-st.write(f"- Daily Change: {merged['dly_pct_change'].iloc[-1]:.1%}")
+st.write(f"- Balance: ${merged['balance'].item(-1):,.2f}")
+st.write(f"- Daily Change: {merged['dly_pct_change'].item(-1):.1%}")
 st.write(f"- Comparison ({selected_comparison})"
-         f" - Daily Change: {merged['dly_comp_change'].iloc[-1]:.1%}"
+         f" - Daily Change: {merged['dly_comp_change'].item(-1):.1%}"
          )
 
 # plot the daily balance for the selected period

@@ -8,7 +8,7 @@ from pathlib import Path
 
 # Import 3rd party modules
 import streamlit as st
-import pandas as pd
+import polars as pl
 from numpy import nan
 
 # Import local modules
@@ -68,7 +68,7 @@ _SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
 _TIME_MACHINE_KEY = "detail_performance_time_machine"
 
 # utility function to analyse trades for a single symbol
-def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
+def _analyze_trades(trades_df: pl.DataFrame) -> pl.DataFrame:
     """
     Analyze the current status of a trade using the trade data from the input Dataframe
     Expects only one symbol... function analyze_trades groups tha dataframe and calls
@@ -98,11 +98,21 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     prev_shares: float = 0.0
     prev_avg_price: float = 0.0
     prev_cost_basis: float = 0.0
-    symbol = trades_df.iloc[0].Symbol
+    symbol = trades_df.item(0, "Symbol")
     security = get_security_info(symbol)
 
+    # convert to a list of dicts once so the hot loop stays cheap
+    rows = trades_df.to_dicts()
+    n_rows = len(rows)
+
+    # initialize analysis columns
+    for col in ["Holding", "Avg Price", "Market Value", "Total Invested",
+                "Basis", "Unrealized P/L", "Unrealized P/L %",
+                "Realized P/L", "Realized P/L %"]:
+        trades_df = trades_df.with_columns(pl.lit(0.0).alias(col))
+
     # loop through each row to compute analysis metrics
-    for row in trades_df.itertuples():
+    for i, row in enumerate(rows):
         _logger.debug("analyzing row %s", row)
 
         # save previous values for transaction analysis
@@ -111,15 +121,15 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         prev_cost_basis = prev_shares * prev_avg_price
 
         # use the trade price as the current price
-        row_price: float = row.Price # type: ignore
+        row_price: float = row["Price"] # type: ignore
         current_price = row_price
 
         # calculate the current holdings
-        row_shares: float = row.Quantity # type: ignore
+        row_shares: float = row["Quantity"] # type: ignore
         current_shares += row_shares
 
         # get the transaction amount
-        row_amount: float = row.Amount # type: ignore
+        row_amount: float = row["Amount"] # type: ignore
 
         # calculate the total cost and realized profit/loss
         if prev_shares < 0:
@@ -199,19 +209,19 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
             unrealized_pl_pct = nan
 
         # update the detail dataframe with results of the analysis
-        trades_df.loc[row.Index, "Holding"] = current_shares
-        trades_df.loc[row.Index, "Basis"] = cost_basis
-        trades_df.loc[row.Index, "Avg Price"] = average_price
-        trades_df.loc[row.Index, "Market Value"] = market_value
-        trades_df.loc[row.Index, "Total Invested"] = total_invested
-        trades_df.loc[row.Index, "Unrealized P/L"] = unrealized_pl
-        trades_df.loc[row.Index, "Unrealized P/L %"] = unrealized_pl_pct
-        trades_df.loc[row.Index, "Realized P/L"] = realized_pl
-        trades_df.loc[row.Index, "Realized P/L %"] = realized_pl_pct
+        trades_df = trades_df.with_columns([
+            pl.Series([v] * n_rows, dtype=pl.Float64).alias(col)
+            for col, v in zip(
+                ["Holding", "Basis", "Avg Price", "Market Value", "Total Invested",
+                 "Unrealized P/L", "Unrealized P/L %", "Realized P/L", "Realized P/L %"],
+                [current_shares, cost_basis, average_price, market_value,
+                 total_invested, unrealized_pl, unrealized_pl_pct,
+                 realized_pl, realized_pl_pct])
+        ])
 
     # update the summary data
     # calculate the sum total of realized profit/loss for the summary
-    realized_pl = trades_df["Realized P/L"].sum()
+    realized_pl = float(trades_df["Realized P/L"].sum())
     # calculate the realized p/l percent for the summary
     if total_invested > 0.0:
         # is long position
@@ -263,7 +273,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
 
 
 # function to analyze trades
-def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
+def analyze_trades(trades_df: pl.DataFrame) -> pl.DataFrame:
     """
     Analyze the current status of a trade using the trade data from the input Dataframe
     Calls _analyze_trades for each symbol found
@@ -278,26 +288,18 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     _logger.debug("in analyze_trades: %s rows to analyze", trades_df.shape[0])
 
     # add columns for analysis
-    trades_df.insert(6, "Holding", 0.0)
-    trades_df.insert(7, "Avg Price", 0.0)
-    trades_df.insert(8, "Market Value", 0.0)
-    trades_df.insert(9, "Total Invested", 0.0)
-    trades_df.insert(10, "Basis", 0.0)
-    trades_df.insert(11, "Unrealized P/L", 0.0)
-    trades_df.insert(12, "Unrealized P/L %", 0.0)
-    trades_df.insert(13, "Realized P/L", 0.0)
-    trades_df.insert(14, "Realized P/L %", 0.0)
+    for col in ["Holding", "Avg Price", "Market Value", "Total Invested",
+                "Basis", "Unrealized P/L", "Unrealized P/L %",
+                "Realized P/L", "Realized P/L %"]:
+        trades_df = trades_df.with_columns(pl.lit(0.0).alias(col))
 
     # group by symbol and analyze trades for each symbol
-    indexed = trades_df
     analyzed = []
-    grouped = indexed.groupby("Symbol")
-    for s in grouped:
-        symbol = s[0]
-        analyzed.append(_analyze_trades(grouped.get_group(symbol)))
+    for symbol, group in trades_df.group_by("Symbol", maintain_order=True):
+        analyzed.append(_analyze_trades(group))
 
     # concatenate the analyzed trades and return
-    return pd.concat(analyzed)
+    return pl.concat(analyzed)
 
 
 ### main page logic
@@ -413,12 +415,12 @@ if not selected_trades.empty:
     trades = analyze_trades(selected_trades)
 else:
     stat_message.set_status_message(stat.WARNING, "No trades found")
-    trades = pd.DataFrame()
+    trades = pl.DataFrame()
 
 # update the time machine with the dates found in the response
-if not trades.empty:
-    df_begin_date = trades["Date"].min()
-    df_end_date = trades["Date"].max()
+if not trades.is_empty():
+    df_begin_date = trades["Date"].min().date()
+    df_end_date = trades["Date"].max().date()
     time_machine.update_date_pickers(df_begin_date, df_end_date)
 
 # display the trade details
@@ -485,11 +487,11 @@ st.dataframe(_TRADE_SUMMARY,
 
 # calculate the grand totals
 if len(_TRADE_SUMMARY) > 0:
-    df_trade_summary = pd.DataFrame(_TRADE_SUMMARY)
-    grand_total_invested = df_trade_summary["Invested"].sum()
-    grand_total_basis = df_trade_summary["Basis"].sum()
-    grand_total_market = df_trade_summary["Market"].sum()
-    grand_total_realized = df_trade_summary["Realized"].sum()
+    df_trade_summary = pl.DataFrame(_TRADE_SUMMARY)
+    grand_total_invested = float(df_trade_summary["Invested"].sum())
+    grand_total_basis = float(df_trade_summary["Basis"].sum())
+    grand_total_market = float(df_trade_summary["Market"].sum())
+    grand_total_realized = float(df_trade_summary["Realized"].sum())
     grand_total_unrealized = grand_total_market - grand_total_basis
     total_realized_pct = grand_total_realized / (grand_total_invested - grand_total_basis)
     total_unrealized_pct = \

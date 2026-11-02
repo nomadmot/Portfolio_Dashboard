@@ -47,7 +47,7 @@ sys.modules['config.settings'] = mock_settings_module
 
 # import 3rd party libraries
 import numpy as np
-import pandas as pd
+import polars as pl
 import pytest
 
 
@@ -65,14 +65,30 @@ from core.performance import (
 
 # --- small helpers to build test series ---
 def _series(values):
-    """A plain RangeIndexed Series of floats."""
-    return pd.Series([float(v) for v in values])
+    """A plain RangeIndexed polars Series of floats."""
+    return pl.Series([float(v) for v in values])
 
 
-def _dated(values, start="2024-01-01", freq="D"):
-    """A date-indexed Series of floats (MWR needs the dates for day counts)."""
-    idx = pd.date_range(start=start, periods=len(values), freq=freq)
-    return pd.Series([float(v) for v in values], index=idx)
+def _dated(values, start="2024-01-01", freq_days=1):
+    """A date-valued polars Series of floats (MWR needs the dates for day counts)."""
+    from datetime import datetime, timedelta
+    base = datetime.strptime(start, "%Y-%m-%d")
+    dates = [base + timedelta(days=freq_days * i) for i in range(len(values))]
+    return pl.DataFrame({
+        "date": pl.Series(dates, dtype=pl.Datetime),
+        "value": pl.Series([float(v) for v in values], dtype=pl.Float64),
+    })
+
+
+def _dated_cash_flows(values, start="2024-01-01", freq_days=1):
+    """A two-column dated cash-flow frame, the shape the page builds and passes to MWR."""
+    from datetime import datetime, timedelta
+    base = datetime.strptime(start, "%Y-%m-%d")
+    dates = [base + timedelta(days=freq_days * i) for i in range(len(values))]
+    return pl.DataFrame({
+        "date": pl.Series(dates, dtype=pl.Datetime),
+        "value": pl.Series([float(v) for v in values], dtype=pl.Float64),
+    })
 
 
 # ==============================================================================
@@ -81,17 +97,17 @@ def _dated(values, start="2024-01-01", freq="D"):
 def test_simple_daily_matches_legacy():
     bal = _series([100, 110, 99])
     daily = simple_daily(bal)
-    assert daily.iloc[0] == 0.0
-    assert daily.iloc[1] == pytest.approx(0.10)
-    assert daily.iloc[2] == pytest.approx((99 - 110) / 110)
+    assert daily["value"].item(0) == 0.0
+    assert daily["value"].item(1) == pytest.approx(0.10)
+    assert daily["value"].item(2) == pytest.approx((99 - 110) / 110)
 
 
 def test_simple_cumulative_matches_legacy():
     bal = _series([100, 110, 99])
     cum = simple_cumulative(bal)
-    assert cum.iloc[0] == 0.0
-    assert cum.iloc[1] == pytest.approx(0.10)
-    assert cum.iloc[2] == pytest.approx(-0.01)
+    assert cum["value"].item(0) == 0.0
+    assert cum["value"].item(1) == pytest.approx(0.10)
+    assert cum["value"].item(2) == pytest.approx(-0.01)
 
 
 # ==============================================================================
@@ -99,35 +115,36 @@ def test_simple_cumulative_matches_legacy():
 # ==============================================================================
 def test_twr_no_cash_flows_equals_simple():
     bal = _series([100, 110, 99])
-    assert twr_daily(bal).tolist() == pytest.approx(simple_daily(bal).tolist())
-    assert twr_cumulative(bal).tolist() == pytest.approx(
-        simple_cumulative(bal).tolist())
+    assert twr_daily(bal)["value"].to_list() == pytest.approx(
+        simple_daily(bal)["value"].to_list())
+    assert twr_cumulative(bal)["value"].to_list() == pytest.approx(
+        simple_cumulative(bal)["value"].to_list())
 
 
 def test_twr_deposit_day_is_zero_return():
     # a $60 deposit on day 2 with a flat market must not register as profit
     bal = _series([100, 160])
-    cf = pd.Series([0.0, 60.0])
-    assert twr_daily(bal, cf).iloc[1] == pytest.approx(0.0)
-    assert twr_cumulative(bal, cf).iloc[1] == pytest.approx(0.0)
+    cf = pl.Series([0.0, 60.0])
+    assert twr_daily(bal, cf)["value"].item(1) == pytest.approx(0.0)
+    assert twr_cumulative(bal, cf)["value"].item(1) == pytest.approx(0.0)
     # contrast: the naive simple method would call this a 60% gain
-    assert simple_cumulative(bal).iloc[1] == pytest.approx(0.60)
+    assert simple_cumulative(bal)["value"].item(1) == pytest.approx(0.60)
 
 
 def test_twr_deposit_with_market_gain():
     # market +5% and a $60 deposit -> only the 5% should be measured
     bal = _series([100, 165])
-    cf = pd.Series([0.0, 60.0])
-    assert twr_daily(bal, cf).iloc[1] == pytest.approx(0.05)
-    assert twr_cumulative(bal, cf).iloc[1] == pytest.approx(0.05)
+    cf = pl.Series([0.0, 60.0])
+    assert twr_daily(bal, cf)["value"].item(1) == pytest.approx(0.05)
+    assert twr_cumulative(bal, cf)["value"].item(1) == pytest.approx(0.05)
 
 
 def test_twr_withdrawal_is_zero_return():
     # a $60 withdrawal on day 2 with a flat market (100 -> 40) is not a loss
     bal = _series([100, 40])
-    cf = pd.Series([0.0, -60.0])
-    assert twr_daily(bal, cf).iloc[1] == pytest.approx(0.0)
-    assert twr_cumulative(bal, cf).iloc[1] == pytest.approx(0.0)
+    cf = pl.Series([0.0, -60.0])
+    assert twr_daily(bal, cf)["value"].item(1) == pytest.approx(0.0)
+    assert twr_cumulative(bal, cf)["value"].item(1) == pytest.approx(0.0)
 
 
 # ==============================================================================
@@ -161,30 +178,60 @@ def test_xirr_single_flow_is_none():
 # ==============================================================================
 def test_mwr_no_cash_flows_equals_simple_cumulative():
     # over a full year with no flows, cumulative MWR must equal simple cumulative
-    bal = _dated([100.0, 110.0], start="2024-01-01", freq="365D")
+    bal = _dated([100.0, 110.0], start="2024-01-01", freq_days=365)
     cum = mwr_cumulative(bal)
-    assert cum.tolist() == pytest.approx(
-        simple_cumulative(bal).tolist(), abs=1e-6)
+    assert cum["value"].to_list() == pytest.approx(
+        simple_cumulative(bal["value"])["value"].to_list(), abs=1e-6)
 
 
 def test_mwr_series_shape_and_first_value():
     bal = _dated([100.0, 110.0, 99.0])
     s = mwr_series(bal)
     assert len(s) == len(bal)
-    assert s.iloc[0] == 0.0
+    assert s["value"].item(0) == 0.0
 
 
 def test_mwr_deposit_is_zero_return():
     # fund 100, deposit 60 the next day, flat market -> cumulative MWR ~ 0
     bal = _dated([100.0, 160.0])
-    cf = pd.Series([0.0, 60.0], index=bal.index)
+    cf = pl.Series([0.0, 60.0])
     cum = mwr_cumulative(bal, cf)
-    assert cum.iloc[1] == pytest.approx(0.0, abs=1e-6)
+    assert cum["value"].item(1) == pytest.approx(0.0, abs=1e-6)
 
 
 def test_mwr_short_period_large_gain_is_finite():
     # a gain over a short span yields a large (but finite) annualized IRR
-    bal = _dated([100.0, 110.0], start="2024-01-01", freq="2D")  # +10% in 2 days
+    bal = _dated([100.0, 110.0], start="2024-01-01", freq_days=2)  # +10% in 2 days
     s = mwr_series(bal)
-    assert np.isfinite(s.iloc[1])
-    assert s.iloc[1] > 1.0  # annualized well beyond 100%
+    assert np.isfinite(s["value"].item(1))
+    assert s["value"].item(1) > 1.0  # annualized well beyond 100%
+
+
+def test_mwr_dated_deposit_is_netted():
+    """
+    Regression: the page passes cash flows as a *dated* two-column frame. A deposit
+    that doubles the balance must be netted out of the money-weighted return, so the
+    cumulative MWR reflects only the (flat) market, not the deposit. Before the fix
+    the dated cash-flow branch dropped every flow and the MWR tracked the simple
+    return (a phantom ~100% gain).
+    """
+    bal = _dated([100.0, 100.0, 200.0])             # flat, then a 100 deposit + flat
+    cf = _dated_cash_flows([0.0, 0.0, 100.0])
+    cum = mwr_cumulative(bal, cf)
+    assert cum["value"].item(2) == pytest.approx(0.0, abs=1e-6)
+    # the unadjusted simple return would call this a 100% gain
+    assert simple_cumulative(bal["value"])["value"].item(2) == pytest.approx(1.0, abs=1e-9)
+
+
+def test_mwr_dated_deposit_does_not_match_simple():
+    """
+    Regression: when a deposit is present, the money-weighted return must *diverge*
+    from the simple return. The two are equal only when no external flow occurs.
+    """
+    bal = _dated([100.0, 160.0])
+    cf = _dated_cash_flows([0.0, 60.0])             # a 60 deposit on day 2
+    mwr = mwr_cumulative(bal, cf)["value"].item(1)
+    simple = simple_cumulative(bal["value"])["value"].item(1)
+    assert mwr == pytest.approx(0.0, abs=1e-6)     # flat market -> ~0, deposit excluded
+    assert simple == pytest.approx(0.60, abs=1e-9)  # naive method sees the deposit
+    assert abs(mwr - simple) > 0.1
