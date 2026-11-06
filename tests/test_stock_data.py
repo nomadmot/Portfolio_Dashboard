@@ -1,7 +1,6 @@
 import sys
 from unittest.mock import patch, MagicMock
 import pandas as pd
-
 # Mock duckdb before importing utility to prevent database connection errors
 mock_duckdb = MagicMock()
 # Create a dummy exception class that inherits from Exception to avoid TypeError when catching duckdb.Error
@@ -20,6 +19,7 @@ mock_db_module.DATABASE_CONNECTION = MagicMock()
 import pytest
 from datetime import date, timedelta
 from unittest.mock import patch
+import polars as pl
 from src.utility.stock_data import get_stock_history, get_security_info, get_basic_quote
 
 # Mock class to simulate duckdb result objects
@@ -35,11 +35,12 @@ class MockResult:
 def test_get_stock_history(mock_ticker):
     # Mock yfinance history return
     mock_instance = mock_ticker.return_value
-    # Return a real DataFrame to avoid issues with MagicMock spec
+    # Return a real (empty) DataFrame to avoid issues with MagicMock spec
     mock_instance.history.return_value = pd.DataFrame()
-    
+
     result = get_stock_history("AAPL", period="1d")
     assert result is not None
+    assert isinstance(result, pl.DataFrame)
     mock_instance.history.assert_called()
 
 @patch('src.utility.stock_data.DATABASE_CONNECTION')
@@ -50,7 +51,7 @@ def test_get_security_info(mock_db):
     
     result = get_security_info("AAPL")
     assert result.symbol == "AAPL"
-    assert result.name == "Apple Inc."
+    assert result.security_name == "Apple Inc."
     assert result.security_type == "S"
     assert result.associated_symbol == "AAPL"
 

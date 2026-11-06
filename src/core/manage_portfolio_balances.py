@@ -27,13 +27,13 @@ def update_daily_balance(
 
     :param balance: The current balance of the account.
     :param account: The account number to update.
-    :param date: The date for which the balance is being updated.
+    :param balance_date: The date for which the balance is being updated.
     """
 
         # 1. Input Validation (Using Pydantic for safety)
     try:
         _ = DailyBalance(
-            date=balance_date,
+            balance_date=balance_date,
             account_id=account_id,
             balance=balance_amount
         )
@@ -57,7 +57,7 @@ def update_daily_balance(
         # --- B. Check for Existing Record (The strict check) ---
         check_existence_sql = """
         SELECT count(*) FROM daily_balances 
-        WHERE account_id = ? AND date = ?;
+        WHERE account_id = ? AND balance_date = ?;
         """
         existing_count = DATABASE_CONNECTION.execute(
             check_existence_sql,
@@ -71,7 +71,7 @@ def update_daily_balance(
 
         # --- C. Write New Record ---
         insert_sql = """
-        INSERT INTO daily_balances (date, account_id, balance) 
+        INSERT INTO daily_balances (balance_date, account_id, balance) 
         VALUES (?, ?, ?);
         """
         # Execute the write operation using the connection object
@@ -126,7 +126,7 @@ def delete_daily_balance(
         # --- B. Delete Operation ---
         delete_sql = """
         DELETE FROM daily_balances
-        WHERE account_id = ? AND date = ?;
+        WHERE account_id = ? AND balance_date = ?;
         """
 
         # Execute the delete command

@@ -1,14 +1,16 @@
 [project]
 name = "portfolio-dashboard"
-version = "0.2.3"
+version = "0.2.4"
 description = "A modern web-based dashboard for tracking, analyzing, and visualizing investment portfolios using Python and Streamlit."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "duckdb>=1.5.2",
     "httpx>=0.28.1",
+    "numpy>=1.26.0",
     "pandas>=2.3.1",
     "plotly>=6.2.0",
+    "polars>=2.1.0",
     "pydantic-settings>=2.12.0",
     "pyyaml>=6.0.3",
     "streamlit>=1.48.1",
