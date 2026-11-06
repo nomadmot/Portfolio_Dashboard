@@ -29,6 +29,15 @@ from .autoupdate_multiselect_component import get_aumc_instance
 from .account_selection_component import get_account_selection_component
 from .time_machine_component import get_time_machine_component
 from .system_info import get_client_ip, get_memory_size, show_system_info
+from .comparison_options import (
+    EMP_DASH,
+    COMPARISON_PREFIX,
+    disambiguated_name,
+    comparison_options,
+    is_account_option,
+    account_name_from_option,
+    account_id_for_option,
+)
 
 __all__ = [
     "get_logger",
@@ -51,6 +60,13 @@ __all__ = [
     "show_system_info",
     "get_client_ip",
     "get_memory_size",
+    "EMP_DASH",
+    "COMPARISON_PREFIX",
+    "disambiguated_name",
+    "comparison_options",
+    "is_account_option",
+    "account_name_from_option",
+    "account_id_for_option",
     "calculate_begin_date",
     "calculate_end_date",
     "count_trading_days",

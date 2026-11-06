@@ -26,7 +26,7 @@ class AccountSelectionComponent:
     """
 
     @property
-    def selected(self):
+    def selected(self) -> int | list[int] | None:
         """
         Returns the currently selected account ID(s): a single int (or
         None) for single-selection, or a list of ints for multi-selection.
