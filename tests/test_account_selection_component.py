@@ -68,6 +68,13 @@ sys.modules['config.settings'] = mock_settings_module
 import pytest
 from streamlit.testing.v1 import AppTest
 
+# Streamlit's AppTest defaults to a 3s script-runner timeout, which the one-time
+# cold-start of the Streamlit runtime exceeds in slow/CI containers (whichever
+# AppTest test runs first in a fresh pytest process would otherwise time out).
+# Warm runs finish well under a second, so a generous budget costs nothing and
+# makes the suite deterministic.
+_APP_TEST_TIMEOUT = 30.0
+
 # import local libraries
 from schemas.portfolio import Account
 from utility.account_selection_component import (
@@ -109,7 +116,7 @@ selector = get_account_selection_component(
 selector.render()
 st.text(str(selector.selected))
 """
-    app_test = AppTest.from_string(script)
+    app_test = AppTest.from_string(script, default_timeout=_APP_TEST_TIMEOUT)
     app_test.run()
     return app_test
 
@@ -257,7 +264,7 @@ component = get_aumc_instance(
 component.selected = ["AAPL", "MSFT"]
 component.set_options(["GOOGL", "IBM"])
 st.text(str(component._options))
-""")
+""", default_timeout=_APP_TEST_TIMEOUT)
     app_test.run()
     # the replacement options were rendered, and the stale selection pruned
     assert app_test.multiselect[0].options == ["GOOGL", "IBM"]
@@ -275,7 +282,7 @@ component = get_aumc_instance(
 component.selected = ["AAPL", "GOOGL"]
 component.set_options(["AAPL", "GOOGL", "MSFT"])
 st.text(str(component.selected))
-""")
+""", default_timeout=_APP_TEST_TIMEOUT)
     app_test.run()
     assert app_test.multiselect[0].options == ["AAPL", "GOOGL", "MSFT"]
     assert app_test.multiselect[0].value == ["AAPL", "GOOGL"]
@@ -308,7 +315,7 @@ if "done" not in st.session_state:
     component.set_options(["GOOGL", "MSFT"])
     st.session_state["done"] = True
 st.text(str(component.selected))
-""")
+""", default_timeout=_APP_TEST_TIMEOUT)
     app_test.run()
     assert app_test.multiselect[0].value == ["GOOGL"]
     assert app_test.multiselect[0].options == ["GOOGL", "MSFT"]
