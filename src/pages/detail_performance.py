@@ -5,6 +5,7 @@ and other criteria.
 # Import necessary libraries
 from typing import NamedTuple
 from pathlib import Path
+from datetime import date
 
 # Import 3rd party modules
 import streamlit as st
@@ -14,7 +15,6 @@ from numpy import nan
 # Import local modules
 from core import (
                   get_accounts,
-                  get_security_symbols,
                   get_traded_symbols,
                   get_trades,
                   get_last_trade_date,
@@ -34,7 +34,7 @@ from utility import (
                 )
 
 # initialize the logger
-_logger_name = f"pages.{Path(__file__).stem}" # pylint: disable=invalid-name
+_logger_name = f"pages.{Path(__file__).stem}"
 _logger = get_logger(_logger_name)
 # mark entry into the module
 _logger.debug("In module %s", _logger_name)
@@ -353,20 +353,20 @@ with st.sidebar:
     multiselect_symbols.render(default_symbols)
 
 # get the selected account(s) from the account selection component
-selected_accounts: list|None  = account_selector.selected
-if selected_accounts is None or len(selected_accounts) == 0:
+selected_accounts: int|list[int]|None  = account_selector.selected
+if selected_accounts is None or (isinstance(selected_accounts, list) and len(selected_accounts) == 0):
     # the user needs to select an account
     stat_message.set_status_message(stat.INFO, "Please select at least one account")
     # display status messages
     stat_message.show_status_messages()
     st.stop()
 
+# normalize the selected accounts to a list for consistent handling
+if isinstance(selected_accounts, int):
+    selected_accounts = [selected_accounts]
+
 # page header
-account_names = ", ".join(
-    a.account_name for a in accounts if a.account_id in selected_accounts
-)
-st.title(f"Detail Performance Analysis for {account_names}")
-st.markdown(f"*Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}*",)
+account_names = ", ".join(a.account_name for a in accounts if a.account_id in selected_accounts)
 
 # get the currently selected symbols from the multiselect component
 selected_symbols = multiselect_symbols.selected
@@ -411,7 +411,7 @@ selected_trades = get_trades(
 )
 
 # analyze the trades
-if not selected_trades.empty:
+if not selected_trades.is_empty():
     trades = analyze_trades(selected_trades)
 else:
     stat_message.set_status_message(stat.WARNING, "No trades found")
@@ -419,8 +419,8 @@ else:
 
 # update the time machine with the dates found in the response
 if not trades.is_empty():
-    df_begin_date = trades["Date"].min().date()
-    df_end_date = trades["Date"].max().date()
+    df_begin_date: date = trades["Date"][0]
+    df_end_date: date = trades["Date"][-1]
     time_machine.update_date_pickers(df_begin_date, df_end_date)
 
 # display the trade details
