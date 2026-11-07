@@ -248,7 +248,7 @@ def get_security_symbols(include_options: bool = False) -> List[str]:
     return symbols
 
 
-def get_traded_symbols(account_ids: List[int], include_options: bool = False) -> List[str]:
+def get_traded_symbols(account_ids: int|List[int], include_options: bool = False) -> List[str]:
     """
     Get a list of symbols that have at least one transaction for any of the
     given accounts over the full trade history.
@@ -273,6 +273,10 @@ def get_traded_symbols(account_ids: List[int], include_options: bool = False) ->
     if not account_ids:
         # no accounts to query; nothing to return
         return []
+
+    # Normalize a single account ID to a list
+    if isinstance(account_ids, int):
+        account_ids = [account_ids]
 
     # Dynamically build the parameter list for the IN clause
     account_placeholders = ', '.join(['?'] * len(account_ids))
