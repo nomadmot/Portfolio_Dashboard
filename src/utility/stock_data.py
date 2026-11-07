@@ -7,7 +7,7 @@ from datetime import timedelta
 from typing import List
 
 # 3rd party imports
-import pandas as pd
+import polars as pl
 import yfinance as yf
 import duckdb
 
@@ -46,7 +46,7 @@ class YfPeriods(Enum):
 def get_stock_history(ticker: str,
                        start_date=None,
                        end_date=None,
-                       period=None) -> pd.DataFrame:
+                       period=None) -> pl.DataFrame:
     """
     Use yfinance to get historical stock data for a given ticker.
 
@@ -69,40 +69,46 @@ def get_stock_history(ticker: str,
         ValueError: The function raises a ValueError if both `start_date`
             and `period` are provided.
     Returns:
-        A pandas DataFrame containing the historical stock data.
+        A polars DataFrame containing the historical stock data.
     """
     # call with start_date or days, not both
     if start_date is not None and period is not None:
         raise ValueError("Specify either start_date or period, not both.")
 
     # initialize an empty DataFrame for the ticker data
-    ticker_data: pd.DataFrame = pd.DataFrame()
+    ticker_data = pl.DataFrame()
 
     # use yfinance to get SPY data starting with the first date
     # in the balances and ending today
     yf_ticker = yf.Ticker(ticker)
+    history = None
     if start_date is not None:
         if end_date is not None:
             # add one day to the end date to include the end date in the results
-            ticker_data: pd.DataFrame = yf_ticker.history(
-                                         start=start_date,
-                                         end=end_date + timedelta(days=1),
-                                         auto_adjust=True
-                                         )
+            history = yf_ticker.history(
+                                      start=start_date,
+                                      end=end_date + timedelta(days=1),
+                                      auto_adjust=True
+                                      )
         else:
-            ticker_data: pd.DataFrame = yf_ticker.history(
-                                         start=start_date,
-                                         auto_adjust=True
-                                         )
+            history = yf_ticker.history(
+                                      start=start_date,
+                                      auto_adjust=True
+                                      )
     elif period is not None:
         period_val = period.value if hasattr(period, 'value') else period
-        ticker_data: pd.DataFrame = yf_ticker.history(
-                                              period=period_val,
-                                              auto_adjust=True
-                                              )
-    ticker_data.reset_index(inplace=True)
+        history = yf_ticker.history(
+                                  period=period_val,
+                                  auto_adjust=True
+                                  )
 
-    return ticker_data
+    if history is None or history.empty:
+        # no data returned (bad ticker, no data in range); return an empty frame
+        return ticker_data
+
+    # move the datetime index into a "Date" column, then convert to polars
+    history = history.reset_index().rename(columns={"index": "Date"})
+    return pl.from_pandas(history)
 
 def get_security_info(symbol: str) -> Security:
     """
@@ -126,7 +132,7 @@ def get_security_info(symbol: str) -> Security:
         # This replaces the ORM object return.
         return Security(
             symbol=result[0],
-            name=result[1],
+            security_name=result[1],
             security_type=result[2],
             associated_symbol=result[3]
         )
@@ -136,6 +142,9 @@ def get_security_info(symbol: str) -> Security:
     except ValueError as e:
         # Re-raise specific business logic errors
         raise e
+    except Exception as e:
+        _logger.error("Error retrieving security:", exc_info=True)
+        raise RuntimeError(f"Error during security retrieval: {e}") from e
 
 def get_basic_quote(symbol: str) -> dict:
     """

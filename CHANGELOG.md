@@ -1,3 +1,36 @@
+## [0.2.4] - 2026-11-06 (AI generated summary)
+
+This release is the "Sad-Sasquatch" development branch merged into `main` (PR #203). It is the first release on the new multi-account, DuckDB-backed architecture and introduces portfolio performance analytics, Schwab data import tooling, and a migration of the internal data layer from Pandas to Polars.
+
+### 🚀 Features
+
+- **Multiple accounts (#116)** — Added an `Accounts` directory table and a reusable account-selection UI component. The sidebar now lets the user pick one or more accounts, and the data-access routines take an explicit `account_id` instead of assuming a single portfolio. (PR #198)
+- **Schwab data import (#192)** — New `tools/` scripts to initialize the portfolio database and import Charles Schwab daily balances and trades, including a mapping of Schwab transaction types (with an "action" column preserving the original platform description). (PR #193)
+- **Performance analytics (#2)** — New `core/performance.py` with three calculation methods (Simple, Time-Weighted, and Money-Weighted/IRR). The Performance Summary page now lets the user select the method, toggle whether dividends/interest and fees/taxes are netted out of the return, and plots cumulative performance with 10/21-day moving averages. (PR #195)
+- **Compare against other accounts (#201)** — The "Compare:" selectbox on the Performance Summary page now lists, alongside the configured ticker symbols, every other account (each prefixed with an em-dash so it can never be confused with a ticker). Selecting an account plots its return using the same calculation method and cash-flow netting as the main account. (PR #202)
+
+### 🐛 Bug Fixes
+
+- **Realized P/L in Detail Performance (#196)** — Sell transactions now negate the quantity so realized profit/loss is reported correctly. (PR #197)
+- **Performance algorithm deposit handling (#2)** — The performance calculation now nets out external cash flows (deposits/withdrawals) so they are not misread as market gains or losses; Schwab trades use the "as of" date rather than the posted date. (PR #195)
+- **Time machine label deprecation (#189)** — Replaced the deprecated `label` parameter usage in the time-machine component. (PR #190)
+
+### 🔧 Technical / Refactoring
+
+- **Pandas → Polars (#199)** — Migrated the internal data layer from Pandas to Polars; query routines now return Polars DataFrames. (PR #200)
+- **Database DDL** — Added SQL DDL for the portfolio tables (`accounts`, `daily_balances`, `market_holidays`, `notes`, `securities`, `trades`) and a market-holidays loader; conformed the Pydantic schemas to the new DDL.
+- **Account management tooling** — New `tools/manage_accounts.py` and database-initialization scripts, plus an optional seed account on init.
+
+### 🧪 Testing
+
+- Added unit tests for the new performance routines, enums, schema/DDL drift, and the account-selection component.
+- Increased the Streamlit `AppTest` timeout to 30 seconds so the suite is stable in slow/CI environments.
+
+### ⚙️ Configuration / Release
+
+- Set the application environment to **PROD** for release.
+- Bypassed the Obsidian integration tests (that module is being reworked separately).
+
 ## [0.2.3] - 2026-08-23
 
 ### 🐛 Bug Fixes

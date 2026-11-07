@@ -24,16 +24,16 @@ def generate_balance_deltas(
     """
     # 1. Initialize Dates and Balance
     try:
-        begin_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        begin_date = datetime.datetime.strptime(start_date_str, '%m-%d-%Y').date()
     except ValueError:
-        print("Error: Please ensure the start date is in 'YYYY-MM-DD' format.")
+        print("Error: Please ensure the start date is in 'MM-DD-YYYY' format.")
         return
 
     if end_date_str:
         try:
-            end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            end_date = datetime.datetime.strptime(end_date_str, '%m-%d-%Y').date()
         except ValueError:
-            print("Error: Please ensure the end date is in 'YYYY-MM-DD' format.")
+            print("Error: Please ensure the end date is in 'MM-DD-YYYY' format.")
             return
     else:
         end_date = datetime.date.today()
@@ -71,7 +71,7 @@ def generate_balance_deltas(
         current_balance += delta
 
         # Store the result (Date formatted as string, New Balance)
-        data_rows.append((date_iterator.strftime('%Y-%m-%d'), round(current_balance, 2)))
+        data_rows.append((date_iterator.strftime('%m/%d/%Y'), round(current_balance, 2)))
 
         # Move to the next day
         date_iterator += datetime.timedelta(days=1)
@@ -81,11 +81,11 @@ def generate_balance_deltas(
         with open(output_filename, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             # Write header row
-            writer.writerow(['Date', 'New_Balance'])
+            writer.writerow(['Date', 'Amount'])
             # Write data rows
             writer.writerows(data_rows)
 
-        print("\n✅ mulation complete!")
+        print("\n✅ Data complete!")
         print(f"Results successfully saved to {output_filename}")
         print(f"Total working days recorded: {len(data_rows)}")
 
@@ -96,7 +96,7 @@ def generate_balance_deltas(
 # --- Execution Example ---
 if __name__ == "__main__":
     # Define your parameters here
-    START_DATE = "2025-01-01"  # Change this to your desired start date
+    START_DATE = "01-01-2026"  # Change this to your desired start date
     START_BALANCE = 10000.00   # Change this to your starting balance
-    END_DATE = "2025-12-31"    # Optional: Specify an end date, or leave as None
+    END_DATE = "12-31-2026"    # Optional: Specify an end date, or leave as None
     generate_balance_deltas(START_DATE, START_BALANCE, end_date_str=END_DATE)

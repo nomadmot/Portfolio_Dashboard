@@ -47,7 +47,7 @@ sys.modules['config.settings'] = mock_settings_module
 
 
 # import 3rd party libraries
-import pandas as pd
+import polars as pl
 import pytest
 
 
@@ -58,13 +58,17 @@ import pytest
 from schemas import Account
 from core import (
     get_account,
+    get_accounts,
     get_balance_history,
     get_security_symbols,
+    get_traded_symbols,
     lookup_associated_symbols,
     get_trades,
+    get_cash_flows,
     get_last_trade_date,
-    get_first_balance_date,
     get_first_trade_date,
+    get_first_balance_date,
+    get_last_balance_date,
 )
 
 # --- Fixtures for Mocking ---
@@ -77,11 +81,45 @@ def mock_connection():
     """
     # Create a mock connection object that simulates the behavior of the real connection
     mock_conn = MagicMock()
+    mock_result = MagicMock()
 
-    # We need to mock the execute method which is called repeatedly
-    mock_conn.execute.return_value.fetchone.return_value = (1, "TestAccount")
-    mock_conn.execute.return_value.fetchall.return_value = []
-    mock_conn.execute.return_value.rowcount = 0
+    # The core functions read results via ``.pl()`` (which the real DuckDB driver
+    # turns into a polars frame whose schema comes from the database). Emulate that:
+    # build the frame from the mocked ``fetchall`` rows, giving the columns the same
+    # names the SELECT clause requests, so the tests exercise the same code path as
+    # production without a live database.
+    def _select_columns(sql):
+        import re
+        match = re.search(r"SELECT\s+(.*?)\s+FROM", sql or "", re.I | re.S)
+        if not match:
+            return []
+        names = []
+        for part in match.group(1).split(","):
+            alias = re.search(r"\bAS\s+(\w+)\s*$", part, re.I)
+            if alias:
+                names.append(alias.group(1))
+            else:
+                names.append(part.split(".")[-1].split()[0])
+        return names
+
+    def _make_pl_frame():
+        import polars as pl
+        last_sql = mock_conn.execute.call_args[0][0] if mock_conn.execute.call_args else ""
+        rows = list(mock_result.fetchall.return_value or [])
+        columns = _select_columns(last_sql)
+        if rows and len(columns) != len(rows[0]):
+            columns = [f"col_{i}" for i in range(len(rows[0]))]
+        if not rows:
+            # an empty result still carries the schema the SELECT requests,
+            # matching the real driver's ``pl()`` behavior for zero rows
+            return pl.DataFrame({name: [] for name in columns})
+        return pl.DataFrame([dict(zip(columns, r)) for r in rows])
+
+    mock_result.pl.side_effect = _make_pl_frame
+    mock_result.fetchone.return_value = (1, "TestAccount")
+    mock_result.fetchall.return_value = []
+    mock_result.rowcount = 0
+    mock_conn.execute.return_value = mock_result
 
     return mock_conn
 
@@ -122,6 +160,29 @@ def test_get_account_not_found(mock_connection):
         get_account(account_id=999)
 
 # ==============================================================================
+# TEST SUITE FOR get_accounts
+# ==============================================================================
+def test_get_accounts_success(mock_connection):
+    """Tests mapping of result rows to Account objects."""
+    # Mock the result set: (account_id, account_name)
+    mock_connection.execute.return_value.fetchall.return_value = [
+        (1, "Alpha"),
+        (2, "Beta"),
+    ]
+
+    accounts = get_accounts()
+    assert accounts == [
+        Account(account_id=1, account_name="Alpha"),
+        Account(account_id=2, account_name="Beta"),
+    ]
+
+def test_get_accounts_empty(mock_connection):
+    """Tests the case where no accounts exist."""
+    mock_connection.execute.return_value.fetchall.return_value = []
+
+    assert get_accounts() == []
+
+# ==============================================================================
 # TEST SUITE FOR get_balance_history
 # ==============================================================================
 def test_get_balance_history_success(mock_connection):
@@ -139,10 +200,10 @@ def test_get_balance_history_success(mock_connection):
         ascending=False,
     )
 
-    assert isinstance(df, pd.DataFrame)
+    assert isinstance(df, pl.DataFrame)
     assert len(df) == 2
     # Check if sorting worked (if we mocked the sorting correctly)
-    assert df['date'].iloc[0] == date(2023, 1, 1)
+    assert df['balance_date'].item(0) == date(2023, 1, 1)
 
 def test_get_balance_history_no_results(mock_connection):
     """Tests case where no balance records are found."""
@@ -155,8 +216,8 @@ def test_get_balance_history_no_results(mock_connection):
         end_date=date(2023, 1, 31)
     )
 
-    assert isinstance(df, pd.DataFrame)
-    assert df.empty
+    assert isinstance(df, pl.DataFrame)
+    assert df.is_empty()
 
 # ==============================================================================
 # TEST SUITE FOR get_security_symbols
@@ -187,6 +248,69 @@ def test_get_security_symbols_with_options(mock_connection):
     assert sorted(list(set(symbols))) == ['AAPL', 'GOOGL']
 
 # ==============================================================================
+# TEST SUITE FOR get_traded_symbols
+# ==============================================================================
+def test_get_traded_symbols_success(mock_connection):
+    """Tests retrieval of unique symbols with trades for the given accounts."""
+    # Mock the result set: (symbol,)
+    mock_connection.execute.return_value.fetchall.return_value = [
+        ('AAPL',),
+        ('GOOGL',),
+        ('AAPL',)  # duplicate; expect de-duplication
+    ]
+
+    symbols = get_traded_symbols(account_ids=[1, 2], include_options=False)
+    assert symbols == ['AAPL', 'GOOGL']
+
+def test_get_traded_symbols_binds_account_ids(mock_connection):
+    """Tests that the requested account IDs and the security types are bound."""
+    mock_connection.execute.return_value.fetchall.return_value = []
+
+    get_traded_symbols(account_ids=[1, 2], include_options=False)
+
+    params = mock_connection.execute.call_args[0][1]
+    assert 1 in params
+    assert 2 in params
+    # the excluded security types (option and cash) are also bound
+    assert 'O' in params
+    assert 'C' in params
+    assert len(params) == 4
+
+def test_get_traded_symbols_excludes_options_and_cash(mock_connection):
+    """
+    The standard (include_options=False) filter excludes option and cash
+    security types, so the cash pseudo-symbol is never offered for selection.
+    """
+    # Mock the result set to include a cash row and an option row; the SQL
+    # filter (exercised via the bound parameters) is expected to exclude them.
+    mock_connection.execute.return_value.fetchall.return_value = [
+        ('AAPL',),
+        ('$CASH',),
+        ('QQQ251121P00612000',),
+    ]
+
+    symbols = get_traded_symbols(account_ids=[1], include_options=False)
+    # the mock returns the raw rows; verify the bound types drive the filter
+    params = mock_connection.execute.call_args[0][1]
+    assert 'O' in params and 'C' in params
+    # the function returns the distinct symbols sorted
+    assert symbols == ['$CASH', 'AAPL', 'QQQ251121P00612000']
+
+def test_get_traded_symbols_empty_account_list(mock_connection):
+    """An empty account list short-circuits to an empty result without querying."""
+    symbols = get_traded_symbols(account_ids=[])
+    assert symbols == []
+    # the connection should not have been used for a query
+    mock_connection.execute.assert_not_called()
+
+def test_get_traded_symbols_no_results(mock_connection):
+    """Tests the empty case where no trades are found for the accounts."""
+    mock_connection.execute.return_value.fetchall.return_value = []
+
+    symbols = get_traded_symbols(account_ids=[1])
+    assert symbols == []
+
+# ==============================================================================
 # TEST SUITE FOR lookup_associated_symbols
 # ==============================================================================
 def test_lookup_associated_symbols_success(mock_connection):
@@ -208,28 +332,58 @@ def test_lookup_associated_symbols_none_found(mock_connection):
     symbols = lookup_associated_symbols(symbols=['XYZ'])
     assert symbols == ['XYZ']
 
+def test_lookup_associated_symbols_empty_input(mock_connection):
+    """
+    An empty input list must return an empty list without querying, so that an
+    empty IN clause (a SQL syntax error) is never generated.
+    """
+    symbols = lookup_associated_symbols(symbols=[])
+    assert symbols == []
+    mock_connection.execute.assert_not_called()
+
 # ==============================================================================
 # TEST SUITE FOR get_trades
 # ==============================================================================
 def test_get_trades_success(mock_connection):
     """Tests successful retrieval and DataFrame transformation for trades."""
-    # Mocking a complex result set: (symbol, name, symbol, date, type, quantity, price, fees)
+    # Mocking a complex result set: (symbol, name, security_type, date, type, quantity, price, fees)
     mock_connection.execute.return_value.fetchall.return_value = [
-        ('AAPL', 'Apple Inc.', 'AAPL', date(2023, 1, 1), 'BUY', 10, 150.00, 5.00),
-        ('GOOGL', 'Google Inc.', 'GOOGL', date(2023, 1, 1), 'SELL', 5, 100.00, 2.00),
+        ('AAPL', 'Apple Inc.', 'S', date(2023, 1, 1), 'BUY', 10, 150.00, 5.00),
+        ('GOOGL', 'Google Inc.', 'S', date(2023, 1, 1), 'SELL', 5, 100.00, 2.00),
+        ('QQQ251121P00612000', 'PUT INVESCO QQQ TR $612 EXP 11/21/25', 'O',
+         date(2023, 1, 5), 'BUY', 1, 13.36, 0.66),
     ]
 
     df = get_trades(
-        symbols=['AAPL', 'GOOGL'],
+        symbols=['AAPL', 'GOOGL', 'QQQ251121P0061200'],
+        account_ids=[1],
         begin_date=date(2023, 1, 1),
         end_date=date(2023, 1, 31),
         ascending=False
     )
 
-    assert isinstance(df, pd.DataFrame)
-    assert len(df) == 2
+    assert isinstance(df, pl.DataFrame)
+    assert len(df) == 3
     # Check the calculated amount for the SELL trade (should be negative)
-    assert df[df['Symbol'] == 'GOOGL']['Amount'].iloc[0] == -500.00
+    assert df.filter(pl.col('Symbol') == 'GOOGL')['Amount'].item(0) == -500.00
+    # Option contracts are multiplied by 100 shares per contract
+    assert df.filter(pl.col('Symbol') == 'QQQ251121P00612000')['Amount'].item(0) == -1336.00
+
+def test_get_trades_binds_account_ids(mock_connection):
+    """Tests that the requested account IDs are bound to the query parameters."""
+    mock_connection.execute.return_value.fetchall.return_value = []
+
+    get_trades(
+        symbols=['AAPL'],
+        account_ids=[1, 2],
+        begin_date=date(2023, 1, 1),
+        end_date=date(2023, 1, 31),
+    )
+
+    params = mock_connection.execute.call_args[0][1]
+    assert 1 in params
+    assert 2 in params
+    assert 'AAPL' in params
 
 # ==============================================================================
 # TEST SUITE FOR get_last_trade_date
@@ -263,11 +417,30 @@ def test_get_first_balance_date_success(mock_connection):
 
 def test_get_first_balance_date_no_results(mock_connection):
     """Tests case where no balance records are found."""
-    # Mock the result set to be None
+    # Mock the result set: None
     mock_connection.execute.return_value.fetchone.return_value = None
 
     first_date = get_first_balance_date()
     assert first_date is None
+
+def test_get_first_balance_date_for_account(mock_connection):
+    """Tests that the account ID is bound when scoping to one account."""
+    mock_connection.execute.return_value.fetchone.return_value = (date(2020, 1, 1),)
+
+    first_date = get_first_balance_date(account_id=5)
+    assert first_date == date(2020, 1, 1)
+    assert mock_connection.execute.call_args[0][1] == (5, 5)
+
+# ==============================================================================
+# TEST SUITE FOR get_last_balance_date
+# ==============================================================================
+def test_get_last_balance_date_for_account(mock_connection):
+    """Tests that the account ID is bound when scoping to one account."""
+    mock_connection.execute.return_value.fetchone.return_value = (date(2020, 6, 1),)
+
+    last_date = get_last_balance_date(account_id=5)
+    assert last_date == date(2020, 6, 1)
+    assert mock_connection.execute.call_args[0][1] == (5, 5)
 
 # ==============================================================================
 # TEST SUITE FOR get_first_trade_date
@@ -287,4 +460,60 @@ def test_get_first_trade_date_no_results(mock_connection):
 
     first_date = get_first_trade_date()
     assert first_date is None
+
+
+# ==============================================================================
+# TEST SUITE FOR get_cash_flows
+# ==============================================================================
+def test_get_cash_flows_success(mock_connection):
+    """Tests successful retrieval and per-date summation of cash flows."""
+    # Mocking a result set: (trade_date, cash_flow)
+    mock_connection.execute.return_value.fetchall.return_value = [
+        (date(2023, 1, 5), 60000.00),
+        (date(2023, 1, 9), -60000.00),
+    ]
+
+    df = get_cash_flows(
+        account_id=1,
+        begin_date=date(2023, 1, 1),
+        end_date=date(2023, 1, 31),
+        trade_types=["DEP", "WDL"],
+    )
+
+    assert isinstance(df, pl.DataFrame)
+    assert len(df) == 2
+    assert list(df.columns) == ['trade_date', 'cash_flow']
+    assert df['cash_flow'].item(0) == 60000.00
+    assert df['cash_flow'].item(1) == -60000.00
+
+
+def test_get_cash_flows_no_results(mock_connection):
+    """Tests the empty case where no cash flows are found."""
+    mock_connection.execute.return_value.fetchall.return_value = []
+
+    df = get_cash_flows(
+        account_id=1,
+        begin_date=date(2023, 1, 1),
+        end_date=date(2023, 1, 31),
+        trade_types=["DEP", "WDL"],
+    )
+
+    assert isinstance(df, pl.DataFrame)
+    assert df.is_empty()
+    assert list(df.columns) == ['trade_date', 'cash_flow']
+
+
+def test_get_cash_flows_no_types_returns_empty(mock_connection):
+    """An empty type list short-circuits to an empty frame without querying."""
+    df = get_cash_flows(
+        account_id=1,
+        begin_date=date(2023, 1, 1),
+        end_date=date(2023, 1, 31),
+        trade_types=[],
+    )
+
+    assert isinstance(df, pl.DataFrame)
+    assert df.is_empty()
+    # the connection should not have been used for a query
+    mock_connection.execute.assert_not_called()
 

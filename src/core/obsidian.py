@@ -11,6 +11,7 @@ from io import StringIO
 ### third-party imports
 import httpx
 import pandas as pd
+import polars as pl
 
 ### local imports
 from utility import get_logger
@@ -78,7 +79,7 @@ def new_obsidian_file(vault: str, filename: str, content: str|None) -> None:
     webbrowser.open(api_url)
 
 
-def search_obsidian_notes(vault: str, symbol:str) -> pd.DataFrame:
+def search_obsidian_notes(vault: str, symbol: str) -> pl.DataFrame:
     """
     Get a list of notes from the specified Obsidian vault that have either the "symbol"
     property or a tag matching the input symbol.
@@ -88,9 +89,9 @@ def search_obsidian_notes(vault: str, symbol:str) -> pd.DataFrame:
         symbol -- The stock symbol to filter notes by.
 
     Returns:
-        A DataFrame containing the notes that match the criteria. The DataFrame includes
-        columns for the note filename, symbol, and date entered, and is indexed by the
-        date entered.
+        A polars DataFrame containing the notes that match the criteria. The
+        DataFrame includes columns for the note filename, symbol, and date
+        entered.
     """
     logger.debug("Searching Obsidian notes in vault: %s for symbol/tag: %s", vault, symbol)
     # Set the base URL for the Obsidian search function
@@ -117,9 +118,9 @@ def search_obsidian_notes(vault: str, symbol:str) -> pd.DataFrame:
         raise
     logger.debug("Obsidian search API Response: %s", response)
     if response.text == '[]':
-        df = pd.DataFrame()  # Return empty DataFrame if no results found
+        df = pl.DataFrame()  # Return empty DataFrame if no results found
     else:
-        df = pd.read_json(StringIO(response.text)) # Convert JSON response to DataFrame
+        df = pl.from_pandas(pd.read_json(StringIO(response.text)))
 
     logger.debug("Raw DataFrame from Obsidian search API: %s", df)
     return df

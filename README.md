@@ -9,6 +9,9 @@ NOTE: This is very much a work in progress. I am working to improve data acquisi
 ## 📌 Features
 
 - Portfolio tracking and performance analytics for individual investors
+- Support for multiple accounts in a single portfolio
+- Performance calculation methods: Simple, Time-Weighted, and Money-Weighted (IRR)
+- Compare an account's performance against other accounts or ticker symbols
 - Interactive visualizations with Plotly
 - SQL database integration using DuckDB
 - Modular architecture with clear separation of concerns
@@ -45,13 +48,13 @@ Portfolio_Dashboard/
 │   ├── core/                  # Core logic and utilities
 │   ├── config/                # Configuration logic
 │   ├── images/                # Static assets
-│   ├── schemas/               # Data models and SQL scripts
+│   ├── schemas/               # Pydantic data models and enumerations
 │   ├── pages/                 # Individual dashboard pages
 │   ├── utility/               # Helper functions
 │   ├── app.py                 # Main entry point for the Streamlit app
 │   └── ...
 ├── docker/                    # Docker configuration
-├── tools/                     # Test data generation and loading
+├── tools/                     # Database DDL, initialization, and data import scripts
 ├── tests/                     # Test files
 └── README.md                  # Project documentation
 ```
@@ -108,7 +111,7 @@ This is the easiest installation if you just want to give it a try, or use it as
 3. **Configure the Application**
 
    - Copy `src/.settings/.env-example` to `src/.settings/.env`, then set:
-     - `DATABASE_FILE` — the path to your DuckDB file (the app expects its tables — accounts, daily balances, securities, market holidays — to already exist in it)
+      - `DATABASE_FILE` — the path to your DuckDB file (the app expects its tables — accounts, daily balances, trades, securities, notes, market holidays — to already exist in it)
      - `WATCHLIST_FOLDER` — the path to the folder holding your watchlists (reserved for the upcoming Watchlist feature)
 
 4. **Run the App**
@@ -121,7 +124,7 @@ This is the easiest installation if you just want to give it a try, or use it as
 
 1. ***Data Files***
 
-   - The application's data lives in two places: a single, self-contained DuckDB file holding all portfolio data (accounts, daily balances, securities) and the market holiday calendar, and a folder of watchlists (reserved for the upcoming Watchlist feature).
+   - The application's data lives in two places: a single, self-contained DuckDB file holding all portfolio data (accounts, daily balances, trades, securities, notes) and the market holiday calendar, and a folder of watchlists (reserved for the upcoming Watchlist feature).
    - If using Docker, mount a directory to the `/var/data` mount point for the DuckDB file and a directory to the `/var/watchlists` mount point for your watchlists.
    - When running from source, point `DATABASE_FILE` and `WATCHLIST_FOLDER` in `src/.settings/.env` at those locations.
 
@@ -140,10 +143,6 @@ This is the easiest installation if you just want to give it a try, or use it as
 
 I'm continuously improving the Portfolio Dashboard based on community feedback and open issues. Below is a summary of the current priorities and planned features:
 
-### Performance & Data Accuracy
-
-- [#2](https://github.com/nomadmot/Portfolio_Dashboard/issues/2) Adjust the performance algorithm to account for deposits
-
 ### User Experience & Interface
 
 - [#145](https://github.com/nomadmot/Portfolio_Dashboard/issues/145) Create an alerts page to view and filter application notifications
@@ -160,7 +159,6 @@ I'm continuously improving the Portfolio Dashboard based on community feedback a
 ### Core Functionality
 
 - [#57](https://github.com/nomadmot/Portfolio_Dashboard/issues/57) Implement support for stock splits in portfolio calculations
-- [#116](https://github.com/nomadmot/Portfolio_Dashboard/issues/116) Implement a multiple account feature for easier portfolio management
 
 ### Other Planned Features
 

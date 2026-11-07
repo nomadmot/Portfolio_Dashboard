@@ -5,16 +5,17 @@ and other criteria.
 # Import necessary libraries
 from typing import NamedTuple
 from pathlib import Path
+from datetime import date
 
 # Import 3rd party modules
 import streamlit as st
-import pandas as pd
+import polars as pl
 from numpy import nan
 
 # Import local modules
 from core import (
-                  get_account,
-                  get_security_symbols,
+                  get_accounts,
+                  get_traded_symbols,
                   get_trades,
                   get_last_trade_date,
                   lookup_associated_symbols,
@@ -23,6 +24,7 @@ from schemas.portfolio import SecurityType
 from utility import (
                 get_logger,
                 get_aumc_instance,
+                get_account_selection_component,
                 get_time_machine_component,
                 get_status_message_component,
                 StatusType as stat,
@@ -32,7 +34,7 @@ from utility import (
                 )
 
 # initialize the logger
-_logger_name = f"pages.{Path(__file__).stem}" # pylint: disable=invalid-name
+_logger_name = f"pages.{Path(__file__).stem}"
 _logger = get_logger(_logger_name)
 # mark entry into the module
 _logger.debug("In module %s", _logger_name)
@@ -60,11 +62,13 @@ class Summary(NamedTuple):
 _TRADE_SUMMARY = []
 
 # the key for the detail performance multiselect and timemachine components
+_ACCOUNT_SELECTION_KEY = "detail_performance_account_selection"
+_PREVIOUS_ACCOUNTS_KEY = "detail_performance_previous_accounts"
 _SYMBOL_MULTISELECT_KEY = "detail_performance_selected_symbols"
 _TIME_MACHINE_KEY = "detail_performance_time_machine"
 
 # utility function to analyse trades for a single symbol
-def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
+def _analyze_trades(trades_df: pl.DataFrame) -> pl.DataFrame:
     """
     Analyze the current status of a trade using the trade data from the input Dataframe
     Expects only one symbol... function analyze_trades groups tha dataframe and calls
@@ -94,11 +98,21 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     prev_shares: float = 0.0
     prev_avg_price: float = 0.0
     prev_cost_basis: float = 0.0
-    symbol = trades_df.iloc[0].Symbol
+    symbol = trades_df.item(0, "Symbol")
     security = get_security_info(symbol)
 
+    # convert to a list of dicts once so the hot loop stays cheap
+    rows = trades_df.to_dicts()
+    n_rows = len(rows)
+
+    # initialize analysis columns
+    for col in ["Holding", "Avg Price", "Market Value", "Total Invested",
+                "Basis", "Unrealized P/L", "Unrealized P/L %",
+                "Realized P/L", "Realized P/L %"]:
+        trades_df = trades_df.with_columns(pl.lit(0.0).alias(col))
+
     # loop through each row to compute analysis metrics
-    for row in trades_df.itertuples():
+    for i, row in enumerate(rows):
         _logger.debug("analyzing row %s", row)
 
         # save previous values for transaction analysis
@@ -107,15 +121,15 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
         prev_cost_basis = prev_shares * prev_avg_price
 
         # use the trade price as the current price
-        row_price: float = row.Price # type: ignore
+        row_price: float = row["Price"] # type: ignore
         current_price = row_price
 
         # calculate the current holdings
-        row_shares: float = row.Quantity # type: ignore
+        row_shares: float = row["Quantity"] # type: ignore
         current_shares += row_shares
 
         # get the transaction amount
-        row_amount: float = row.Amount # type: ignore
+        row_amount: float = row["Amount"] # type: ignore
 
         # calculate the total cost and realized profit/loss
         if prev_shares < 0:
@@ -195,19 +209,19 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
             unrealized_pl_pct = nan
 
         # update the detail dataframe with results of the analysis
-        trades_df.loc[row.Index, "Holding"] = current_shares
-        trades_df.loc[row.Index, "Basis"] = cost_basis
-        trades_df.loc[row.Index, "Avg Price"] = average_price
-        trades_df.loc[row.Index, "Market Value"] = market_value
-        trades_df.loc[row.Index, "Total Invested"] = total_invested
-        trades_df.loc[row.Index, "Unrealized P/L"] = unrealized_pl
-        trades_df.loc[row.Index, "Unrealized P/L %"] = unrealized_pl_pct
-        trades_df.loc[row.Index, "Realized P/L"] = realized_pl
-        trades_df.loc[row.Index, "Realized P/L %"] = realized_pl_pct
+        trades_df = trades_df.with_columns([
+            pl.Series([v] * n_rows, dtype=pl.Float64).alias(col)
+            for col, v in zip(
+                ["Holding", "Basis", "Avg Price", "Market Value", "Total Invested",
+                 "Unrealized P/L", "Unrealized P/L %", "Realized P/L", "Realized P/L %"],
+                [current_shares, cost_basis, average_price, market_value,
+                 total_invested, unrealized_pl, unrealized_pl_pct,
+                 realized_pl, realized_pl_pct])
+        ])
 
     # update the summary data
     # calculate the sum total of realized profit/loss for the summary
-    realized_pl = trades_df["Realized P/L"].sum()
+    realized_pl = float(trades_df["Realized P/L"].sum())
     # calculate the realized p/l percent for the summary
     if total_invested > 0.0:
         # is long position
@@ -259,7 +273,7 @@ def _analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
 
 
 # function to analyze trades
-def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
+def analyze_trades(trades_df: pl.DataFrame) -> pl.DataFrame:
     """
     Analyze the current status of a trade using the trade data from the input Dataframe
     Calls _analyze_trades for each symbol found
@@ -274,26 +288,18 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
     _logger.debug("in analyze_trades: %s rows to analyze", trades_df.shape[0])
 
     # add columns for analysis
-    trades_df.insert(6, "Holding", 0.0)
-    trades_df.insert(7, "Avg Price", 0.0)
-    trades_df.insert(8, "Market Value", 0.0)
-    trades_df.insert(9, "Total Invested", 0.0)
-    trades_df.insert(10, "Basis", 0.0)
-    trades_df.insert(11, "Unrealized P/L", 0.0)
-    trades_df.insert(12, "Unrealized P/L %", 0.0)
-    trades_df.insert(13, "Realized P/L", 0.0)
-    trades_df.insert(14, "Realized P/L %", 0.0)
+    for col in ["Holding", "Avg Price", "Market Value", "Total Invested",
+                "Basis", "Unrealized P/L", "Unrealized P/L %",
+                "Realized P/L", "Realized P/L %"]:
+        trades_df = trades_df.with_columns(pl.lit(0.0).alias(col))
 
     # group by symbol and analyze trades for each symbol
-    indexed = trades_df
     analyzed = []
-    grouped = indexed.groupby("Symbol")
-    for s in grouped:
-        symbol = s[0]
-        analyzed.append(_analyze_trades(grouped.get_group(symbol)))
+    for symbol, group in trades_df.group_by("Symbol", maintain_order=True):
+        analyzed.append(_analyze_trades(group))
 
     # concatenate the analyzed trades and return
-    return pd.concat(analyzed)
+    return pl.concat(analyzed)
 
 
 ### main page logic
@@ -301,13 +307,22 @@ def analyze_trades(trades_df: pd.DataFrame) -> pd.DataFrame:
 # retrieve or create the multiselect component for selecting symbols
 multiselect_symbols = get_aumc_instance(key=_SYMBOL_MULTISELECT_KEY,
                                         label="Select Symbol(s):",
-                                        options=get_security_symbols(include_options=False),
-                                        accept_new_options=False,
+                                        options=[],
+                                        accept_new_options=True,
                                         placeholder="Select symbols...",
                                         )
 
 # create a time machine component to select the time period for the analysis
 time_machine = get_time_machine_component(_TIME_MACHINE_KEY, Periods.ALL)
+
+# create the account selection component (multiple accounts may be selected)
+accounts = get_accounts()
+account_selector = get_account_selection_component(
+                                        _ACCOUNT_SELECTION_KEY,
+                                        label="Select Account(s):",
+                                        options=accounts,
+                                        allow_multiple=True,
+                                        )
 
 # create a StatusMessageComponent to display messages to the user
 stat_message = get_status_message_component(f"status_{st.context.ip_address}")
@@ -315,12 +330,11 @@ stat_message = get_status_message_component(f"status_{st.context.ip_address}")
 # configure the page layout
 st.set_page_config(layout="wide")
 
-# page header
-st.title(f"Detail Performance Analysis for {get_account(1).account_name}")
-st.markdown(f"*Last Trade Date on file: {get_last_trade_date():%Y-%m-%d}*",)
-
 # add widgets for user inputs to sidebar
 with st.sidebar:
+    # render the account selection component
+    account_selector.render()
+
     # render the time machine
     time_machine.render()
 
@@ -334,124 +348,161 @@ with st.sidebar:
     if query_symbols:
         for query_symbol in query_symbols:
             default_symbols.append(query_symbol)
-    # multiselect symbols for performance analysis
+
+    # render the multiselect component for selecting symbols
     multiselect_symbols.render(default_symbols)
 
+# get the selected account(s) from the account selection component
+selected_accounts: int|list[int]|None  = account_selector.selected
+if selected_accounts is None or (isinstance(selected_accounts, list) and len(selected_accounts) == 0):
+    # the user needs to select an account
+    stat_message.set_status_message(stat.INFO, "Please select at least one account")
+    # display status messages
+    stat_message.show_status_messages()
+    st.stop()
 
-# get the selected symbols from the multiselect component
+# normalize the selected accounts to a list for consistent handling
+if isinstance(selected_accounts, int):
+    selected_accounts = [selected_accounts]
+
+# page header
+account_names = ", ".join(a.account_name for a in accounts if a.account_id in selected_accounts)
+
+# get the currently selected symbols from the multiselect component
 selected_symbols = multiselect_symbols.selected
+
+# before we move on, update the symbols multiselect component
+# for the next iteration
+# the symbols offered for selection are those with transactions
+# in the selected accounts
+available_symbols = get_traded_symbols(selected_accounts, include_options=False)
+previous_accounts = st.session_state.get(_PREVIOUS_ACCOUNTS_KEY)
+if previous_accounts is None:
+    # first run for this session; initialize the symbol options
+    multiselect_symbols.set_options(available_symbols)
+elif sorted(previous_accounts) != sorted(selected_accounts):
+    # the account selection changed; refresh the symbol options
+    multiselect_symbols.set_options(available_symbols)
+st.session_state[_PREVIOUS_ACCOUNTS_KEY] = list(selected_accounts)
+
+if load_options:
+    # add any associated symbols from the database to the selection list
+    selected_symbols = lookup_associated_symbols(selected_symbols)
+    # re-render the multiselect with updated selected symbols
+    multiselect_symbols.update_options(selected_symbols)
+
+    stat_message.set_status_message(stat.INFO, "Options loaded")
+
+# now back to our regularly scheduled program
 if len(selected_symbols) == 0:
     # the user needs to select a symbol
     stat_message.set_status_message(stat.INFO, "Please select at least one symbol")
+    # display status messages
+    stat_message.show_status_messages()
+    st.stop()
+
+# get the trades for the selected accounts, symbols, and period
+selected_trades = get_trades(
+    symbols=selected_symbols,
+    account_ids=selected_accounts,
+    begin_date=time_machine.begin_date,
+    end_date=time_machine.end_date,
+    ascending=True,
+)
+
+# analyze the trades
+if not selected_trades.is_empty():
+    trades = analyze_trades(selected_trades)
 else:
-    if load_options:
-        stat_message.set_status_message(stat.INFO, "Options loaded")
-        # add any associated symbols from the database to the selection list
-        selected_symbols = lookup_associated_symbols(selected_symbols)
-        # re-render the multiselect with updated selected symbols
-        multiselect_symbols.update_options(selected_symbols)
+    stat_message.set_status_message(stat.WARNING, "No trades found")
+    trades = pl.DataFrame()
 
-    # get the trades for the selected symbols and period
-    selected_trades = get_trades(
-        symbols=selected_symbols,
-        begin_date=time_machine.begin_date,
-        end_date=time_machine.end_date,
-        ascending=True,
-    )
+# update the time machine with the dates found in the response
+if not trades.is_empty():
+    df_begin_date: date = trades["Date"][0]
+    df_end_date: date = trades["Date"][-1]
+    time_machine.update_date_pickers(df_begin_date, df_end_date)
 
-    # analyze the trades
-    if not selected_trades.empty:
-        trades = analyze_trades(selected_trades)
-    else:
-        stat_message.set_status_message(stat.WARNING, "No trades found")
-        trades = pd.DataFrame()
-
-    # update the time machine with the dates found in the response
-    if not trades.empty:
-        df_begin_date = trades["Date"].min()
-        df_end_date = trades["Date"].max()
-        time_machine.update_date_pickers(df_begin_date, df_end_date)
-
-    # display the trade details
-    st.dataframe(trades,
-                hide_index=True,
-                column_config={
-                    "Symbol": st.column_config.TextColumn(width=150),
-                    "Quantity": st.column_config.NumberColumn(format="accounting", width="small"),
-                    "Price": st.column_config.NumberColumn(format="$%.2f",),
-                    "Amount": st.column_config.NumberColumn(format="$%.2f"),
-                    "Holding": st.column_config.NumberColumn(format="accounting"),
-                    "Avg Price": st.column_config.NumberColumn(format="$%.2f",),
-                    "Market Value": st.column_config.NumberColumn(format="$%.2f"),
-                    "Total Invested": st.column_config.NumberColumn(format="$%.2f"),
-                    "Basis": st.column_config.NumberColumn(format="$%.2f"),
-                    "Unrealized P/L": st.column_config.NumberColumn(format="$%.2f"),
-                    "Unrealized P/L %": st.column_config.NumberColumn(format="percent"),
-                    "Realized P/L": st.column_config.NumberColumn(format="$%.2f"),
-                    "Realized P/L %": st.column_config.NumberColumn(format="percent"),
-                    }
-                )
-
-    # print out the summary information
-    st.subheader("Trade Summary:")
-    st.dataframe(_TRADE_SUMMARY,
-                hide_index=True,
-                column_config={
-                    "Symbol": st.column_config.TextColumn(width=150),
-                    "Invested": st.column_config.NumberColumn(
-                        label="Total Invested",
-                        format="$%.2f",
-                    ),
-                    "Realized": st.column_config.NumberColumn(
-                        label="Realized P/L",
-                        format="$%.2f",
-                    ),
-                    "RealizedPct": st.column_config.NumberColumn(
-                        label="Realized P/L %",
-                        format="percent",
-                    ),
-                    "Holding": st.column_config.NumberColumn(format="accounting", width="small"),
-                    "Price": st.column_config.NumberColumn(
-                        label="Current Price",
-                        format="$%.2f",
-                    ),
-                    "Market": st.column_config.NumberColumn(
-                        label="Market Value",
-                        format="$%.2f",
-                    ),
-                    "Basis": st.column_config.NumberColumn(
-                        label="Cost Basis",
-                        format="$%.2f",
-                    ),
-                    "Unrealized": st.column_config.NumberColumn(
-                        label="Unrealized P/L",
-                        format="$%.2f",
-                    ),
-                    "UnrealizedPct": st.column_config.NumberColumn(
-                        label="Unrealized P/L %",
-                        format="percent",
-                    ),
+# display the trade details
+st.dataframe(trades,
+            hide_index=True,
+            column_config={
+                "Symbol": st.column_config.TextColumn(width=150),
+                "Quantity": st.column_config.NumberColumn(format="accounting", width="small"),
+                "Price": st.column_config.NumberColumn(format="$%.2f",),
+                "Amount": st.column_config.NumberColumn(format="$%.2f"),
+                "Holding": st.column_config.NumberColumn(format="accounting"),
+                "Avg Price": st.column_config.NumberColumn(format="$%.2f",),
+                "Market Value": st.column_config.NumberColumn(format="$%.2f"),
+                "Total Invested": st.column_config.NumberColumn(format="$%.2f"),
+                "Basis": st.column_config.NumberColumn(format="$%.2f"),
+                "Unrealized P/L": st.column_config.NumberColumn(format="$%.2f"),
+                "Unrealized P/L %": st.column_config.NumberColumn(format="percent"),
+                "Realized P/L": st.column_config.NumberColumn(format="$%.2f"),
+                "Realized P/L %": st.column_config.NumberColumn(format="percent"),
                 }
-    )
+            )
 
-    # calculate the grand totals
-    if len(_TRADE_SUMMARY) > 0:
-        df_trade_summary = pd.DataFrame(_TRADE_SUMMARY)
-        grand_total_invested = df_trade_summary["Invested"].sum()
-        grand_total_basis = df_trade_summary["Basis"].sum()
-        grand_total_market = df_trade_summary["Market"].sum()
-        grand_total_realized = df_trade_summary["Realized"].sum()
-        grand_total_unrealized = grand_total_market - grand_total_basis
-        total_realized_pct = grand_total_realized / (grand_total_invested - grand_total_basis)
-        total_unrealized_pct = \
-            grand_total_unrealized / grand_total_basis if grand_total_basis != 0.0 else nan
-        st.subheader(f"Total Invested: ${grand_total_invested:,.2f}")
-        st.subheader("Total Realized Profit/Loss: $" +
-                    f"{grand_total_realized:,.2f} ({total_realized_pct:.1%})")
-        st.subheader(f"Total Current Market: ${grand_total_market:,.2f}")
-        st.subheader(f"Total Current Basis: ${grand_total_basis:,.2f}")
-        st.subheader("Total Unrealized Profit/Loss: $" +
-                    f"{grand_total_unrealized:,.2f} ({total_unrealized_pct:.1%})")
+# print out the summary information
+st.subheader("Trade Summary:")
+st.dataframe(_TRADE_SUMMARY,
+            hide_index=True,
+            column_config={
+                "Symbol": st.column_config.TextColumn(width=150),
+                "Invested": st.column_config.NumberColumn(
+                    label="Total Invested",
+                    format="$%.2f",
+                ),
+                "Realized": st.column_config.NumberColumn(
+                    label="Realized P/L",
+                    format="$%.2f",
+                ),
+                "RealizedPct": st.column_config.NumberColumn(
+                    label="Realized P/L %",
+                    format="percent",
+                ),
+                "Holding": st.column_config.NumberColumn(format="accounting", width="small"),
+                "Price": st.column_config.NumberColumn(
+                    label="Current Price",
+                    format="$%.2f",
+                ),
+                "Market": st.column_config.NumberColumn(
+                    label="Market Value",
+                    format="$%.2f",
+                ),
+                "Basis": st.column_config.NumberColumn(
+                    label="Cost Basis",
+                    format="$%.2f",
+                ),
+                "Unrealized": st.column_config.NumberColumn(
+                    label="Unrealized P/L",
+                    format="$%.2f",
+                ),
+                "UnrealizedPct": st.column_config.NumberColumn(
+                    label="Unrealized P/L %",
+                    format="percent",
+                ),
+            }
+)
+
+# calculate the grand totals
+if len(_TRADE_SUMMARY) > 0:
+    df_trade_summary = pl.DataFrame(_TRADE_SUMMARY)
+    grand_total_invested = float(df_trade_summary["Invested"].sum())
+    grand_total_basis = float(df_trade_summary["Basis"].sum())
+    grand_total_market = float(df_trade_summary["Market"].sum())
+    grand_total_realized = float(df_trade_summary["Realized"].sum())
+    grand_total_unrealized = grand_total_market - grand_total_basis
+    total_realized_pct = grand_total_realized / (grand_total_invested - grand_total_basis)
+    total_unrealized_pct = \
+        grand_total_unrealized / grand_total_basis if grand_total_basis != 0.0 else nan
+    st.subheader(f"Total Invested: ${grand_total_invested:,.2f}")
+    st.subheader("Total Realized Profit/Loss: $" +
+                f"{grand_total_realized:,.2f} ({total_realized_pct:.1%})")
+    st.subheader(f"Total Current Market: ${grand_total_market:,.2f}")
+    st.subheader(f"Total Current Basis: ${grand_total_basis:,.2f}")
+    st.subheader("Total Unrealized Profit/Loss: $" +
+                f"{grand_total_unrealized:,.2f} ({total_unrealized_pct:.1%})")
 
 # display any status messages
 stat_message.show_status_messages()
