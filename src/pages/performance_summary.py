@@ -372,15 +372,6 @@ if compare_is_account:
         has_comparison = False
         # create an empty frame with the expected schema so the rest of the code can run
         df_comparison = pl.DataFrame(schema={"Date": pl.Date, "Close": pl.Float64})
-    # if compare_account_id is None:
-    #     # the selected option no longer resolves to an account (e.g. it was the
-    #     # account that is now selected as the main target, so it is excluded);
-    #     # render without a comparison rather than querying an unknown account.
-    #     status_message.set_status_message(
-    #         stat.INFO,
-    #         f"{compare_label} is the selected account; no comparison shown.",
-    #     )
-    #     has_comparison = False
     else:
         df_comparison = (
             get_balance_history(account_id=compare_account_id,
@@ -557,11 +548,7 @@ if time_machine.period_selected == Periods.CUS:
 else:
     selected_period = Periods.get_label(time_machine.period_selected)
 # label the headline figure according to the selected calculation method
-if selected_method == CalculationMethod.MWR:
-    perf_label = "Money-Weighted Return"
-else:
-    perf_label = f"Total Cumulative Performance ({selected_method})"
-st.subheader(f"{perf_label} for period "
+st.subheader(f"{selected_method} Performance for period "
               f"{selected_period}: {merged['pct_change'].item(-1):.1%}"
               )
 if has_comparison:
