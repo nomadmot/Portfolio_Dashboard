@@ -51,7 +51,9 @@ account_selector = get_account_selection_component(
 status_message = get_status_message_component(f"status_{st.context.ip_address}")
 
 # if no account is available, don't continue
-selected_account_id = account_selector.selected
+selected_account_id: None|int|list[int] = account_selector.selected
+if isinstance(selected_account_id, list):
+    selected_account_id = selected_account_id[0]
 if selected_account_id is None:
     status_message.set_status_message(stat.WARNING, "No accounts available")
     status_message.show_status_messages()
@@ -73,8 +75,8 @@ if selected_row is not None and selected_row != [] and selected_row["selection"]
     if selected_row < len(history):
         # set the values for the update date and balance widgets
         row = history.row(selected_row)
-        st.session_state[_UPDATE_DATE_SESSION_KEY] = row["balance_date"]
-        st.session_state[_UPDATE_BALANCE_SESSION_KEY] = float(row["balance"])
+        st.session_state[_UPDATE_DATE_SESSION_KEY] = row[0]
+        st.session_state[_UPDATE_BALANCE_SESSION_KEY] = float(row[1])
 # if the update date is not set, initialize it to today's date
 elif _UPDATE_DATE_SESSION_KEY not in st.session_state:
     st.session_state[_UPDATE_DATE_SESSION_KEY] = date.today()
