@@ -1,3 +1,17 @@
+## [0.2.4a] - 2026-11-17
+
+This is a patch release following [0.2.4] (PR #203) that fixes two reported bugs and standardizes the Performance Summary page headings.
+
+### 🐛 Bug Fixes
+
+- **Realized P/L in Detail Performance (#196)** — Rewrote the trade analysis to process rows as a list of dictionaries and accumulate realized profit/loss in a running total, so the summary reports the correct realized P/L instead of summing per-row values that were being overwritten. (PR #208)
+- **Manage Daily Balances row selection (#204)** — Fixed the update-date and balance widgets not being populated when a table row was selected; also handles the account selector returning a list by taking its first entry. (PR #205)
+
+### 💼 Other
+
+- **Performance Summary subheadings (#206)** — Standardized the performance method header to "{Method} Performance for period …" and removed a block of commented-out code. (PR #207)
+- Set the application environment to **PROD** for release.
+
 ## [0.2.4] - 2026-11-06 (AI generated summary)
 
 This release is the "Sad-Sasquatch" development branch merged into `main` (PR #203). It is the first release on the new multi-account, DuckDB-backed architecture and introduces portfolio performance analytics, Schwab data import tooling, and a migration of the internal data layer from Pandas to Polars.
