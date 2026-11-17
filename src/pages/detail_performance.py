@@ -106,12 +106,6 @@ def _analyze_trades(trades_df: pl.DataFrame) -> pl.DataFrame:
     rows = trades_df.to_dicts()
     n_rows = len(rows)
 
-    # initialize analysis columns
-    for col in ["Holding", "Avg Price", "Market Value", "Total Invested",
-                "Basis", "Unrealized P/L", "Unrealized P/L %",
-                "Realized P/L", "Realized P/L %"]:
-        trades_df = trades_df.with_columns(pl.lit(0.0).alias(col))
-
     # loop through each row to compute analysis metrics
     for i, row in enumerate(rows):
         _logger.debug("analyzing row %s", row)
