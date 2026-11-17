@@ -10,7 +10,7 @@ from datetime import date
 # Import 3rd party modules
 import streamlit as st
 import polars as pl
-from numpy import nan
+from numpy import nan, isnan
 
 # Import local modules
 from core import (
@@ -89,6 +89,7 @@ def _analyze_trades(trades_df: pl.DataFrame) -> pl.DataFrame:
     average_price: float = 0.0
     market_value: float = 0.0
     total_invested: float = 0.0
+    total_realized: float = 0.0
     cost_basis: float = 0.0
     market_value: float = 0.0
     realized_pl: float = 0.0
@@ -183,6 +184,10 @@ def _analyze_trades(trades_df: pl.DataFrame) -> pl.DataFrame:
             realized_pl = nan
             realized_pl_pct = nan
 
+        # update total realized profit/loss for the summary
+        if not isnan(realized_pl):
+            total_realized += realized_pl
+
         # calculate the average price
         average_price = \
             cost_basis / current_shares if current_shares != 0 else nan
@@ -208,27 +213,27 @@ def _analyze_trades(trades_df: pl.DataFrame) -> pl.DataFrame:
             unrealized_pl = nan
             unrealized_pl_pct = nan
 
-        # update the detail dataframe with results of the analysis
-        trades_df = trades_df.with_columns([
-            pl.Series([v] * n_rows, dtype=pl.Float64).alias(col)
-            for col, v in zip(
-                ["Holding", "Basis", "Avg Price", "Market Value", "Total Invested",
-                 "Unrealized P/L", "Unrealized P/L %", "Realized P/L", "Realized P/L %"],
-                [current_shares, cost_basis, average_price, market_value,
-                 total_invested, unrealized_pl, unrealized_pl_pct,
-                 realized_pl, realized_pl_pct])
-        ])
+        # update the row with the current values
+        row["Holding"] = current_shares
+        row["Basis"] = cost_basis
+        row["Avg Price"] = average_price
+        row["Market Value"] = market_value
+        row["Total Invested"] = total_invested
+        row["Unrealized P/L"] = unrealized_pl
+        row["Unrealized P/L %"] = unrealized_pl_pct
+        row["Realized P/L"] = realized_pl
+        row["Realized P/L %"] = realized_pl_pct
 
     # update the summary data
     # calculate the sum total of realized profit/loss for the summary
-    realized_pl = float(trades_df["Realized P/L"].sum())
+    # realized_pl = float(trades_df["Realized P/L"].sum())
     # calculate the realized p/l percent for the summary
     if total_invested > 0.0:
         # is long position
-        realized_pl_pct = realized_pl / (total_invested - cost_basis)
+        realized_pl_pct = total_realized / (total_invested - cost_basis)
     elif total_invested < 0.0:
         # is short position
-        realized_pl_pct = -realized_pl / (total_invested + cost_basis)
+        realized_pl_pct = -total_realized / (total_invested + cost_basis)
     else:
         realized_pl_pct = nan
     # calculate amounts for current holdings
@@ -259,7 +264,7 @@ def _analyze_trades(trades_df: pl.DataFrame) -> pl.DataFrame:
     _TRADE_SUMMARY.append(Summary(
                 Symbol=symbol,
                 Invested=total_invested,
-                Realized=realized_pl,
+                Realized=total_realized,
                 RealizedPct=realized_pl_pct,
                 Holding=current_shares,
                 Price=current_price,
@@ -269,7 +274,7 @@ def _analyze_trades(trades_df: pl.DataFrame) -> pl.DataFrame:
                 UnrealizedPct=unrealized_pl_pct,
                 ))
 
-    return trades_df
+    return pl.DataFrame(rows)
 
 
 # function to analyze trades
