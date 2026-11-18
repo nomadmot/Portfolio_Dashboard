@@ -33,6 +33,7 @@ NOTE: This is very much a work in progress. I am working to improve data acquisi
 
 - **Frontend**: Streamlit
 - **Backend**: Python, DuckDB
+- **Data Processing**: Polars
 - **Data Fetching**: yfinance
 - **Visualization**: Plotly
 - **Dependency Management**: uv (via `pyproject.toml` and `uv.lock`)
@@ -48,9 +49,12 @@ Portfolio_Dashboard/
 │   ├── core/                  # Core logic and utilities
 │   ├── config/                # Configuration logic
 │   ├── images/                # Static assets
+│   ├── library/               # Option modeling (not currently used)
 │   ├── schemas/               # Pydantic data models and enumerations
 │   ├── pages/                 # Individual dashboard pages
 │   ├── utility/               # Helper functions
+│   ├── .settings/             # .env and app_config.yml (copy the -example files)
+│   ├── .streamlit/            # Streamlit configuration
 │   ├── app.py                 # Main entry point for the Streamlit app
 │   └── ...
 ├── docker/                    # Docker configuration
@@ -154,11 +158,14 @@ I'm continuously improving the Portfolio Dashboard based on community feedback a
 - [#101](https://github.com/nomadmot/Portfolio_Dashboard/issues/101) Create a Security Details page to provide information on selected stocks
 - [#39](https://github.com/nomadmot/Portfolio_Dashboard/issues/39) Develop a Watchlist page for tracking specific stocks or assets
 - [#90](https://github.com/nomadmot/Portfolio_Dashboard/issues/90) Introduce a Portfolio Journal for tracking transactions and notes
-- [#43](https://github.com/nomadmot/Portfolio_Dashboard/issues/43) Enable Obsidian integration for seamless note-taking and portfolio synchronization
 
 ### Core Functionality
 
 - [#57](https://github.com/nomadmot/Portfolio_Dashboard/issues/57) Implement support for stock splits in portfolio calculations
+
+### In Progress
+
+- [#43](https://github.com/nomadmot/Portfolio_Dashboard/issues/43) Obsidian integration — note-taking works today; the module is being reworked for full portfolio synchronization
 
 ### Other Planned Features
 
