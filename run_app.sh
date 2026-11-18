@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/sh
 
 # activate Python virtual environment
 source .venv/bin/activate
