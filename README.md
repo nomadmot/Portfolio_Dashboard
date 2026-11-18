@@ -136,7 +136,7 @@ This is the easiest installation if you just want to give it a try, or use it as
 
    - The `.settings` folder in the application source directory contains example configuration files:
      - `.env` — environment variables: `DATABASE_FILE`, `WATCHLIST_FOLDER`, and the log levels
-     - `app_config.yml` — application defaults (performance summary period and comparison symbols, time machine maximum)
+     - `app_config.yml` — application defaults (performance summary period, comparison symbols, calculation method, dividend/fee netting toggles, time machine maximum)
    - Copy the `-example` files to `.env` and `app_config.yml` and adjust them to your setup.
 
 ***More To Come***
